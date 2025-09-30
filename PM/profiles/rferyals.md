@@ -1,3 +1,5 @@
 rferyals
 2024187186
 Rabia Saygin
+PL8
+Darwin Rabias-MacBook-Air.local 24.1.0 Darwin Kernel Version 24.1.0: Thu Oct 10 21:02:26 PDT 2024; root:xnu-11215.41.3~2/RELEASE_ARM64_T8122 arm64
