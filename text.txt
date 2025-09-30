@@ -1,0 +1,64 @@
+
+Host Name:                     SR_SMITH
+OS Name:                       Microsoft Windows 11 Pro
+OS Version:                    10.0.26100 N/A Build 26100
+OS Manufacturer:               Microsoft Corporation
+OS Configuration:              Standalone Workstation
+OS Build Type:                 Multiprocessor Free
+Registered Owner:              welzmathias@gmail.com
+Registered Organization:       N/A
+Product ID:                    00355-70005-65874-AAOEM
+Original Install Date:         17/09/2025, 04:42:05
+System Boot Time:              21/09/2025, 22:34:48
+System Manufacturer:           LENOVO
+System Model:                  83DA
+System Type:                   x64-based PC
+Processor(s):                  1 Processor(s) Installed.
+                               [01]: Intel64 Family 6 Model 170 Stepping 4 GenuineIntel ~1400 Mhz
+BIOS Version:                  LENOVO N7CN30WW, 19/09/2024
+Windows Directory:             C:\WINDOWS
+System Directory:              C:\WINDOWS\system32
+Boot Device:                   \Device\HarddiskVolume1
+System Locale:                 en-us;Inglˆs (Estados Unidos)
+Input Locale:                  pt;Portuguˆs (Portugal)
+Time Zone:                     (UTC+00:00) Dublin, Edimburgo, Lisboa, Londres
+Total Physical Memory:         32ÿ437 MB
+Available Physical Memory:     19ÿ558 MB
+Virtual Memory: Max Size:      37ÿ301 MB
+Virtual Memory: Available:     23ÿ871 MB
+Virtual Memory: In Use:        13ÿ430 MB
+Page File Location(s):         C:\pagefile.sys
+Domain:                        WORKGROUP
+Logon Server:                  \\SR_SMITH
+Hotfix(s):                     5 Hotfix(s) Installed.
+                               [01]: KB5064401
+                               [02]: KB5050575
+                               [03]: KB5065847
+                               [04]: KB5065426
+                               [05]: KB5064531
+Network Card(s):               1 NIC(s) Installed.
+                               [01]: Realtek 8852CE WiFi 6E PCI-E NIC
+                                     Connection Name: Wi-Fi
+                                     DHCP Enabled:    Yes
+                                     DHCP Server:     193.136.203.173
+                                     IP address(es)
+                                     [01]: 194.210.175.160
+                                     [02]: fe80::1e1e:2087:5dd9:42bd
+Virtualization-based security: Status: Running
+                               Required Security Properties:
+                                     Base Virtualization Support
+                               Available Security Properties:
+                                     Base Virtualization Support
+                                     DMA Protection
+                                     UEFI Code Readonly
+                                     SMM Security Mitigations 1.0
+                                     Mode Based Execution Control
+                                     APIC Virtualization
+                               Services Configured:
+                                     Hypervisor enforced Code Integrity
+                               Services Running:
+                                     Hypervisor enforced Code Integrity
+                               App Control for Business policy: Enforced
+                               App Control for Business user mode policy: Audit
+                               Security Features Enabled:
+Hyper-V Requirements:          A hypervisor has been detected. Features required for Hyper-V will not be displayed.
