@@ -1,2 +1,3 @@
 Nunca mais
-a tua face será pura limpa e viva,
+
+4º se poderá nos passos do tempo tecer.
