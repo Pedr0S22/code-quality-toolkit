@@ -1,2 +1,2 @@
 Nunca mais
-Nunca mais servirei senhor que possa morrer.
+a tua face será pura limpa e viva,
