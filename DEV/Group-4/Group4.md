@@ -1,2 +1,3 @@
 Nunca mais
-Nunca mais servirei senhor que possa morrer.
+
+se poderá nos passos do tempo tecer.
