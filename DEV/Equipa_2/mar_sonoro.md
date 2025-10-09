@@ -4,4 +4,6 @@ A tua beleza aumenta quando estamos sós
 
 E tão fundo intimamente a tua voz
 
-Segue o mais secreto bailar do meu sonho.Que momentos há em que eu suponho
+Segue o mais secreto bailar do meu sonho.
+
+Que momentos há em que eu suponho
