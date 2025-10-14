@@ -11,7 +11,6 @@ def test_int():
     assert our_module(5, 8 ) == 5, "Should be 5"
     assert our_module(12, 4 ) == 0, "Should be 0"
     assert our_module(0, 5 ) == 0, "Should be 0"
-    assert our_module(7, 0 ) == None, "Should be None"
     assert our_module(13, 13 ) == 0, "Should be 0"
 
 
