@@ -7,9 +7,13 @@ def test_float():
     assert our_module(55.5, 5.5 ) == 0.5, "Should be 0.5"
 
 def test_int():
-    assert our_module(10, 3 ) == 1, "Should be 0"
-    assert our_module(12, 4 ) == 0, "Should be 3"
-    assert our_module(55, 7 ) == 6, "Should be 1"
+    assert our_module(10, 3 ) == 1, "Should be 1"
+    assert our_module(5, 8 ) == 5, "Should be 5"
+    assert our_module(12, 4 ) == 0, "Should be 0"
+    assert our_module(0, 5 ) == 0, "Should be 0"
+    assert our_module(7, 0 ) == None, "Should be None"
+    assert our_module(13, 13 ) == 0, "Should be 0"
+
 
 # @pytest.mark.parametrize(
 #     "a, b, expected",
