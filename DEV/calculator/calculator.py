@@ -41,7 +41,7 @@ def main():
         if operation == '+':
             print(f"{our_add(num1, num2)}")
         elif operation == '*':
-            print(f"{num1} * {num2} = {our_multiplication(num1, num2)}")
+            print(f"{our_multiplication(num1, num2)}")
             #           print(f"{num1} + {num2} = {our_add(num1, num2)}")
             
             # add more operations as they are integrated into the main branch
