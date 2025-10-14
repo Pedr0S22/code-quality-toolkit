@@ -14,6 +14,14 @@ def test_calculator_add():
     assert '5' in result.stdout
 #    assert '2' in result.stdout (only needed if you have more return arguments)
 
+def test_calculator_mul():
+    # Run calculator.py as if from the command line with add inputs ok
+    result = subprocess.run(['python3', 'calculator.py', '*', '2', '3'], capture_output=True, text=True)
+
+    # Assert the expected output
+    assert '6' in result.stdout
+#    assert '2' in result.stdout (only needed if you have more return arguments)
+
 def test_wrong_operation():
     # Run calculator.py with an operation that was not yet implemented
     result = subprocess.run(['python3', 'calculator.py', '%', '2', '3'], capture_output=True, text=True)
