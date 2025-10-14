@@ -16,10 +16,10 @@ def test_calculator_add():
 
 def test_wrong_operation():
     # Run calculator.py with an operation that was not yet implemented
-    result = subprocess.run(['python3', 'calculator.py', '%', '2', '3'], capture_output=True, text=True)
+    result = subprocess.run(['python3', 'calculator.py', '!', '2', '3'], capture_output=True, text=True)
 
     # Assert the expected output
-    assert 'Invalid operation: %' in result.stdout
+    assert 'Invalid operation: !' in result.stdout
 
 
 def test_wrong_nr_inputs():
