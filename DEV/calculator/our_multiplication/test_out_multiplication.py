@@ -3,3 +3,6 @@ from our_multiplication import our_multiplication
 
 def test_trivial_multiplication():
     assert our_multiplication(2, 3) == 6, "Should be 6"
+
+def test_for_zero():
+    assert our_multiplication(5, 0) == 1, "Should be 0 (error)"
