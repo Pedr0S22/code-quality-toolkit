@@ -11,3 +11,9 @@ def test_for_mixed():
 
 def test_division_by_floats():
     assert our_division(5.0, 0.5) == 10.0, "Should be 10.0"
+
+def test_division_by_zero():
+    with pytest.raises(ZeroDivisionError) as ex:
+        our_division(12, 0)
+
+    assert str(ex.value) == "division by zero error"
