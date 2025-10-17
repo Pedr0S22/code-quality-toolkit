@@ -5,3 +5,5 @@
 2023212648, @andresilva219, uc2023212648@student.uc.pt
 
 2023235452, @Pedr0S22, uc2023235452@student.uc.pt
+
+2023221892, @Isaque_capra, uc2023221892@student.uc.pt
