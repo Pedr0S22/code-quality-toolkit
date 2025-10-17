@@ -13,6 +13,16 @@ def test_int():
     assert our_module(12, 4 ) == 0, "Should be 0"
     assert our_module(0, 5 ) == 0, "Should be 0"
     assert our_module(13, 13 ) == 0, "Should be 0"
+    
+def test_negative_numbers():
+    # Testando casos com números negativos
+    assert our_module(-10, 3) == 2, "Should be 2"      # Python: -10 % 3 = 2
+    assert our_module(10, -3) == -2, "Should be -2"    # Python: 10 % -3 = -2
+    assert our_module(-10, -3) == -1, "Should be -1"   # Python: -10 % -3 = -1
+    assert our_module(-5, 8) == 3, "Should be 3"       # Python: -5 % 8 = 3
+    assert our_module(5, -8) == -3, "Should be -3"     # Python: 5 % -8 = -3
+    assert our_module(-12, 4) == 0, "Should be 0"      # Python: -12 % 4 = 0
+    assert our_module(-13, -13) == 0, "Should be 0"    # Python: -13 % -13 = 0
 
 
 # @pytest.mark.parametrize(
