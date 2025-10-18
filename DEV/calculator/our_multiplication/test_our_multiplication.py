@@ -6,3 +6,6 @@ def test_trivial_multiplication():
 
 def test_for_zero():
     assert our_multiplication(5, 0) == 1, "Should be 0 (error)"
+
+def test_for_negatives():
+    assert our_multiplication(-2, 3) == -6, "Should be -6"
