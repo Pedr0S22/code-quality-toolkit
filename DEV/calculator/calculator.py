@@ -5,11 +5,13 @@ import sys   # to be able to read the command line arguments
 
 # each operation must be imported from a sub-folder provided by a distinct sub-group originating from their branch.
 from our_add.our_add import our_add
+
+# UNCOMENT aach line below as each sub-group delivers its <operation> 
 from our_multiplication.our_multiplication import our_multiplication
-# UNCOMENT each line below as each sub-group delivers its <operation> 
-# from our_sub import our_subtract
+from our_sub.our_sub import our_sub
+from our_division.our_division import our_division
+from our_module.our_module import our_module
 # from our_mul import our_multiply
-# from our_div import our_divide
 # from our_rem import div-remainder # integer remainder of division
 # from our_pow import our_power # n to the power of m
 # if needed (because there may be more than five subgroups), create more operations
@@ -40,8 +42,14 @@ def main():
 
         if operation == '+':
             print(f"{our_add(num1, num2)}")
+        elif operation == '-':
+            print(f"{num1} - {num2} = {our_sub(num1, num2)}")
         elif operation == '*':
             print(f"{our_multiplication(num1, num2)}")
+        elif operation == '/':
+            print(f"{num1} / {num2} = {our_division(num1, num2)}")
+        elif operation == '%':
+            print(f"{num1} % {num2} = {our_module(num1, num2)}")
             #           print(f"{num1} + {num2} = {our_add(num1, num2)}")
             
             # add more operations as they are integrated into the main branch
@@ -51,7 +59,7 @@ def main():
                 elif operation == '*':
                     print(f"{num1} * {num2} = {our_multiply(num1, num2)}")
                 elif operation == '/':
-                    print(f"{num1} / {num2} = {our_divide(num1, num2)}")
+                    print(f"{num1} / {num2} = {our_division(num1, num2)}")
 
                 # add more operations, as they are merged into the main trunk
             '''
