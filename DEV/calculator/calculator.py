@@ -5,7 +5,7 @@ import sys   # to be able to read the command line arguments
 
 # each operation must be imported from a sub-folder provided by a distinct sub-group originating from their branch.
 from our_add.our_add import our_add
-from our_module.our_module import our_module
+
 # UNCOMENT each line below as each sub-group delivers its <operation> 
 # from our_sub import our_subtract
 # from our_mul import our_multiply
@@ -53,8 +53,6 @@ def main():
 
                 # add more operations, as they are merged into the main trunk
             '''
-        elif operation == '%':
-            print(f"{num1} % {num2} = {our_module(num1, num2)}")
         else:
             print(f"Invalid operation: {operation}")
 
