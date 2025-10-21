@@ -8,7 +8,7 @@ def test_for_negatives():
     assert our_add(-2, -3) == -5, "Should be -5"
 
 def test_for_mixed():
-    assert our_add(-2, 3) == 0, "Should be 1 (error)"
+    assert our_add(-2, 3) == 1, "Should be 1 (error)"
 
 # uncomment later
 '''
