@@ -1,0 +1,9 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.2, pytest-7.4.4, pluggy-1.0.0
+rootdir: /Users/rabiaferyalsaygin/es2025-pl8/DEV/calculator
+plugins: anyio-4.2.0
+collected 1 item
+
+test_calculator.py .                                                     [100%]
+
+============================== 1 passed in 0.02s ===============================
