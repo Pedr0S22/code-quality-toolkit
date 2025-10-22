@@ -18,6 +18,6 @@ tests_mul:
   script:
   - echo "Running unit tests for mul... "
   - echo $CI_COMMIT_BRANCH
-  - cd $CI_PROJECT_DIR/DEV/calculator/our_mul
+  - cd $CI_PROJECT_DIR/DEV/calculator/our_multiplication
   - pytest
 
