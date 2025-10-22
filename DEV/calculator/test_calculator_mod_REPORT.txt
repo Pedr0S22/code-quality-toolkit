@@ -1,9 +1,9 @@
-============================================================= test session starts ==============================================================
+============================= test session starts =============================
 platform win32 -- Python 3.11.5, pytest-8.4.2, pluggy-1.6.0
-rootdir: C:\Users\pedro\Desktop\Documentos_uni\Cadeiras_Uni\3ºA_1º_Semestre\ES\es2025-pl8\DEV\calculator
+rootdir: C:\Users\pedro\Desktop\Documentos_uni\Cadeiras_Uni\3�A_1�_Semestre\ES\es2025-pl8\DEV\calculator
 plugins: anyio-4.10.0, timeout-2.4.0
-collected 1 item                                                                                                                                 
+collected 1 item
 
-test_calculator.py .                                                                                                                      [100%]
+test_calculator.py .                                                     [100%]
 
-============================================================== 1 passed in 0.10s =============================================================== 
+============================== 1 passed in 0.12s ==============================
