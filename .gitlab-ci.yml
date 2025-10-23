@@ -1,4 +1,5 @@
 # .gitlab_ci.yml (version 1)
+
 image: python:latest
 
 before_script:
@@ -20,3 +21,10 @@ tests_mul:
   - cd $CI_PROJECT_DIR/DEV/calculator/our_multiplication
   - pytest
 
+tests_module:
+  stage: unit_tests
+  script:
+  - echo "Running unit tests for module... "
+  - echo $CI_COMMIT_BRANCH
+  - cd $CI_PROJECT_DIR/DEV/calculator/our_module
+  - pytest
