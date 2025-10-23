@@ -15,7 +15,7 @@ stages: # List of stages for jobs, and their order of execution
 tests_add:
   stage: unit_tests
   script:
-  - echo "Running unit tests for add... "
+  - echo "Running unit tests for our_division... "
   - echo $CI_COMMIT_BRANCH
   - cd $CI_PROJECT_DIR/DEV/calculator/our_division
   - pytest
