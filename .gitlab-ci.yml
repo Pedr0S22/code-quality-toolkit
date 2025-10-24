@@ -12,7 +12,7 @@ stages: # List of stages for jobs, and their order of execution
 
 # **************** UNIT TESTING stage ****************************
 
-tests_add:
+tests_div:
   stage: unit_tests
   script:
   - echo "Running unit tests for our_division... "
