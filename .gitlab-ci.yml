@@ -1,4 +1,5 @@
 # .gitlab_ci.yml (version 1)
+
 image: python:latest
 
 before_script:
