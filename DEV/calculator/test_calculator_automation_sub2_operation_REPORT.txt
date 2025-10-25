@@ -1,0 +1,27 @@
+============================= test session starts =============================
+platform win32 -- Python 3.10.7, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\tiago\es2025-pl8\DEV\calculator
+collected 1 item
+
+test_calculator.py F                                                     [100%]
+
+================================== FAILURES ===================================
+__________________ test_calculator_automation_sub2_operation __________________
+
+    def test_calculator_automation_sub2_operation():
+        import os, sys, subprocess
+        py = sys.executable
+        calc = os.path.join(os.path.dirname(__file__), 'calculator.py')
+        # 7 - 4 = 3 (operação vem primeiro)
+        p = subprocess.run([py, calc, '-', '7', '4'], capture_output=True, text=True)
+        assert p.returncode == 0
+>       assert p.stdout.strip() == '3'
+E       AssertionError: assert '7 - 4 = 3' == '3'
+E         
+E         - 3
+E         + 7 - 4 = 3
+
+test_calculator.py:71: AssertionError
+=========================== short test summary info ===========================
+FAILED test_calculator.py::test_calculator_automation_sub2_operation - Assert...
+============================== 1 failed in 0.18s ==============================

@@ -59,3 +59,13 @@ def test_wrong_nr_inputs():
 
     # Assert the expected output
     assert 'Number of arguments must be exactly three' in result.stdout
+
+
+def test_calculator_automation_sub2_operation():
+    import os, sys, subprocess
+    py = sys.executable
+    calc = os.path.join(os.path.dirname(__file__), 'calculator.py')
+    # 7 - 4 = 3 (operação vem primeiro)
+    p = subprocess.run([py, calc, '-', '7', '4'], capture_output=True, text=True)
+    assert p.returncode == 0
+    assert p.stdout.strip() == '3'
