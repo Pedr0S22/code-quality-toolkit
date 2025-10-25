@@ -13,9 +13,11 @@ stages: # List of stages for jobs, and their order of execution
 
 # **************** UNIT TESTING stage ****************************
 
-tests_integration_calculator:
+tests_sub:
   stage: unit_tests
   script:
-    - echo "Running integration tests for calculator..."
-    - cd $CI_PROJECT_DIR/DEV/calculator
-    - pytest
+  - echo "Running unit tests for sub..."
+  - echo $CI_COMMIT_BRANCH
+  - cd $CI_PROJECT_DIR/DEV/calculator/our_sub
+  - pytest
+
