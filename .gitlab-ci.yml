@@ -76,3 +76,18 @@ coding_style:
   allow_failure: true #default is false;
   only:
     - Equipa_2-Pedr0S22   #this step only runs when the commit occurs in the 41-add branch
+  
+code_complexity:
+  stage: quality
+  before_script:
+    - pip install xenon
+  script:
+    - echo "Checking code complexity... "
+    - echo $CI_COMMIT_BRANCH
+    - xenon -b A -m A -a A --ignore='venv' .
+            # -b A : At least one block has a complexity rank higher than A (i.e. B, C, D, E or F)
+            # -m A : At least one module has a complexity rank higher than A (i.e. B, C, D, E or F)
+            # -a A : Average complexity has rank higher than A (i.e. B , C, D, E or F)
+  allow_failure: true #default is false;
+  only:
+    - Equipa_2-Pedr0S22   #this step only runs when the commit occurs in the 41-add branch
