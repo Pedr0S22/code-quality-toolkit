@@ -18,6 +18,7 @@ from our_module.our_module import our_module
 
 # intentionally leave one blank line before a def so that flake8 detects it (E302)
 
+
 def main():
     # Check number of command line arguments
 
