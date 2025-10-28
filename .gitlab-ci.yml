@@ -18,6 +18,7 @@ stages: # List of stages for jobs, and their order of execution
     - unit_tests
     - quality
     - integration
+    - security
 
 # **************** UNIT TESTING stage ****************************
 
@@ -62,6 +63,7 @@ test_coverage:
     - Equipa_2-Pedr0S22   #this step only runs when the commit occurs in the miacouto branch
   #  - main #this step only runs when the commit occurs in the main trunk
 
+
 # **************** QUALITY stage ****************************
 
 coding_style:
@@ -91,3 +93,19 @@ code_complexity:
   allow_failure: true #default is false;
   only:
     - Equipa_2-Pedr0S22   #this step only runs when the commit occurs in the 41-add branch
+
+
+# **************** SECURITY stage ****************************
+
+security:
+  stage: security
+  before_script:
+    - pip install bandit
+  script:
+    - echo "Running security tests at application level... "
+    - echo $CI_COMMIT_BRANCH
+    - cd $CI_PROJECT_DIR/DEV/calculator/
+    - bandit ./calculator.py
+  only:
+    - Equipa_2-Pedr0S22 #this step only runs when the commit occurs in the main branch
+  allow_failure: false # set to false - security should NEVER be compromised
