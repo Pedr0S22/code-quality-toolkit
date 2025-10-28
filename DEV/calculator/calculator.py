@@ -1,12 +1,12 @@
 import sys   # to be able to read the command line arguments
 
 # Usage: python calculator.py <operation> <integer> <integer>
-# example: python calculator + 2 3 
+# example: python calculator + 2 3
 
 # each operation must be imported from a sub-folder provided by a distinct sub-group originating from their branch.
 from our_add.our_add import our_add
 
-# UNCOMENT aach line below as each sub-group delivers its <operation> 
+# UNCOMENT aach line below as each sub-group delivers its <operation>
 from our_multiplication.our_multiplication import our_multiplication
 from our_sub.our_sub import our_sub
 from our_division.our_division import our_division
@@ -28,7 +28,6 @@ def main():
         operation = sys.argv[1]
         first_arg = sys.argv[2]
         second_arg = sys.argv[3]
-        
         '''
         # uncomment this block for feedback, comment for run-time tests
             print(f"operation: {operation}")
@@ -51,7 +50,6 @@ def main():
         elif operation == '%':
             print(f"{num1} % {num2} = {our_module(num1, num2)}")
             #           print(f"{num1} + {num2} = {our_add(num1, num2)}")
-            
             # add more operations as they are integrated into the main branch
             '''
                 elif operation == '-':
