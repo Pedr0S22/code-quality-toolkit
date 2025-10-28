@@ -4,6 +4,8 @@ The coverage achieved by our tests was 76%. Considering the theoritical componen
 
 # Question 2
 
+In the first few times, the code (calulator.py) does not followed PEP8 guidelines, since we got some extra spaces at the end of some code lines and we had only one blank line before "def main()" and PEP8 guidelines expect tow blank spaces. After correcting all these "problems", the pipeline passed.
+
 # Question 3
 
 # Question 4
