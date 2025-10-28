@@ -16,6 +16,7 @@ before_script:
 
 stages: # List of stages for jobs, and their order of execution
     - unit_tests
+    - quality
     - integration
 
 # **************** UNIT TESTING stage ****************************
@@ -61,4 +62,17 @@ test_coverage:
     - Equipa_2-Pedr0S22   #this step only runs when the commit occurs in the miacouto branch
   #  - main #this step only runs when the commit occurs in the main trunk
 
+# **************** QUALITY stage ****************************
 
+coding_style:
+  stage: quality
+  before_script:
+    - pip install flake8
+  script:
+    - echo "Checking coding style... "
+    - echo $CI_COMMIT_BRANCH
+    - cd $CI_PROJECT_DIR/DEV/calculator
+    - flake8 --max-line-length=120 calculator.py
+  allow_failure: true #default is false;
+  only:
+    - Equipa_2-Pedr0S22   #this step only runs when the commit occurs in the 41-add branch
