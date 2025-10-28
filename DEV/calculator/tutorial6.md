@@ -8,4 +8,6 @@ In the first few times, the code (calulator.py) does not followed PEP8 guideline
 
 # Question 3
 
+At the first time, the average complexity of the code was B rank. Since we had the minimum acceptance of A rank, the pipeline job produced a warning containing this information (not passed). Correcting the gitlab-ci pipeline that garantees the minimum of B rank acceptance, we ensure that the pipeline passes.
+
 # Question 4
