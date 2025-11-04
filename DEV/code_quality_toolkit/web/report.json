@@ -1,0 +1,562 @@
+{
+  "analysis_metadata": {
+    "timestamp": "2025-10-17T14:07:29Z",
+    "tool_version": "0.1.0",
+    "plugins_executed": [
+      "CyclomaticComplexity",
+      "StyleChecker"
+    ],
+    "status": "completed"
+  },
+  "summary": {
+    "total_files": 15,
+    "total_issues": 23,
+    "issues_by_severity": {
+      "info": 7,
+      "low": 12,
+      "medium": 0,
+      "high": 4
+    },
+    "issues_by_plugin": {
+      "CyclomaticComplexity": 4,
+      "StyleChecker": 19
+    },
+    "top_offenders": [
+      {
+        "file": "/Users/charlesgoncalves/Dropbox/Projetos/Hemominas/git_repositories/armazem/hemominas/util/RunCmd.py",
+        "issues": 4
+      },
+      {
+        "file": "/Users/charlesgoncalves/Dropbox/Projetos/Hemominas/git_repositories/armazem/update_T01_hmae.py",
+        "issues": 4
+      },
+      {
+        "file": "/Users/charlesgoncalves/Dropbox/Projetos/Hemominas/git_repositories/armazem/copy_process.py",
+        "issues": 3
+      },
+      {
+        "file": "/Users/charlesgoncalves/Dropbox/Projetos/Hemominas/git_repositories/armazem/hemominas/OracleFacade.py",
+        "issues": 2
+      },
+      {
+        "file": "/Users/charlesgoncalves/Dropbox/Projetos/Hemominas/git_repositories/armazem/hemominas/Unidades.py",
+        "issues": 2
+      }
+    ]
+  },
+  "details": [
+    {
+      "file": "/Users/charlesgoncalves/Dropbox/Projetos/Hemominas/git_repositories/armazem/DWLogger.py",
+      "plugins": [
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        },
+        {
+          "plugin": "StyleChecker",
+          "results": [
+            {
+              "severity": "info",
+              "code": "FILENAME_STYLE",
+              "message": "Nome do ficheiro não segue snake_case.",
+              "line": 1,
+              "col": 1,
+              "hint": "Utilize nomes como sample_module.py"
+            }
+          ],
+          "summary": {
+            "issues_found": 1,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "/Users/charlesgoncalves/Dropbox/Projetos/Hemominas/git_repositories/armazem/copy_process.py",
+      "plugins": [
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        },
+        {
+          "plugin": "StyleChecker",
+          "results": [
+            {
+              "severity": "low",
+              "code": "LINE_LENGTH",
+              "message": "Linha com 124 caracteres",
+              "line": 34,
+              "col": 1,
+              "hint": "Máximo configurado: 88"
+            },
+            {
+              "severity": "low",
+              "code": "LINE_LENGTH",
+              "message": "Linha com 94 caracteres",
+              "line": 183,
+              "col": 1,
+              "hint": "Máximo configurado: 88"
+            },
+            {
+              "severity": "low",
+              "code": "LINE_LENGTH",
+              "message": "Linha com 94 caracteres",
+              "line": 185,
+              "col": 1,
+              "hint": "Máximo configurado: 88"
+            }
+          ],
+          "summary": {
+            "issues_found": 3,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "/Users/charlesgoncalves/Dropbox/Projetos/Hemominas/git_repositories/armazem/dbf2csv.py",
+      "plugins": [
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        },
+        {
+          "plugin": "StyleChecker",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "/Users/charlesgoncalves/Dropbox/Projetos/Hemominas/git_repositories/armazem/hemominas/Dw.py",
+      "plugins": [
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        },
+        {
+          "plugin": "StyleChecker",
+          "results": [
+            {
+              "severity": "info",
+              "code": "FILENAME_STYLE",
+              "message": "Nome do ficheiro não segue snake_case.",
+              "line": 1,
+              "col": 1,
+              "hint": "Utilize nomes como sample_module.py"
+            }
+          ],
+          "summary": {
+            "issues_found": 1,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "/Users/charlesgoncalves/Dropbox/Projetos/Hemominas/git_repositories/armazem/hemominas/OracleFacade.py",
+      "plugins": [
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        },
+        {
+          "plugin": "StyleChecker",
+          "results": [
+            {
+              "severity": "low",
+              "code": "LINE_LENGTH",
+              "message": "Linha com 92 caracteres",
+              "line": 247,
+              "col": 1,
+              "hint": "Máximo configurado: 88"
+            },
+            {
+              "severity": "info",
+              "code": "FILENAME_STYLE",
+              "message": "Nome do ficheiro não segue snake_case.",
+              "line": 1,
+              "col": 1,
+              "hint": "Utilize nomes como sample_module.py"
+            }
+          ],
+          "summary": {
+            "issues_found": 2,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "/Users/charlesgoncalves/Dropbox/Projetos/Hemominas/git_repositories/armazem/hemominas/Unidades.py",
+      "plugins": [
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        },
+        {
+          "plugin": "StyleChecker",
+          "results": [
+            {
+              "severity": "low",
+              "code": "LINE_LENGTH",
+              "message": "Linha com 89 caracteres",
+              "line": 22,
+              "col": 1,
+              "hint": "Máximo configurado: 88"
+            },
+            {
+              "severity": "info",
+              "code": "FILENAME_STYLE",
+              "message": "Nome do ficheiro não segue snake_case.",
+              "line": 1,
+              "col": 1,
+              "hint": "Utilize nomes como sample_module.py"
+            }
+          ],
+          "summary": {
+            "issues_found": 2,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "/Users/charlesgoncalves/Dropbox/Projetos/Hemominas/git_repositories/armazem/hemominas/__init__.py",
+      "plugins": [
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        },
+        {
+          "plugin": "StyleChecker",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "/Users/charlesgoncalves/Dropbox/Projetos/Hemominas/git_repositories/armazem/hemominas/dw_config.py",
+      "plugins": [
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [
+            {
+              "severity": "high",
+              "code": "SYNTAX_ERROR",
+              "message": "Erro de sintaxe: (unicode error) 'unicodeescape' codec can't decode bytes in position 26-27: truncated \\uXXXX escape (<unknown>, line 6)",
+              "line": 6,
+              "col": 14,
+              "hint": "Corrija a sintaxe antes de medir complexidade."
+            }
+          ],
+          "summary": {
+            "issues_found": 1,
+            "status": "partial"
+          }
+        },
+        {
+          "plugin": "StyleChecker",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "/Users/charlesgoncalves/Dropbox/Projetos/Hemominas/git_repositories/armazem/hemominas/util/Misc.py",
+      "plugins": [
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        },
+        {
+          "plugin": "StyleChecker",
+          "results": [
+            {
+              "severity": "info",
+              "code": "FILENAME_STYLE",
+              "message": "Nome do ficheiro não segue snake_case.",
+              "line": 1,
+              "col": 1,
+              "hint": "Utilize nomes como sample_module.py"
+            }
+          ],
+          "summary": {
+            "issues_found": 1,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "/Users/charlesgoncalves/Dropbox/Projetos/Hemominas/git_repositories/armazem/hemominas/util/RunCmd.py",
+      "plugins": [
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [
+            {
+              "severity": "high",
+              "code": "SYNTAX_ERROR",
+              "message": "Erro de sintaxe: Missing parentheses in call to 'print'. Did you mean print(...)? (<unknown>, line 54)",
+              "line": 54,
+              "col": 13,
+              "hint": "Corrija a sintaxe antes de medir complexidade."
+            }
+          ],
+          "summary": {
+            "issues_found": 1,
+            "status": "partial"
+          }
+        },
+        {
+          "plugin": "StyleChecker",
+          "results": [
+            {
+              "severity": "low",
+              "code": "LINE_LENGTH",
+              "message": "Linha com 93 caracteres",
+              "line": 6,
+              "col": 1,
+              "hint": "Máximo configurado: 88"
+            },
+            {
+              "severity": "low",
+              "code": "LINE_LENGTH",
+              "message": "Linha com 101 caracteres",
+              "line": 12,
+              "col": 1,
+              "hint": "Máximo configurado: 88"
+            },
+            {
+              "severity": "info",
+              "code": "FILENAME_STYLE",
+              "message": "Nome do ficheiro não segue snake_case.",
+              "line": 1,
+              "col": 1,
+              "hint": "Utilize nomes como sample_module.py"
+            }
+          ],
+          "summary": {
+            "issues_found": 3,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "/Users/charlesgoncalves/Dropbox/Projetos/Hemominas/git_repositories/armazem/hemominas/util/__init__.py",
+      "plugins": [
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        },
+        {
+          "plugin": "StyleChecker",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "/Users/charlesgoncalves/Dropbox/Projetos/Hemominas/git_repositories/armazem/load_process.py",
+      "plugins": [
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        },
+        {
+          "plugin": "StyleChecker",
+          "results": [
+            {
+              "severity": "low",
+              "code": "LINE_LENGTH",
+              "message": "Linha com 112 caracteres",
+              "line": 33,
+              "col": 1,
+              "hint": "Máximo configurado: 88"
+            }
+          ],
+          "summary": {
+            "issues_found": 1,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "/Users/charlesgoncalves/Dropbox/Projetos/Hemominas/git_repositories/armazem/parse_logs_armazen.py",
+      "plugins": [
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [
+            {
+              "severity": "high",
+              "code": "SYNTAX_ERROR",
+              "message": "Erro de sintaxe: Missing parentheses in call to 'print'. Did you mean print(...)? (<unknown>, line 70)",
+              "line": 70,
+              "col": 3,
+              "hint": "Corrija a sintaxe antes de medir complexidade."
+            }
+          ],
+          "summary": {
+            "issues_found": 1,
+            "status": "partial"
+          }
+        },
+        {
+          "plugin": "StyleChecker",
+          "results": [
+            {
+              "severity": "low",
+              "code": "LINE_LENGTH",
+              "message": "Linha com 102 caracteres",
+              "line": 78,
+              "col": 1,
+              "hint": "Máximo configurado: 88"
+            }
+          ],
+          "summary": {
+            "issues_found": 1,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "/Users/charlesgoncalves/Dropbox/Projetos/Hemominas/git_repositories/armazem/update_T01_hmae.py",
+      "plugins": [
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        },
+        {
+          "plugin": "StyleChecker",
+          "results": [
+            {
+              "severity": "low",
+              "code": "LINE_LENGTH",
+              "message": "Linha com 97 caracteres",
+              "line": 42,
+              "col": 1,
+              "hint": "Máximo configurado: 88"
+            },
+            {
+              "severity": "low",
+              "code": "LINE_LENGTH",
+              "message": "Linha com 114 caracteres",
+              "line": 50,
+              "col": 1,
+              "hint": "Máximo configurado: 88"
+            },
+            {
+              "severity": "low",
+              "code": "LINE_LENGTH",
+              "message": "Linha com 93 caracteres",
+              "line": 69,
+              "col": 1,
+              "hint": "Máximo configurado: 88"
+            },
+            {
+              "severity": "info",
+              "code": "FILENAME_STYLE",
+              "message": "Nome do ficheiro não segue snake_case.",
+              "line": 1,
+              "col": 1,
+              "hint": "Utilize nomes como sample_module.py"
+            }
+          ],
+          "summary": {
+            "issues_found": 4,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "/Users/charlesgoncalves/Dropbox/Projetos/Hemominas/parse_forponto.py",
+      "plugins": [
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [
+            {
+              "severity": "high",
+              "code": "SYNTAX_ERROR",
+              "message": "Erro de sintaxe: Missing parentheses in call to 'print'. Did you mean print(...)? (<unknown>, line 80)",
+              "line": 80,
+              "col": 2,
+              "hint": "Corrija a sintaxe antes de medir complexidade."
+            }
+          ],
+          "summary": {
+            "issues_found": 1,
+            "status": "partial"
+          }
+        },
+        {
+          "plugin": "StyleChecker",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        }
+      ]
+    }
+  ]
+}

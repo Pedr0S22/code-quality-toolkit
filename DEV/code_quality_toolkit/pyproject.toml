@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "code-quality-toolkit"
+version = "0.1.0"
+description = "Plugin-based code quality toolkit for educational use"
+authors = [{name = "UC Software Engineering Teaching Team"}]
+license = {text = "MIT"}
+requires-python = ">=3.11"
+readme = "README.md"
+dependencies = []
+
+[project.scripts]
+toolkit-cli = "toolkit.core.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "mypy>=1.8",
+    "black>=24.4",
+    "ruff>=0.4.0",
+    "typing_extensions>=4.9",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+target-version = ["py311"]
+line-length = 88
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.11"
+files = "src/toolkit"
+strict = true
+warn_unused_ignores = true
+allow_subclassing_any = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+branch = true
+source = ["toolkit"]

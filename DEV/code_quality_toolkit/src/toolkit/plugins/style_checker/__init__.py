@@ -1,0 +1,1 @@
+"""Style checker plugin package."""
