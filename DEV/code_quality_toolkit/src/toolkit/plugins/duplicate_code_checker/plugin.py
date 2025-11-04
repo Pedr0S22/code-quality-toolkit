@@ -20,4 +20,7 @@ class Plugin:
             "description": "Plugin que procura por codigo duplicado.",
         }
 
+    def analyze(self, source_code: str, file_path: str | None) -> Dict[str, Any]:
+        # TODO
+        return { "results": "" }
 
