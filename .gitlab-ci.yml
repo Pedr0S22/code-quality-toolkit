@@ -1,7 +1,7 @@
 image: python:3.12
 
 variables:
-  MAKEFILE_PATH: "DEV/code_quality_toolkit/web/Makefile"
+  MAKEFILE_PATH: "DEV/code_quality_toolkit/Makefile"
   PYTEST_ADDOPTS: "-q -o junit_family=xunit2 --junitxml=reports/junit.xml --cov=. --cov-report=term --cov-report=xml:reports/coverage.xml --cov-report=html:htmlcov"
 
 cache:
