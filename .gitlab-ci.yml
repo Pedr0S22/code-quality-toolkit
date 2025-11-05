@@ -1,6 +1,6 @@
 # .gitlab_ci.yml (version 5 -- add security checks)
 
-image: python:latest
+image: python:3.12
 
 
 variables:
