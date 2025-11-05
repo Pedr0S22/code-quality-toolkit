@@ -1,4 +1,4 @@
-# .gitlab-ci.yml — usa Makefile (ruff/black/mypy/pytest) con venv local
+# .gitlab-ci.yml — Makefile + venv (.venv) + ruff/mypy/pytest
 
 image: python:3.12
 
@@ -6,7 +6,6 @@ variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
   VENV: ".venv"
   BIN: ".venv/bin"
-  # Pasamos opciones a pytest sin tocar tu Makefile
   PYTEST_ADDOPTS: "-q -o junit_family=xunit2 --junitxml=reports/junit.xml --cov=. --cov-report=term --cov-report=xml:reports/coverage.xml --cov-report=html:htmlcov"
 
 cache:
@@ -21,28 +20,21 @@ stages:
   - coverage
   - analyze
 
-# Anchor para instalar dependencias vía tu Makefile
-.default_setup: &default_setup
-  - python --version
-  - pip install --upgrade pip
-  # make puede no estar en la imagen base
-  - apt-get update && apt-get install -y make > /dev/null
-  # Instala todo con tu Makefile (crea venv + extras [dev])
-  - make setup
-  # Fallback (por si [dev] no trae herramientas)
-  - |
-    if [ ! -x "$BIN/ruff" ] || [ ! -x "$BIN/black" ] || [ ! -x "$BIN/mypy" ] || [ ! -x "$BIN/pytest" ]; then
-      $BIN/pip install ruff black mypy pytest pytest-cov
-    fi
-  - echo "Branch: $CI_COMMIT_BRANCH  Dir: $CI_PROJECT_DIR"
-
 # ---------- LINT ----------
-lint:
+lint_ruff:
   stage: lint
-  before_script: *default_setup
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - apt-get update && apt-get install -y make > /dev/null
+    - make setup
+    - |
+      if [ ! -x "$BIN/ruff" ] || [ ! -x "$BIN/black" ] || [ ! -x "$BIN/mypy" ] || [ ! -x "$BIN/pytest" ]; then
+        $BIN/pip install ruff black mypy pytest pytest-cov
+      fi
   script:
-    - make lint            # ejecuta: $BIN/ruff check src tests
-  allow_failure: true      # ponlo en false si quieres bloquear por lint
+    - make lint          # ruff check src tests
+  allow_failure: true
   artifacts:
     when: always
     paths:
@@ -51,12 +43,20 @@ lint:
     - if: $CI_PIPELINE_SOURCE == "push"
 
 # ---------- TYPECHECK ----------
-typecheck:
+typecheck_mypy:
   stage: typecheck
-  before_script: *default_setup
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - apt-get update && apt-get install -y make > /dev/null
+    - make setup
+    - |
+      if [ ! -x "$BIN/mypy" ]; then
+        $BIN/pip install mypy
+      fi
   script:
-    - make typecheck       # ejecuta: $BIN/mypy src/toolkit
-  allow_failure: true      # opcional
+    - make typecheck     # mypy src/toolkit
+  allow_failure: true
   artifacts:
     when: always
     paths:
@@ -64,12 +64,20 @@ typecheck:
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
 
-# ---------- UNIT TESTS (repo completo) ----------
-tests:unit:
+# ---------- UNIT TESTS ----------
+tests_unit:
   stage: unit
-  before_script: *default_setup
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - apt-get update && apt-get install -y make > /dev/null
+    - make setup
+    - |
+      if [ ! -x "$BIN/pytest" ]; then
+        $BIN/pip install pytest pytest-cov
+      fi
   script:
-    - make test            # ejecuta: $BIN/pytest (con PYTEST_ADDOPTS)
+    - make test          # pytest (usa PYTEST_ADDOPTS)
   artifacts:
     when: always
     reports:
@@ -81,11 +89,19 @@ tests:unit:
     - if: $CI_COMMIT_BRANCH == "main"
 
 # ---------- COVERAGE ----------
-coverage:report:
+coverage_report:
   stage: coverage
-  before_script: *default_setup
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - apt-get update && apt-get install -y make > /dev/null
+    - make setup
+    - |
+      if [ ! -x "$BIN/pytest" ]; then
+        $BIN/pip install pytest pytest-cov
+      fi
   script:
-    - make test            # reutilizamos para generar cobertura (PYTEST_ADDOPTS)
+    - make test          # genera coverage.xml y htmlcov/ por PYTEST_ADDOPTS
   artifacts:
     when: always
     reports:
@@ -98,12 +114,16 @@ coverage:report:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
 
-# ---------- ANALYZE (genera report.json del toolkit) ----------
-analyze:
+# ---------- ANALYZE (toolkit) ----------
+analyze_toolkit:
   stage: analyze
-  before_script: *default_setup
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - apt-get update && apt-get install -y make > /dev/null
+    - make setup
   script:
-    - make report          # ejecuta: run → toolkit.core.cli analyze ... --out report.json
+    - make report        # python -m toolkit.core.cli analyze ... --out report.json
   artifacts:
     when: always
     paths:
