@@ -18,14 +18,14 @@ before_script:
 
 stages: # List of stages for jobs, and their order of execution
     - unit_tests
-    # - quality
+    - quality
     # - integration
     # - security
 
 
 # **************** UNIT TESTING stage ****************************
 
-tests_add:
+unit_tests:
   stage: unit_tests
   script:
     - echo "Running unit tests for add... "
@@ -37,18 +37,13 @@ tests_add:
 
 # # **************** QUALITY stage ****************************
 
-# coding_style:
-#   stage: quality
-#   before_script:
-#     - pip install flake8
-#   script:
-#     - echo "Checking coding style... "
-#     - echo $CI_COMMIT_BRANCH
-#     - cd $CI_PROJECT_DIR/DEV/calculator
-#     - flake8 --max-line-length=120 calculator.py
-#   allow_failure: true #default is false;
-#   only:
-#     - 41-add   #this step only runs when the commit occurs in the 41-add branch
+lint_code:
+  stage: quality
+  script:
+    - echo "Checking coding style... "
+    - echo $CI_COMMIT_BRANCH
+    - make lint
+  allow_failure: true #default is false;
 
 # code_complexity:
 #   stage: quality
