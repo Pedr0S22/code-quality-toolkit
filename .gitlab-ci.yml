@@ -1,117 +1,113 @@
-image: python:3.12
+# .gitlab_ci.yml (version 5 -- add security checks)
+
+image: python:latest
+
 
 variables:
-  APP_DIR: "DEV/code_quality_toolkit"   # ← carpeta donde está tu Makefile y pyproject
-  PYTEST_ADDOPTS: "-q -o junit_family=xunit2 --junitxml=reports/junit.xml --cov=. --cov-report=term --cov-report=xml:reports/coverage.xml --cov-report=html:htmlcov"
+    BUILD_TYPE: draft # you can change e.g. to release when the time comes
 
-cache:
-  paths:
-    - .venv
-    - .cache/pip
-
-stages:
-  - debug
-  - lint
-  - typecheck
-  - unit
-  - coverage
-  - analyze
-
-debug_workspace:
-  stage: debug
-  script:
+before_script:
+    - python --version
+    - echo "Hello, $GITLAB_USER_LOGIN!"
+    - echo $REPO_NAME
+    - echo $CI_COMMIT_BRANCH
+    - echo $CI_PROJECT_DIR
+    - cd $CI_PROJECT_DIR/DEV/code_quality_toolkit
+    - make setup
     - pwd
-    - ls -la
-    - echo "Checking $APP_DIR"
-    - test -f "$APP_DIR/Makefile" || (echo "FALTA $APP_DIR/Makefile" && exit 1)
-    - find . -maxdepth 3 -type f -name pyproject.toml -o -name setup.cfg -o -name setup.py
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "push"
 
-lint_ruff:
-  stage: lint
-  before_script:
-    - python --version
-    - pip install --upgrade pip
-    - apt-get update -y && apt-get install -y make
-    - make -C "$APP_DIR" setup
-  script:
-    - make -C "$APP_DIR" lint           # ruff check src tests
-  allow_failure: true
-  artifacts:
-    when: always
-    paths:
-      - $APP_DIR/.ruff_cache/
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "push"
+stages: # List of stages for jobs, and their order of execution
+    - unit_tests
+    # - quality
+    # - integration
+    # - security
 
-typecheck_mypy:
-  stage: typecheck
-  before_script:
-    - python --version
-    - pip install --upgrade pip
-    - apt-get update -y && apt-get install -y make
-    - make -C "$APP_DIR" setup
-  script:
-    - make -C "$APP_DIR" typecheck      # mypy src/toolkit
-  allow_failure: true
-  artifacts:
-    when: always
-    paths:
-      - $APP_DIR/.mypy_cache/
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "push"
 
-tests_unit:
-  stage: unit
-  before_script:
-    - python --version
-    - pip install --upgrade pip
-    - apt-get update -y && apt-get install -y make
-    - make -C "$APP_DIR" setup
-    - mkdir -p "$APP_DIR/reports"
-  script:
-    - make -C "$APP_DIR" test           # pytest (usa PYTEST_ADDOPTS)
-  artifacts:
-    when: always
-    reports:
-      junit: $APP_DIR/reports/junit.xml
-    paths:
-      - $APP_DIR/reports/
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "push"
-    - if: $CI_COMMIT_BRANCH == "main"
+# **************** UNIT TESTING stage ****************************
 
-coverage_report:
-  stage: coverage
-  before_script:
-    - python --version
-    - pip install --upgrade pip
-    - apt-get update -y && apt-get install -y make
-    - make -C "$APP_DIR" setup
-    - mkdir -p "$APP_DIR/reports"
+tests_add:
+  stage: unit_tests
   script:
-    - make -C "$APP_DIR" test           # genera coverage.xml y htmlcov/ por PYTEST_ADDOPTS
-  artifacts:
-    when: always
-    paths:
-      - $APP_DIR/htmlcov/
-      - $APP_DIR/reports/coverage.xml
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+    - echo "Running unit tests for add... "
+    - echo $CI_COMMIT_BRANCH
+    - make test
+#  only:
+#    - 41-add   #this step only runs when the commit occurs in the 41-add branch
 
-analyze_toolkit:
-  stage: analyze
-  before_script:
-    - python --version
-    - pip install --upgrade pip
-    - apt-get update -y && apt-get install -y make
-    - make -C "$APP_DIR" setup
-  script:
-    - make -C "$APP_DIR" report         # genera report.json en la subcarpeta
-  artifacts:
-    when: always
-    paths:
-      - $APP_DIR/report.json
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+
+# # **************** QUALITY stage ****************************
+
+# coding_style:
+#   stage: quality
+#   before_script:
+#     - pip install flake8
+#   script:
+#     - echo "Checking coding style... "
+#     - echo $CI_COMMIT_BRANCH
+#     - cd $CI_PROJECT_DIR/DEV/calculator
+#     - flake8 --max-line-length=120 calculator.py
+#   allow_failure: true #default is false;
+#   only:
+#     - 41-add   #this step only runs when the commit occurs in the 41-add branch
+
+# code_complexity:
+#   stage: quality
+#   before_script:
+#     - pip install xenon
+#   script:
+#     - echo "Checking code complexity... "
+#     - echo $CI_COMMIT_BRANCH
+#     - xenon -b A -m A -a A --ignore='venv' . 
+#             # -b A : At least one block has a complexity rank higher than A (i.e. B, C, D, E or F)
+#             # -m A : At least one module has a complexity rank higher than A (i.e. B, C, D, E or F)
+#             # -a A : Average complexity has rank higher than A (i.e. B , C, D, E or F)
+#   allow_failure: true #default is false;
+#   only:
+#     - 41-add   #this step only runs when the commit occurs in the 41-add branch
+
+# # **************** INTEGRATION stage ****************************
+
+# integration:
+#   stage: integration
+#   script:
+#     - echo "Running integration tests at calculator level... "
+#     - echo $CI_COMMIT_BRANCH
+#     - cd $CI_PROJECT_DIR/DEV/calculator/
+#     - pytest test_calculator.py
+#   only:
+#   #  - 41-add   #this step only runs when the commit occurs in the 41-add branch
+#     - main #this step only runs when the commit occurs in the main trunk
+
+# test_coverage:
+#   stage: integration
+#   before_script:
+#     - pip install pytest pytest-cov
+#   script:
+#   - echo "Assessing test coverage... "
+#   - echo $CI_COMMIT_BRANCH
+#   - cd $CI_PROJECT_DIR/DEV/calculator/
+#   - pytest --cov=. --cov-report=html --cov-report=term # report goes to terminal and htmlcov → open 'index.html' in a browser
+#   artifacts:
+#     paths:
+#       - $CI_PROJECT_DIR/DEV/calculator/htmlcov/ # Preserve the html coverage files as an artifact
+#     expire_in: 1 day  # (Optional) Specify how long to keep the artifact
+#     # (e.g., 1 week, 1 day, never).
+#   only:
+#   #  - 41-add   #this step only runs when the commit occurs in the 41-add branch
+#     - main #this step only runs when the commit occurs in the main trunk
+
+
+# # **************** SECURITY stage ****************************
+
+# security:
+#   stage: security
+#   before_script:
+#     - pip install bandit
+#   script:
+#     - echo "Running security tests at application level... "
+#     - echo $CI_COMMIT_BRANCH
+#     - cd $CI_PROJECT_DIR/DEV/calculator/
+#     - bandit ./calculator.py   
+#   only:
+#     - main #this step only runs when the commit occurs in the main branch
+#   allow_failure: false # set to false - security should NEVER be compromised
