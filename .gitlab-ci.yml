@@ -1,7 +1,7 @@
 image: python:3.12
 
 variables:
-  MAKEFILE_PATH: "DEV/code_quality_toolkit/Makefile"
+  APP_DIR: "DEV/code_quality_toolkit"   # ← carpeta donde está tu Makefile y pyproject
   PYTEST_ADDOPTS: "-q -o junit_family=xunit2 --junitxml=reports/junit.xml --cov=. --cov-report=term --cov-report=xml:reports/coverage.xml --cov-report=html:htmlcov"
 
 cache:
@@ -17,112 +17,101 @@ stages:
   - coverage
   - analyze
 
-# --- DEBUG: valida que el Makefile esté donde esperas ---
 debug_workspace:
   stage: debug
   script:
     - pwd
     - ls -la
-    - echo "MAKEFILE_PATH=$MAKEFILE_PATH"
-    - test -f "$MAKEFILE_PATH" || (echo "FALTA $MAKEFILE_PATH" && exit 1)
-    - find . -maxdepth 2 -type d -print
+    - echo "Checking $APP_DIR"
+    - test -f "$APP_DIR/Makefile" || (echo "FALTA $APP_DIR/Makefile" && exit 1)
+    - find . -maxdepth 3 -type f -name pyproject.toml -o -name setup.cfg -o -name setup.py
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
 
-# --- LINT (ruff) ---
 lint_ruff:
   stage: lint
   before_script:
     - python --version
     - pip install --upgrade pip
-    - apt-get update -y
-    - apt-get install -y make
-    - make -f "$MAKEFILE_PATH" setup
+    - apt-get update -y && apt-get install -y make
+    - make -C "$APP_DIR" setup
   script:
-    - make -f "$MAKEFILE_PATH" lint
+    - make -C "$APP_DIR" lint           # ruff check src tests
   allow_failure: true
   artifacts:
     when: always
     paths:
-      - .ruff_cache/
+      - $APP_DIR/.ruff_cache/
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
 
-# --- TYPECHECK (mypy) ---
 typecheck_mypy:
   stage: typecheck
   before_script:
     - python --version
     - pip install --upgrade pip
-    - apt-get update -y
-    - apt-get install -y make
-    - make -f "$MAKEFILE_PATH" setup
+    - apt-get update -y && apt-get install -y make
+    - make -C "$APP_DIR" setup
   script:
-    - make -f "$MAKEFILE_PATH" typecheck
+    - make -C "$APP_DIR" typecheck      # mypy src/toolkit
   allow_failure: true
   artifacts:
     when: always
     paths:
-      - .mypy_cache/
+      - $APP_DIR/.mypy_cache/
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
 
-# --- UNIT TESTS ---
 tests_unit:
   stage: unit
   before_script:
     - python --version
     - pip install --upgrade pip
-    - apt-get update -y
-    - apt-get install -y make
-    - make -f "$MAKEFILE_PATH" setup
-    - mkdir -p reports
+    - apt-get update -y && apt-get install -y make
+    - make -C "$APP_DIR" setup
+    - mkdir -p "$APP_DIR/reports"
   script:
-    - make -f "$MAKEFILE_PATH" test
+    - make -C "$APP_DIR" test           # pytest (usa PYTEST_ADDOPTS)
   artifacts:
     when: always
     reports:
-      junit: reports/junit.xml
+      junit: $APP_DIR/reports/junit.xml
     paths:
-      - reports/
+      - $APP_DIR/reports/
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
     - if: $CI_COMMIT_BRANCH == "main"
 
-# --- COVERAGE (HTML + Cobertura) ---
 coverage_report:
   stage: coverage
   before_script:
     - python --version
     - pip install --upgrade pip
-    - apt-get update -y
-    - apt-get install -y make
-    - make -f "$MAKEFILE_PATH" setup
-    - mkdir -p reports
+    - apt-get update -y && apt-get install -y make
+    - make -C "$APP_DIR" setup
+    - mkdir -p "$APP_DIR/reports"
   script:
-    - make -f "$MAKEFILE_PATH" test
+    - make -C "$APP_DIR" test           # genera coverage.xml y htmlcov/ por PYTEST_ADDOPTS
   artifacts:
     when: always
     paths:
-      - htmlcov/
-      - reports/coverage.xml
+      - $APP_DIR/htmlcov/
+      - $APP_DIR/reports/coverage.xml
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
 
-# --- ANALYZE (toolkit → report.json) ---
 analyze_toolkit:
   stage: analyze
   before_script:
     - python --version
     - pip install --upgrade pip
-    - apt-get update -y
-    - apt-get install -y make
-    - make -f "$MAKEFILE_PATH" setup
+    - apt-get update -y && apt-get install -y make
+    - make -C "$APP_DIR" setup
   script:
-    - make -f "$MAKEFILE_PATH" report
+    - make -C "$APP_DIR" report         # genera report.json en la subcarpeta
   artifacts:
     when: always
     paths:
-      - report.json
+      - $APP_DIR/report.json
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
