@@ -100,5 +100,5 @@ security:
   script:
     - echo "Running security tests at application level... "
     - echo $CI_COMMIT_BRANCH
-    - bandit -r ./src   
+    - bandit -r $CI_PROJECT_DIR/DEV/code_quality_toolkit/src   
   allow_failure: false # set to false - security should NEVER be compromised
