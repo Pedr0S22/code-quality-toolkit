@@ -1,0 +1,112 @@
+# .gitlab-ci.yml — usa Makefile (ruff/black/mypy/pytest) con venv local
+
+image: python:3.12
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  VENV: ".venv"
+  BIN: ".venv/bin"
+  # Pasamos opciones a pytest sin tocar tu Makefile
+  PYTEST_ADDOPTS: "-q -o junit_family=xunit2 --junitxml=reports/junit.xml --cov=. --cov-report=term --cov-report=xml:reports/coverage.xml --cov-report=html:htmlcov"
+
+cache:
+  paths:
+    - .cache/pip
+    - .venv
+
+stages:
+  - lint
+  - typecheck
+  - unit
+  - coverage
+  - analyze
+
+# Anchor para instalar dependencias vía tu Makefile
+.default_setup: &default_setup
+  - python --version
+  - pip install --upgrade pip
+  # make puede no estar en la imagen base
+  - apt-get update && apt-get install -y make > /dev/null
+  # Instala todo con tu Makefile (crea venv + extras [dev])
+  - make setup
+  # Fallback (por si [dev] no trae herramientas)
+  - |
+    if [ ! -x "$BIN/ruff" ] || [ ! -x "$BIN/black" ] || [ ! -x "$BIN/mypy" ] || [ ! -x "$BIN/pytest" ]; then
+      $BIN/pip install ruff black mypy pytest pytest-cov
+    fi
+  - echo "Branch: $CI_COMMIT_BRANCH  Dir: $CI_PROJECT_DIR"
+
+# ---------- LINT ----------
+lint:
+  stage: lint
+  before_script: *default_setup
+  script:
+    - make lint            # ejecuta: $BIN/ruff check src tests
+  allow_failure: true      # ponlo en false si quieres bloquear por lint
+  artifacts:
+    when: always
+    paths:
+      - .ruff_cache/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+
+# ---------- TYPECHECK ----------
+typecheck:
+  stage: typecheck
+  before_script: *default_setup
+  script:
+    - make typecheck       # ejecuta: $BIN/mypy src/toolkit
+  allow_failure: true      # opcional
+  artifacts:
+    when: always
+    paths:
+      - .mypy_cache/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+
+# ---------- UNIT TESTS (repo completo) ----------
+tests:unit:
+  stage: unit
+  before_script: *default_setup
+  script:
+    - make test            # ejecuta: $BIN/pytest (con PYTEST_ADDOPTS)
+  artifacts:
+    when: always
+    reports:
+      junit: reports/junit.xml
+    paths:
+      - reports/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_COMMIT_BRANCH == "main"
+
+# ---------- COVERAGE ----------
+coverage:report:
+  stage: coverage
+  before_script: *default_setup
+  script:
+    - make test            # reutilizamos para generar cobertura (PYTEST_ADDOPTS)
+  artifacts:
+    when: always
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: reports/coverage.xml
+    paths:
+      - htmlcov/
+      - reports/coverage.xml
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+
+# ---------- ANALYZE (genera report.json del toolkit) ----------
+analyze:
+  stage: analyze
+  before_script: *default_setup
+  script:
+    - make report          # ejecuta: run → toolkit.core.cli analyze ... --out report.json
+  artifacts:
+    when: always
+    paths:
+      - report.json
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
