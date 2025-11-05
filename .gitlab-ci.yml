@@ -64,6 +64,7 @@ integration:
   script:
     - echo "Running integration tests ... "
     - echo $CI_COMMIT_BRANCH
+    - cd $CI_PROJECT_DIR/DEV/code_quality_toolkit/
     - pytest tests/
 
 test_coverage:
