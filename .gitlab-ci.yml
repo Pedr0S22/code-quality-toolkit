@@ -20,7 +20,7 @@ stages: # List of stages for jobs, and their order of execution
     - unit_tests
     - quality
     # - integration
-    # - security
+    - security
 
 
 # **************** UNIT TESTING stage ****************************
@@ -52,7 +52,7 @@ code_complexity:
   script:
     - echo "Checking code complexity... "
     - echo $CI_COMMIT_BRANCH
-    - xenon -b B -m B -a B --ignore='venv' . 
+    - xenon -b C -m C -a C --ignore='venv' . 
             # -b A : At least one block has a complexity rank higher than A (i.e. B, C, D, E or F)
             # -m A : At least one module has a complexity rank higher than A (i.e. B, C, D, E or F)
             # -a A : Average complexity has rank higher than A (i.e. B , C, D, E or F)
@@ -93,15 +93,12 @@ code_complexity:
 
 # # **************** SECURITY stage ****************************
 
-# security:
-#   stage: security
-#   before_script:
-#     - pip install bandit
-#   script:
-#     - echo "Running security tests at application level... "
-#     - echo $CI_COMMIT_BRANCH
-#     - cd $CI_PROJECT_DIR/DEV/calculator/
-#     - bandit ./calculator.py   
-#   only:
-#     - main #this step only runs when the commit occurs in the main branch
-#   allow_failure: false # set to false - security should NEVER be compromised
+security:
+  stage: security
+  before_script:
+    - pip install bandit
+  script:
+    - echo "Running security tests at application level... "
+    - echo $CI_COMMIT_BRANCH
+    - bandit -r .   
+  allow_failure: false # set to false - security should NEVER be compromised
