@@ -1,4 +1,4 @@
-# .gitlab-ci.yml — Makefile + venv (.venv) + ruff/mypy/pytest
+# .gitlab-ci.yml — usar Makefile ubicado en subcarpeta (invocado con -f)
 
 image: python:3.12
 
@@ -6,6 +6,9 @@ variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
   VENV: ".venv"
   BIN: ".venv/bin"
+  # ⬇⬇⬇ CAMBIA ESTA RUTA a donde está tu Makefile
+  MAKEFILE_PATH: "DEV/code_quality_toolkit/Makefile"
+  # Cobertura/JUnit para pytest lanzado vía make test
   PYTEST_ADDOPTS: "-q -o junit_family=xunit2 --junitxml=reports/junit.xml --cov=. --cov-report=term --cov-report=xml:reports/coverage.xml --cov-report=html:htmlcov"
 
 cache:
@@ -13,120 +16,91 @@ cache:
     - .cache/pip
     - .venv
 
-stages:
-  - lint
-  - typecheck
-  - unit
-  - coverage
-  - analyze
+stages: [ lint, typecheck, unit, coverage, analyze ]
 
-# ---------- LINT ----------
+.setup: &setup
+  - python --version
+  - pip install --upgrade pip
+  - apt-get update && apt-get install -y make > /dev/null
+  # Usa tu Makefile si existe; si no, hace fallback para no romper
+  - |
+    if [ -f "$MAKEFILE_PATH" ]; then
+      echo ">>> Using Makefile at $MAKEFILE_PATH"
+      make -f "$MAKEFILE_PATH" setup
+    else
+      echo ">>> Fallback setup (Makefile not found at $MAKEFILE_PATH)"
+      python -m venv .venv
+      .venv/bin/pip install --upgrade pip
+      if [ -f requirements-dev.txt ]; then
+        .venv/bin/pip install -r requirements-dev.txt
+      elif [ -f requirements.txt ]; then
+        .venv/bin/pip install -r requirements.txt
+      else
+        .venv/bin/pip install ruff black mypy pytest pytest-cov
+      fi
+    fi
+  - echo "PWD: $(pwd)"; ls -la
+
 lint_ruff:
   stage: lint
-  before_script:
-    - python --version
-    - pip install --upgrade pip
-    - apt-get update && apt-get install -y make > /dev/null
-    - make setup
-    - |
-      if [ ! -x "$BIN/ruff" ] || [ ! -x "$BIN/black" ] || [ ! -x "$BIN/mypy" ] || [ ! -x "$BIN/pytest" ]; then
-        $BIN/pip install ruff black mypy pytest pytest-cov
-      fi
+  before_script: *setup
   script:
-    - make lint          # ruff check src tests
+    - if [ -f "$MAKEFILE_PATH" ]; then make -f "$MAKEFILE_PATH" lint; else .venv/bin/ruff check src tests; fi
   allow_failure: true
   artifacts:
     when: always
-    paths:
-      - .ruff_cache/
+    paths: [ .ruff_cache/ ]
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
 
-# ---------- TYPECHECK ----------
 typecheck_mypy:
   stage: typecheck
-  before_script:
-    - python --version
-    - pip install --upgrade pip
-    - apt-get update && apt-get install -y make > /dev/null
-    - make setup
-    - |
-      if [ ! -x "$BIN/mypy" ]; then
-        $BIN/pip install mypy
-      fi
+  before_script: *setup
   script:
-    - make typecheck     # mypy src/toolkit
+    - if [ -f "$MAKEFILE_PATH" ]; then make -f "$MAKEFILE_PATH" typecheck; else .venv/bin/mypy src/toolkit; fi
   allow_failure: true
   artifacts:
     when: always
-    paths:
-      - .mypy_cache/
+    paths: [ .mypy_cache/ ]
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
 
-# ---------- UNIT TESTS ----------
 tests_unit:
   stage: unit
-  before_script:
-    - python --version
-    - pip install --upgrade pip
-    - apt-get update && apt-get install -y make > /dev/null
-    - make setup
-    - |
-      if [ ! -x "$BIN/pytest" ]; then
-        $BIN/pip install pytest pytest-cov
-      fi
+  before_script: *setup
   script:
-    - make test          # pytest (usa PYTEST_ADDOPTS)
+    - if [ -f "$MAKEFILE_PATH" ]; then make -f "$MAKEFILE_PATH" test; else .venv/bin/pytest; fi
   artifacts:
     when: always
     reports:
       junit: reports/junit.xml
-    paths:
-      - reports/
+    paths: [ reports/ ]
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
     - if: $CI_COMMIT_BRANCH == "main"
 
-# ---------- COVERAGE ----------
 coverage_report:
   stage: coverage
-  before_script:
-    - python --version
-    - pip install --upgrade pip
-    - apt-get update && apt-get install -y make > /dev/null
-    - make setup
-    - |
-      if [ ! -x "$BIN/pytest" ]; then
-        $BIN/pip install pytest pytest-cov
-      fi
+  before_script: *setup
   script:
-    - make test          # genera coverage.xml y htmlcov/ por PYTEST_ADDOPTS
+    - if [ -f "$MAKEFILE_PATH" ]; then make -f "$MAKEFILE_PATH" test; else .venv/bin/pytest; fi
   artifacts:
     when: always
     reports:
       coverage_report:
         coverage_format: cobertura
         path: reports/coverage.xml
-    paths:
-      - htmlcov/
-      - reports/coverage.xml
+    paths: [ htmlcov/, reports/coverage.xml ]
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
 
-# ---------- ANALYZE (toolkit) ----------
 analyze_toolkit:
   stage: analyze
-  before_script:
-    - python --version
-    - pip install --upgrade pip
-    - apt-get update && apt-get install -y make > /dev/null
-    - make setup
+  before_script: *setup
   script:
-    - make report        # python -m toolkit.core.cli analyze ... --out report.json
+    - if [ -f "$MAKEFILE_PATH" ]; then make -f "$MAKEFILE_PATH" report; else .venv/bin/python -m toolkit.core.cli analyze examples/sample_project --out report.json; fi
   artifacts:
     when: always
-    paths:
-      - report.json
+    paths: [ report.json ]
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
