@@ -4,7 +4,7 @@ variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
   VENV: ".venv"
   BIN: ".venv/bin"
-  MAKEFILE_PATH: "DEV/code_quality_toolkit/Makefile"
+  MAKEFILE_PATH: "DEV/code_quality_toolkit/web/Makefile"
   PYTEST_ADDOPTS: "-q -o junit_family=xunit2 --junitxml=reports/junit.xml --cov=. --cov-report=term --cov-report=xml:reports/coverage.xml --cov-report=html:htmlcov"
 
 cache:
@@ -119,6 +119,132 @@ analyze_toolkit:
   extends: .setup_job
   script:
     - make -f "$MAKEFILE_PATH" report || .venv/bin/python -m toolkit.core.cli analyze examples/sample_project --out report.json
+  artifacts:
+    when: always
+    paths:
+      - report.json
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+image: python:3.12
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  # ⬇⬇⬇ Ruta RELATIVA dentro del repo al Makefile (no uses C:\...):
+  MAKEFILE_PATH: "DEV/code_quality_toolkit/Makefile"
+  # Pytest recogerá esto aunque lo invoques con make
+  PYTEST_ADDOPTS: "-q -o junit_family=xunit2 --junitxml=reports/junit.xml --cov=. --cov-report=term --cov-report=xml:reports/coverage.xml --cov-report=html:htmlcov"
+
+cache:
+  paths:
+    - .cache/pip
+    - .venv
+
+stages:
+  - debug
+  - lint
+  - typecheck
+  - unit
+  - coverage
+  - analyze
+
+# --- DEBUG opcional para validar rutas ---
+debug_workspace:
+  stage: debug
+  script:
+    - "pwd"
+    - "ls -la"
+    - "echo MAKEFILE_PATH=$MAKEFILE_PATH"
+    - 'test -f "$MAKEFILE_PATH" && echo "OK: existe $MAKEFILE_PATH" || (echo "FALTA: $MAKEFILE_PATH" && exit 1)'
+    - "find . -maxdepth 2 -type d -print"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+
+# --- LINT (ruff) ---
+lint_ruff:
+  stage: lint
+  before_script:
+    - "python --version"
+    - "pip install --upgrade pip"
+    - "apt-get update -y && apt-get install -y make"
+    - "make -f \"$MAKEFILE_PATH\" setup || (echo 'Fallback setup' && python -m venv .venv && .venv/bin/pip install --upgrade pip && (.venv/bin/pip install -r requirements-dev.txt || .venv/bin/pip install -r requirements.txt || .venv/bin/pip install ruff black mypy pytest pytest-cov))"
+  script:
+    - "make -f \"$MAKEFILE_PATH\" lint || .venv/bin/ruff check src tests"
+  allow_failure: true
+  artifacts:
+    when: always
+    paths:
+      - .ruff_cache/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+
+# --- TYPECHECK (mypy) ---
+typecheck_mypy:
+  stage: typecheck
+  before_script:
+    - "python --version"
+    - "pip install --upgrade pip"
+    - "apt-get update -y && apt-get install -y make"
+    - "make -f \"$MAKEFILE_PATH\" setup || (echo 'Fallback setup' && python -m venv .venv && .venv/bin/pip install --upgrade pip && (.venv/bin/pip install -r requirements-dev.txt || .venv/bin/pip install -r requirements.txt || .venv/bin/pip install ruff black mypy pytest pytest-cov))"
+  script:
+    - "make -f \"$MAKEFILE_PATH\" typecheck || .venv/bin/mypy src/toolkit"
+  allow_failure: true
+  artifacts:
+    when: always
+    paths:
+      - .mypy_cache/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+
+# --- UNIT TESTS ---
+tests_unit:
+  stage: unit
+  before_script:
+    - "python --version"
+    - "pip install --upgrade pip"
+    - "apt-get update -y && apt-get install -y make"
+    - "make -f \"$MAKEFILE_PATH\" setup || (echo 'Fallback setup' && python -m venv .venv && .venv/bin/pip install --upgrade pip && (.venv/bin/pip install -r requirements-dev.txt || .venv/bin/pip install -r requirements.txt || .venv/bin/pip install ruff black mypy pytest pytest-cov))"
+    - "mkdir -p reports"
+  script:
+    - "make -f \"$MAKEFILE_PATH\" test || .venv/bin/pytest"
+  artifacts:
+    when: always
+    reports:
+      junit: reports/junit.xml
+    paths:
+      - reports/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_COMMIT_BRANCH == "main"
+
+# --- COVERAGE (HTML + Cobertura) ---
+coverage_report:
+  stage: coverage
+  before_script:
+    - "python --version"
+    - "pip install --upgrade pip"
+    - "apt-get update -y && apt-get install -y make"
+    - "make -f \"$MAKEFILE_PATH\" setup || (echo 'Fallback setup' && python -m venv .venv && .venv/bin/pip install --upgrade pip && (.venv/bin/pip install -r requirements-dev.txt || .venv/bin/pip install -r requirements.txt || .venv/bin/pip install ruff black mypy pytest pytest-cov))"
+    - "mkdir -p reports"
+  script:
+    - "make -f \"$MAKEFILE_PATH\" test || .venv/bin/pytest"
+  artifacts:
+    when: always
+    paths:
+      - htmlcov/
+      - reports/coverage.xml
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+
+# --- ANALYZE (toolkit → report.json) ---
+analyze_toolkit:
+  stage: analyze
+  before_script:
+    - "python --version"
+    - "pip install --upgrade pip"
+    - "apt-get update -y && apt-get install -y make"
+    - "make -f \"$MAKEFILE_PATH\" setup || (echo 'Fallback setup' && python -m venv .venv && .venv/bin/pip install --upgrade pip && (.venv/bin/pip install -r requirements-dev.txt || .venv/bin/pip install -r requirements.txt || .venv/bin/pip install ruff black mypy pytest pytest-cov))"
+  script:
+    - "make -f \"$MAKEFILE_PATH\" report || .venv/bin/python -m toolkit.core.cli analyze examples/sample_project --out report.json"
   artifacts:
     when: always
     paths:
