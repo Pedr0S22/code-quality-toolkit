@@ -10,7 +10,7 @@ from ...core.contracts import IssueResult
 from ...utils.config import ToolkitConfig
 
 _SNAKE_CASE_RE = re.compile(r"^[a-z0-9_]+\.py$")
-
+_TRAILING_WS_RE = re.compile(r"[ \t]+$")
 
 class Plugin:
     """Plugin que valida regras de estilo básicas."""
@@ -29,6 +29,24 @@ class Plugin:
             "version": "0.1.0",
             "description": "Valida comprimento de linhas e convenções simples de nomes.",
         }
+    
+    def _check_trailing_whitespace(self, lines: List[str]) -> List[IssueResult]:
+        results: List[IssueResult] = []
+        for idx, line in enumerate(lines, start=1):
+            m = _TRAILING_WS_RE.search(line)
+            if m:
+                col = m.start() + 1
+                results.append(
+                    {
+                        "severity": "low",
+                        "code": "TRAILING_WHITESPACE",
+                        "message": "Espaços ou tabulações no final da linha.",
+                        "line": idx,
+                        "col": col,
+                        "hint": "Remova os espaços/tabulações no final.",
+                    }
+                )
+        return results
 
     def analyze(self, source_code: str, file_path: str | None) -> Dict[str, Any]:
         results: List[IssueResult] = []
@@ -45,6 +63,9 @@ class Plugin:
                         "hint": f"Máximo configurado: {self.max_line_length}",
                     }
                 )
+        
+        results.extend(self._check_trailing_whitespace(lines))
+        
         if file_path and not _SNAKE_CASE_RE.match(Path(file_path).name):
             results.append(
                 {
