@@ -28,8 +28,8 @@ class Plugin:
     def get_metadata(self) -> Dict[str, str]:
         return {
             "name": "StyleChecker",
-            "version": "0.1.0",
-            "description": "Valida comprimento de linhas e convenções simples de nomes.",
+            "version": "0.1.1",
+            "description": "Valida comprimento de linhas, convenções simples de nomes e trailingwhitespace.",
         }
     
     def _check_trailing_whitespace(self, lines: List[str]) -> List[IssueResult]:
