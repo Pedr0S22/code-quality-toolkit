@@ -17,11 +17,13 @@ class Plugin:
 
     def __init__(self) -> None:
         self.max_line_length = 88
+        self.check_whitespace = True
 
     def configure(self, config: ToolkitConfig) -> None:
         """Configure plugin thresholds from global config."""
 
         self.max_line_length = config.rules.max_line_length
+        self.check_whitespace = config.rules.check_whitespace
 
     def get_metadata(self) -> Dict[str, str]:
         return {
@@ -64,7 +66,8 @@ class Plugin:
                     }
                 )
         
-        results.extend(self._check_trailing_whitespace(lines))
+        if self.check_whitespace:
+            results.extend(self._check_trailing_whitespace(lines))
         
         if file_path and not _SNAKE_CASE_RE.match(Path(file_path).name):
             results.append(
