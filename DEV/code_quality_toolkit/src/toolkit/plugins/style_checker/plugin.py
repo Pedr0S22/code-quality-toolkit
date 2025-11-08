@@ -76,10 +76,10 @@ class Plugin:
                     {
                         "severity": "low",
                         "code": "INDENT_MIXED",
-                        "message": "Mezcla de tabs y espacios al inicio de la línea.",
+                        "message": "Mistura de tabulações e espaços no início da linha.",
                         "line": idx,
                         "col": 1,
-                        "hint": "Usa sólo un estilo: define rules.indent_style y ajusta tu editor.",
+                        "hint": "Utilize apenas um estilo: defina o ficheiro rules.indent_style e ajuste o seu editor.",
                     }
                 )
 
@@ -88,10 +88,10 @@ class Plugin:
                     {
                         "severity": "low",
                         "code": "INDENT_TABS_NOT_ALLOWED",
-                        "message": "Indentación con tabs no permitida (se requieren espacios).",
+                        "message": "Os recuos com tabulações não são permitidos (os espaços são obrigatórios).",
                         "line": idx,
                         "col": 1,
-                        "hint": f"Convierte tabs a espacios (múltiplos de {self.indent_size}).",
+                        "hint": f"Converter tabulações em espaços (múltiplos de {self.indent_size}).",
                     }
                 )
 
@@ -102,10 +102,10 @@ class Plugin:
                     {
                         "severity": "low",
                         "code": "INDENT_SPACES_NOT_ALLOWED",
-                        "message": "Indentación con espacios no permitida (se requieren tabs).",
+                        "message": "Não são permitidos recuos com espaços (tabulações são obrigatórias).",
                         "line": idx,
                         "col": 1,
-                        "hint": "Convierte espacios a tabs para la indentación.",
+                        "hint": "Converter espaços em tabulações para criar avanços.",
                     }
                 )
                 continue
@@ -117,10 +117,10 @@ class Plugin:
                         {
                             "severity": "low",
                             "code": "INDENT_WIDTH",
-                            "message": f"Indentación no múltiplo de {self.indent_size} espacios.",
+                            "message": f"O recuo não é um múltiplo de espaços {self.indent_size}.",
                             "line": idx,
                             "col": 1,
-                            "hint": f"Ajusta la indentación a múltiplos de {self.indent_size}.",
+                            "hint": f"Ajuste o recuo para múltiplos de {self.indent_size}.",
                         }
                     )
 
