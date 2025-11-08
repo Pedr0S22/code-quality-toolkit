@@ -53,7 +53,9 @@ class RulesConfig:
     max_line_length: int = 88
     max_complexity: int = 10    # This is a widely accepted threshold. Functions with a complexity higher than this
     check_whitespace: bool = True                             # are generally considered difficult to read, test, and maintain.
-
+    indent_style = "spaces" 
+    indent_size = 4
+    allow_mixed_indentation = False
 
 #-------------ToolkitConfig -----------------------
 @dataclass(slots=True)

@@ -11,6 +11,7 @@ from ...utils.config import ToolkitConfig
 
 _SNAKE_CASE_RE = re.compile(r"^[a-z0-9_]+\.py$")
 _TRAILING_WS_RE = re.compile(r"[ \t]+$")
+_LEADING_WS_RE = re.compile(r"^([ \t]+)")
 
 class Plugin:
     """Plugin que valida regras de estilo básicas."""
@@ -18,18 +19,24 @@ class Plugin:
     def __init__(self) -> None:
         self.max_line_length = 88
         self.check_whitespace = True
+        self.indent_style = "spaces" 
+        self.indent_size = 4
+        self.allow_mixed_indentation = False
 
     def configure(self, config: ToolkitConfig) -> None:
         """Configure plugin thresholds from global config."""
 
         self.max_line_length = config.rules.max_line_length
         self.check_whitespace = config.rules.check_whitespace
+        self.indent_style = config.rules.indent_style
+        self.indent_size = config.rules.indent_size
+        self.allow_mixed_indentation = config.rules.allow_mixed_indentation
 
     def get_metadata(self) -> Dict[str, str]:
         return {
             "name": "StyleChecker",
-            "version": "0.1.1",
-            "description": "Valida comprimento de linhas, convenções simples de nomes e trailingwhitespace.",
+            "version": "0.1.2",
+            "description": "Valida comprimento de linhas, convenções simples de nomes, trailingwhitespace e identation.",
         }
     
     def _check_trailing_whitespace(self, lines: List[str]) -> List[IssueResult]:
@@ -50,6 +57,75 @@ class Plugin:
                 )
         return results
 
+    def _check_indentation(self, lines: List[str]) -> List[IssueResult]:
+        results: List[IssueResult] = []
+        for idx, line in enumerate(lines, start=1):
+            if not line:  
+                continue
+
+            m = _LEADING_WS_RE.match(line)
+            if not m:
+                continue  
+
+            leading = m.group(1)  
+            has_tab = "\t" in leading
+            has_space = " " in leading
+
+            if has_tab and has_space and not self.allow_mixed_indentation:
+                results.append(
+                    {
+                        "severity": "low",
+                        "code": "INDENT_MIXED",
+                        "message": "Mezcla de tabs y espacios al inicio de la línea.",
+                        "line": idx,
+                        "col": 1,
+                        "hint": "Usa sólo un estilo: define rules.indent_style y ajusta tu editor.",
+                    }
+                )
+
+            if self.indent_style == "spaces" and has_tab:
+                results.append(
+                    {
+                        "severity": "low",
+                        "code": "INDENT_TABS_NOT_ALLOWED",
+                        "message": "Indentación con tabs no permitida (se requieren espacios).",
+                        "line": idx,
+                        "col": 1,
+                        "hint": f"Convierte tabs a espacios (múltiplos de {self.indent_size}).",
+                    }
+                )
+
+                continue
+
+            if self.indent_style == "tabs" and has_space:
+                results.append(
+                    {
+                        "severity": "low",
+                        "code": "INDENT_SPACES_NOT_ALLOWED",
+                        "message": "Indentación con espacios no permitida (se requieren tabs).",
+                        "line": idx,
+                        "col": 1,
+                        "hint": "Convierte espacios a tabs para la indentación.",
+                    }
+                )
+                continue
+
+            if self.indent_style == "spaces" and has_space and not has_tab:
+                width = len(leading)  
+                if width % self.indent_size != 0:
+                    results.append(
+                        {
+                            "severity": "low",
+                            "code": "INDENT_WIDTH",
+                            "message": f"Indentación no múltiplo de {self.indent_size} espacios.",
+                            "line": idx,
+                            "col": 1,
+                            "hint": f"Ajusta la indentación a múltiplos de {self.indent_size}.",
+                        }
+                    )
+
+        return results
+
     def analyze(self, source_code: str, file_path: str | None) -> Dict[str, Any]:
         results: List[IssueResult] = []
         lines = source_code.splitlines()
@@ -68,6 +144,8 @@ class Plugin:
         
         if self.check_whitespace:
             results.extend(self._check_trailing_whitespace(lines))
+
+        results.extend(self._check_indentation(lines))
         
         if file_path and not _SNAKE_CASE_RE.match(Path(file_path).name):
             results.append(
