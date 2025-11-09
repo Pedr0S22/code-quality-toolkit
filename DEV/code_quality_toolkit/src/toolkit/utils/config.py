@@ -53,7 +53,7 @@ class RulesConfig:
     max_line_length: int = 88
     max_complexity: int = 10    # This is a widely accepted threshold. Functions with a complexity higher than this
                                 # are generally considered difficult to read, test, and maintain.
-
+    max_function_length: int = 50  # New rule: maximum number of lines allowed in a function
 
 #-------------ToolkitConfig -----------------------
 @dataclass(slots=True)

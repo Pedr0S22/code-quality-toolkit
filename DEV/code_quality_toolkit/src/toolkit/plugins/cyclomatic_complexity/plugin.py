@@ -3,10 +3,17 @@
 from __future__ import annotations
 
 import ast
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from ...core.contracts import IssueResult
 from ...utils.config import ToolkitConfig
+
+def _function_length(node: ast.AST) -> Optional[int]:
+    """Calcula o numero de linhas em funcao."""
+    if hasattr(node, "lineno") and hasattr(node, "end_lineno"):
+        return node.end_lineno - node.lineno + 1
+    return None
+
 
 
 class _ComplexityVisitor(ast.NodeVisitor):
@@ -37,9 +44,11 @@ class Plugin:
 
     def __init__(self) -> None:
         self.max_complexity = 10
+        self.max_function_length = 50
 
     def configure(self, config: ToolkitConfig) -> None:
         self.max_complexity = config.rules.max_complexity
+        self.max_function_length = config.rules.max_function_length
 
     def get_metadata(self) -> Dict[str, str]:
         return {
@@ -84,6 +93,20 @@ class Plugin:
                             "hint": f"Reduza para <= {self.max_complexity}",
                         }
                     )
+                function_length = _function_length(node)
+                if (function_length is not None and function_length > self.max_function_length):
+                    severity = "low" if function_length <= self.max_function_length + 20 else "medium"
+                    results.append(
+                        {
+                            "severity": severity,
+                            "code": "LONG_FUNCTION",
+                            "message": f"Function '{node.name}' with ({function_length} lines)",
+                            "line": node.lineno,
+                            "col": 0,
+                            "hint": f"Consider dividing to smaller functions (<= {self.max_function_length} lines).",
+                        }
+                    )
+
         return {
             "results": results,
             "summary": {
