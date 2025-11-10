@@ -126,7 +126,8 @@ class Plugin:
 
         return results
 
-    def analyze(self, source_code: str, file_path: str | None) -> Dict[str, Any]:
+def analyze(self, source_code: str, file_path: str | None) -> Dict[str, Any]:
+    try:
         results: List[IssueResult] = []
         lines = source_code.splitlines()
         for idx, line in enumerate(lines, start=1):
@@ -141,12 +142,12 @@ class Plugin:
                         "hint": f"Máximo configurado: {self.max_line_length}",
                     }
                 )
-        
+
         if self.check_whitespace:
             results.extend(self._check_trailing_whitespace(lines))
 
         results.extend(self._check_indentation(lines))
-        
+
         if file_path and not _SNAKE_CASE_RE.match(Path(file_path).name):
             results.append(
                 {
@@ -158,6 +159,7 @@ class Plugin:
                     "hint": "Utilize nomes como sample_module.py",
                 }
             )
+
         return {
             "results": results,
             "summary": {
@@ -165,4 +167,16 @@ class Plugin:
                 "status": "completed",
             },
         }
+
+    except Exception as e:
+        # Captura de errores para evitar crash do plugin
+        return {
+            "results": [],
+            "summary": {
+                "issues_found": 0,
+                "status": "failed",
+                "error": str(e),
+            },
+        }
+
 # EXTENSION-POINT: adicionar novas regras, p.ex. indentação ou trailing whitespace.
