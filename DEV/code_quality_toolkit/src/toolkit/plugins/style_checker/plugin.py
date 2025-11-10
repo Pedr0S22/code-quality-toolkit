@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from ...core.contracts import IssueResult
 from ...utils.config import ToolkitConfig
@@ -32,15 +32,15 @@ class Plugin:
         self.indent_size = config.rules.indent_size
         self.allow_mixed_indentation = config.rules.allow_mixed_indentation
 
-    def get_metadata(self) -> Dict[str, str]:
+    def get_metadata(self) -> dict[str, str]:
         return {
             "name": "StyleChecker",
             "version": "0.1.2",
             "description": "Valida comprimento de linhas, convenções simples de nomes, trailingwhitespace e identation.",
         }
     
-    def _check_trailing_whitespace(self, lines: List[str]) -> List[IssueResult]:
-        results: List[IssueResult] = []
+    def _check_trailing_whitespace(self, lines: list[str]) -> list[IssueResult]:
+        results: list[IssueResult] = []
         for idx, line in enumerate(lines, start=1):
             m = _TRAILING_WS_RE.search(line)
             if m:
@@ -57,8 +57,8 @@ class Plugin:
                 )
         return results
 
-    def _check_indentation(self, lines: List[str]) -> List[IssueResult]:
-        results: List[IssueResult] = []
+    def _check_indentation(self, lines: list[str]) -> list[IssueResult]:
+        results: list[IssueResult] = []
         for idx, line in enumerate(lines, start=1):
             if not line:  
                 continue
@@ -126,9 +126,9 @@ class Plugin:
 
         return results
 
-    def analyze(self, source_code: str, file_path: str | None) -> Dict[str, Any]:
+    def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
         try:
-            results: List[IssueResult] = []
+            results: list[IssueResult] = []
             lines = source_code.splitlines()
             for idx, line in enumerate(lines, start=1):
                 if len(line) > self.max_line_length:

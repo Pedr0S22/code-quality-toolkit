@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, List
+
 
 def match_any(path: str, patterns: Iterable[str]) -> bool:
     rel_path = Path(path)
@@ -17,11 +18,11 @@ def match_any(path: str, patterns: Iterable[str]) -> bool:
 
 # EXTENSION-POINT: substituir por implementação assíncrona ou com cache de glob.
 
-def discover_files(root: str | Path, include: Iterable[str], exclude: Iterable[str]) -> List[Path]:
+def discover_files(root: str | Path, include: Iterable[str], exclude: Iterable[str]) -> list[Path]:
     """Return a sorted list of files under root matching include patterns."""
 
     root_path = Path(root)
-    files: List[Path] = []
+    files: list[Path] = []
     for file_path in root_path.rglob("*"):
         if not file_path.is_file():
             continue
