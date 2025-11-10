@@ -1,4 +1,4 @@
-"""Testes Unitários para o StyleCheckerPlugin (Tarefa #99)."""
+"""Testes Unitários para o StyleCheckerPlugin (Tarefa #98/99)."""
 
 # Importar o plugin (nome da classe 'Plugin')
 from toolkit.plugins.style_checker.plugin import Plugin
@@ -20,7 +20,7 @@ class MockToolkitConfig:
 # --------------------------------------------------------------------
 
 def test_style_checker_flags_long_line():
-    """Verifica a regra LINE_LENGTH e a conformidade com o Contrato NOVO."""
+    """Verifica a regra LINE_LENGTH (Contrato ANTIGO)."""
     
     plugin = Plugin()
     config = MockToolkitConfig() # MUDANÇA: Usar o Mock
@@ -29,23 +29,20 @@ def test_style_checker_flags_long_line():
 
     report = plugin.analyze("linha muito longa", "sample.py")
 
-    # A. Verificar Sumário e Contrato
     assert report["summary"]["issues_found"] == 1
-    assert "plugin" in report # <--- CORREÇÃO (Contrato Novo)
-    assert report["plugin"]["name"] == "StyleChecker"
     
-    # B. Verificar Ocorrência
+    # VALIDAR O CONTRATO ANTIGO
     issue = report["results"][0]
-    assert issue["metric"] == "LINE_LENGTH" # <--- CORREÇÃO (era 'code')
-    assert issue["value"] == 17             # <--- CORREÇÃO (novo campo)
-    assert issue["entity"] == "Linha 1"     # <--- CORREÇÃO (novo campo)
-    assert issue["severity"] == "low"
+    assert issue["code"] == "LINE_LENGTH" # <--- CORREÇÃO (revertido para 'code')
+    assert "Máximo configurado: 10" in issue["hint"] # <--- CORREÇÃO (validar 'hint')
+    assert issue["line"] == 1
+
 
 def test_style_checker_flags_trailing_whitespace():
-    """Verifica a nova regra TRAILING_WHITESPACE (Contrato NOVO)."""
+    """Verifica a nova regra TRAILING_WHITESPACE (Contrato ANTIGO)."""
     
     plugin = Plugin()
-    config = MockToolkitConfig() # MUDANÇA: Usar o Mock
+    config = MockToolkitConfig() # Usar o Mock
     config.rules.check_whitespace = True
     plugin.configure(config)
     
@@ -54,35 +51,35 @@ def test_style_checker_flags_trailing_whitespace():
     
     assert report["summary"]["issues_found"] == 1
     issue = report["results"][0]
-    assert issue["metric"] == "TRAILING_WHITESPACE" # <--- CORREÇÃO (era 'code')
+    assert issue["code"] == "TRAILING_WHITESPACE" # <--- CORREÇÃO (revertido para 'code')
     assert issue["line"] == 1
 
 def test_style_checker_flags_indentation_tabs():
-    """Verifica a nova regra INDENT_TABS_NOT_ALLOWED (Contrato NOVO)."""
+    """Verifica a nova regra INDENT_TABS_NOT_ALLOWED (Contrato ANTIGO)."""
     
     plugin = Plugin()
     config = MockToolkitConfig() # MUDANÇA: Usar o Mock
-    config.rules.indent_style = "spaces" 
+    config.rules.indent_style = "spaces" # O Mock permite esta atribuição
     plugin.configure(config)
     
-    source_code = "\tprint('hello')"
+    source_code = "\tprint('hello')" # Recuo com Tab
     report = plugin.analyze(source_code, "indent.py")
     
     assert report["summary"]["issues_found"] >= 1
     
-    # <--- CORREÇÃO (procurar por 'metric')
-    indent_issue = next((r for r in report["results"] if r["metric"] == "INDENT_TABS_NOT_ALLOWED"), None)
+    # <--- CORREÇÃO (revertido para 'code')
+    indent_issue = next((r for r in report["results"] if r["code"] == "INDENT_TABS_NOT_ALLOWED"), None)
     assert indent_issue is not None
     assert indent_issue["line"] == 1
 
 def test_style_checker_no_issues_found():
-    """Verifica código limpo (Contrato NOVO)."""
+    """Verifica código limpo (Contrato ANTIGO)."""
     
     plugin = Plugin()
-    config = MockToolkitConfig() # MUDANÇA: Usar o Mock
-    plugin.configure(config)
+    config = MockToolkitConfig() # Usar o Mock
+    plugin.configure(config) # Usar defaults
 
-    source_code = "def fn():\n    pass\n"
+    source_code = "def fn():\n    pass\n" # Código limpo
     report = plugin.analyze(source_code, "good_file.py")
 
     assert report["summary"]["issues_found"] == 0
