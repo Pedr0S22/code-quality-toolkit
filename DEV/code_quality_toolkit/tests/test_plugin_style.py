@@ -1,10 +1,11 @@
-"""Testes Unitários para o StyleCheckerPlugin (Tarefa #98/99)."""
+"""Testes Unitários para o StyleCheckerPlugin (Tarefa #98)."""
 
 # Importar o plugin (nome da classe 'Plugin')
 from toolkit.plugins.style_checker.plugin import Plugin
 # REMOVA: from toolkit.utils.config import ToolkitConfig
 
 # --- Mocks para resolver o erro 'AttributeError: 'RulesConfig' object attribute 'indent_style' is read-only' ---
+# Usamos Mocks para simular o toolkit.toml
 class MockRulesConfig:
     """Mock 'read-only' para permitir a configuração das regras no teste."""
     max_line_length = 88
@@ -33,8 +34,8 @@ def test_style_checker_flags_long_line():
     
     # VALIDAR O CONTRATO ANTIGO
     issue = report["results"][0]
-    assert issue["code"] == "LINE_LENGTH" # <--- CORREÇÃO (revertido para 'code')
-    assert "Máximo configurado: 10" in issue["hint"] # <--- CORREÇÃO (validar 'hint')
+    assert issue["code"] == "LINE_LENGTH"
+    assert "Máximo configurado: 10" in issue["hint"]
     assert issue["line"] == 1
 
 
@@ -51,7 +52,7 @@ def test_style_checker_flags_trailing_whitespace():
     
     assert report["summary"]["issues_found"] == 1
     issue = report["results"][0]
-    assert issue["code"] == "TRAILING_WHITESPACE" # <--- CORREÇÃO (revertido para 'code')
+    assert issue["code"] == "TRAILING_WHITESPACE"
     assert issue["line"] == 1
 
 def test_style_checker_flags_indentation_tabs():
@@ -67,7 +68,7 @@ def test_style_checker_flags_indentation_tabs():
     
     assert report["summary"]["issues_found"] >= 1
     
-    # <--- CORREÇÃO (revertido para 'code')
+    # Validar que a regra de indentação correta foi ativada
     indent_issue = next((r for r in report["results"] if r["code"] == "INDENT_TABS_NOT_ALLOWED"), None)
     assert indent_issue is not None
     assert indent_issue["line"] == 1
