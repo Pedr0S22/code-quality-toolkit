@@ -126,57 +126,57 @@ class Plugin:
 
         return results
 
-def analyze(self, source_code: str, file_path: str | None) -> Dict[str, Any]:
-    try:
-        results: List[IssueResult] = []
-        lines = source_code.splitlines()
-        for idx, line in enumerate(lines, start=1):
-            if len(line) > self.max_line_length:
+    def analyze(self, source_code: str, file_path: str | None) -> Dict[str, Any]:
+        try:
+            results: List[IssueResult] = []
+            lines = source_code.splitlines()
+            for idx, line in enumerate(lines, start=1):
+                if len(line) > self.max_line_length:
+                    results.append(
+                        {
+                            "severity": "low",
+                            "code": "LINE_LENGTH",
+                            "message": f"Linha com {len(line)} caracteres",
+                            "line": idx,
+                            "col": 1,
+                            "hint": f"Máximo configurado: {self.max_line_length}",
+                        }
+                    )
+
+            if self.check_whitespace:
+                results.extend(self._check_trailing_whitespace(lines))
+
+            results.extend(self._check_indentation(lines))
+
+            if file_path and not _SNAKE_CASE_RE.match(Path(file_path).name):
                 results.append(
                     {
-                        "severity": "low",
-                        "code": "LINE_LENGTH",
-                        "message": f"Linha com {len(line)} caracteres",
-                        "line": idx,
+                        "severity": "info",
+                        "code": "FILENAME_STYLE",
+                        "message": "Nome do ficheiro não segue snake_case.",
+                        "line": 1,
                         "col": 1,
-                        "hint": f"Máximo configurado: {self.max_line_length}",
+                        "hint": "Utilize nomes como sample_module.py",
                     }
                 )
 
-        if self.check_whitespace:
-            results.extend(self._check_trailing_whitespace(lines))
+            return {
+                "results": results,
+                "summary": {
+                    "issues_found": len(results),
+                    "status": "completed",
+                },
+            }
 
-        results.extend(self._check_indentation(lines))
-
-        if file_path and not _SNAKE_CASE_RE.match(Path(file_path).name):
-            results.append(
-                {
-                    "severity": "info",
-                    "code": "FILENAME_STYLE",
-                    "message": "Nome do ficheiro não segue snake_case.",
-                    "line": 1,
-                    "col": 1,
-                    "hint": "Utilize nomes como sample_module.py",
-                }
-            )
-
-        return {
-            "results": results,
-            "summary": {
-                "issues_found": len(results),
-                "status": "completed",
-            },
-        }
-
-    except Exception as e:
-        # Captura de errores para evitar crash do plugin
-        return {
-            "results": [],
-            "summary": {
-                "issues_found": 0,
-                "status": "failed",
-                "error": str(e),
-            },
-        }
+        except Exception as e:
+            # Captura de errores para evitar crash do plugin
+            return {
+                "results": [],
+                "summary": {
+                    "issues_found": 0,
+                    "status": "failed",
+                    "error": str(e),
+                },
+            }
 
 # EXTENSION-POINT: adicionar novas regras, p.ex. indentação ou trailing whitespace.
