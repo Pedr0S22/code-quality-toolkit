@@ -5,7 +5,6 @@ from toolkit.plugins.style_checker.plugin import Plugin
 # REMOVA: from toolkit.utils.config import ToolkitConfig
 
 # --- Mocks para resolver o erro 'AttributeError: 'RulesConfig' object attribute 'indent_style' is read-only' ---
-# Usamos Mocks para simular o toolkit.toml
 class MockRulesConfig:
     """Mock 'read-only' para permitir a configuração das regras no teste."""
     max_line_length = 88
