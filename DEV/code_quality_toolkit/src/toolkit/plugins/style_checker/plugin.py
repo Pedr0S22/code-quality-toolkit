@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import ast 
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +13,8 @@ from ...utils.config import ToolkitConfig
 _SNAKE_CASE_RE = re.compile(r"^[a-z0-9_]+\.py$")
 _TRAILING_WS_RE = re.compile(r"[ \t]+$")
 _LEADING_WS_RE = re.compile(r"^([ \t]+)")
+_CLASS_NAME_RE = re.compile(r"^[A-Z][A-Za-z0-9]*$")          
+_FUNC_NAME_RE = re.compile(r"^[a-z_][a-z0-9_]*$") 
 
 class Plugin:
     """Plugin que valida regras de estilo básicas."""
@@ -22,6 +25,7 @@ class Plugin:
         self.indent_style = "spaces" 
         self.indent_size = 4
         self.allow_mixed_indentation = False
+        self.check_naming = False
 
     def configure(self, config: ToolkitConfig) -> None:
         """Configure plugin thresholds from global config."""
@@ -31,12 +35,13 @@ class Plugin:
         self.indent_style = config.rules.indent_style
         self.indent_size = config.rules.indent_size
         self.allow_mixed_indentation = config.rules.allow_mixed_indentation
+        self.check_naming = config.rules.check_naming
 
     def get_metadata(self) -> dict[str, str]:
         return {
             "name": "StyleChecker",
-            "version": "0.1.2",
-            "description": "Valida comprimento de linhas, convenções simples de nomes, trailingwhitespace e identation.",
+            "version": "0.1.3",
+            "description": "Valida comprimento de linhas, convenções simples de nomes, trailingwhitespace, identation e naming convention.",
         }
     
     def _check_trailing_whitespace(self, lines: list[str]) -> list[IssueResult]:
@@ -125,6 +130,45 @@ class Plugin:
                     )
 
         return results
+    
+    def _check_naming_conventions(
+        self, source_code: str, file_path: str | None
+    ) -> List[IssueResult]:
+        results: List[IssueResult] = []
+
+        try:
+            tree = ast.parse(source_code, filename=file_path or "<unknown>")
+        except SyntaxError:
+            return results
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                if not _CLASS_NAME_RE.match(node.name):
+                    results.append(
+                        {
+                            "severity": "low",
+                            "code": "CLASS_NAMING",
+                            "message": f"Class name '{node.name}' deve usar o CamelCase.",
+                            "line": node.lineno,
+                            "col": node.col_offset + 1,
+                            "hint": "Utilize nomes como 'MyClass', 'UserProfile', etc.",
+                        }
+                    )
+
+            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if not _FUNC_NAME_RE.match(node.name):
+                    results.append(
+                        {
+                            "severity": "low",
+                            "code": "FUNC_NAMING",
+                            "message": f"Function name '{node.name}' deve usar o snake_case.",
+                            "line": node.lineno,
+                            "col": node.col_offset + 1,
+                            "hint": "Utilize nomes como 'process_data', 'get_user', etc.",
+                        }
+                    )
+
+        return results
 
     def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
         try:
@@ -178,5 +222,4 @@ class Plugin:
                     "error": str(e),
                 },
             }
-
 # EXTENSION-POINT: adicionar novas regras, p.ex. indentação ou trailing whitespace.

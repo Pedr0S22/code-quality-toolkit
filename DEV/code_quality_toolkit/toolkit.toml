@@ -8,6 +8,7 @@ check_whitespace = true
 indent_style = "spaces" 
 indent_size = 4
 allow_mixed_indentation = false
+check_naming = false
 
 [analyze]
 include = ["**/*.py"]
