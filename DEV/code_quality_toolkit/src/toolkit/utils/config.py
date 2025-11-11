@@ -62,7 +62,7 @@ class ToolkitConfig:
     # "StyleChecker" and "CyclomaticComplexity" are predefined defaults.
     # 'default_factory' ensures that every new ToolkitConfig instance gets its own independent list object.
     enabled_plugins: List[str] = field(default_factory=lambda: ["StyleChecker", "CyclomaticComplexity"])
- 
+
     # 'rules' the numerical thresholds and specific parameters for the code quality checks
     # (e.g., maximum line length, maximum complexity score).
     # 'default_factory=RulesConfig' ensures that the default RulesConfig object is instantiated only

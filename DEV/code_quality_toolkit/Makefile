@@ -31,7 +31,7 @@ test:
 	$(BIN)/pytest
 
 run:
-	$(BIN)/python -m toolkit.core.cli analyze examples/sample_project --out report.json
+	$(BIN)/python -m toolkit.core.cli analyze examples/sample_project --out report.json --config toolkit.toml
 
 report: run
 
