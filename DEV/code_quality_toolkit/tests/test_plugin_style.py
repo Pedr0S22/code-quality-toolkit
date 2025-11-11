@@ -12,12 +12,17 @@ class MockRulesConfig:
     indent_style = "spaces" 
     indent_size = 4
     allow_mixed_indentation = False
+    check_naming = True  # <-- 1. ADICIONAR ESTA LINHA
 
 class MockToolkitConfig:
     """Mock do ToolkitConfig que usa o MockRulesConfig."""
     def __init__(self):
         self.rules = MockRulesConfig()
 # --------------------------------------------------------------------
+
+#
+# --- TESTES DE REGRESSÃO (CONTRATO ANTIGO) ---
+#
 
 def test_style_checker_flags_long_line():
     """Verifica a regra LINE_LENGTH (Contrato ANTIGO)."""
@@ -79,8 +84,73 @@ def test_style_checker_no_issues_found():
     config = MockToolkitConfig() # Usar o Mock
     plugin.configure(config) # Usar defaults
 
-    source_code = "def fn():\n    pass\n" # Código limpo
+    # Código limpo (agora também verifica naming)
+    source_code = "class MyClass:\n    def my_function(self):\n        pass\n" 
     report = plugin.analyze(source_code, "good_file.py")
 
     assert report["summary"]["issues_found"] == 0
     assert len(report["results"]) == 0
+
+#
+# --- 2. ADICIONAR NOVOS TESTES (TAREFA #98) ---
+#
+
+def test_style_checker_flags_class_naming_violation():
+    """Verifica a nova regra CLASS_NAMING (Tarefa #98)."""
+    
+    plugin = Plugin()
+    config = MockToolkitConfig()
+    config.rules.check_naming = True # Ativar a regra
+    plugin.configure(config)
+
+    # Classe em snake_case (inválido)
+    source_code = "class my_bad_class:\n    pass\n" 
+    report = plugin.analyze(source_code, "naming.py")
+
+    assert report["summary"]["issues_found"] >= 1
+    
+    # Validar que a regra correta foi ativada
+    issue = next((r for r in report["results"] if r["code"] == "CLASS_NAMING"), None)
+    assert issue is not None
+    assert issue["message"] == "Class name 'my_bad_class' deve usar o CamelCase."
+    assert issue["line"] == 1
+
+
+def test_style_checker_flags_function_naming_violation():
+    """Verifica a nova regra FUNC_NAMING (Tarefa #98)."""
+    
+    plugin = Plugin()
+    config = MockToolkitConfig()
+    config.rules.check_naming = True # Ativar a regra
+    plugin.configure(config)
+
+    # Função em CamelCase (inválido)
+    source_code = "def MyBadFunction():\n    pass\n" 
+    report = plugin.analyze(source_code, "naming.py")
+
+    assert report["summary"]["issues_found"] >= 1
+    
+    # Validar que a regra correta foi ativada
+    issue = next((r for r in report["results"] if r["code"] == "FUNC_NAMING"), None)
+    assert issue is not None
+    assert issue["message"] == "Function name 'MyBadFunction' deve usar o snake_case."
+    assert issue["line"] == 1
+
+def test_style_checker_ignores_naming_if_disabled():
+    """Verifica se as regras de nomeação são ignoradas se check_naming=False."""
+    
+    plugin = Plugin()
+    config = MockToolkitConfig()
+    config.rules.check_naming = False # Desativar a regra
+    plugin.configure(config)
+
+    # Código com violações
+    source_code = "class my_bad_class:\n    def MyBadFunction():\n        pass\n"
+    report = plugin.analyze(source_code, "naming.py")
+
+    # Garantir que nenhuma issue de nomeação foi reportada
+    class_issue = next((r for r in report["results"] if r["code"] == "CLASS_NAMING"), None)
+    func_issue = next((r for r in report["results"] if r["code"] == "FUNC_NAMING"), None)
+
+    assert class_issue is None
+    assert func_issue is None
