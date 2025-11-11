@@ -56,7 +56,7 @@ class RulesConfig:
     indent_style = "spaces" 
     indent_size = 4
     allow_mixed_indentation = False
-    check_naming: bool = False
+    check_naming = False
 
 #-------------ToolkitConfig -----------------------
 @dataclass(slots=True)
