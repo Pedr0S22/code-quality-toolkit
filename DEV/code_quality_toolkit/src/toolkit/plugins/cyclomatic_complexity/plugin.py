@@ -14,6 +14,17 @@ def _function_length(node: ast.AST) -> Optional[int]:
         return node.end_lineno - node.lineno + 1
     return None
 
+def _arg_count(fn: ast.AST) -> int:
+    if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        return 0
+    a = fn.args
+    total = 0
+    total += len(getattr(a, "posonlyargs", []))
+    total += len(a.args)
+    total += len(a.kwonlyargs)
+    total += 1 if a.vararg else 0
+    total += 1 if a.kwarg else 0
+    return total
 
 
 class _ComplexityVisitor(ast.NodeVisitor):
@@ -45,10 +56,12 @@ class Plugin:
     def __init__(self) -> None:
         self.max_complexity = 10
         self.max_function_length = 50
+        self.max_arguments = 5
 
     def configure(self, config: ToolkitConfig) -> None:
         self.max_complexity = config.rules.max_complexity
         self.max_function_length = config.rules.max_function_length
+        self.max_arguments = config.rules.max_arguments
 
     def get_metadata(self) -> Dict[str, str]:
         return {
@@ -104,6 +117,19 @@ class Plugin:
                             "line": node.lineno,
                             "col": 0,
                             "hint": f"Consider dividing to smaller functions (<= {self.max_function_length} lines).",
+                        }
+                    )
+                arg_count = _arg_count(node)
+                if arg_count > self.max_arguments:
+                    severity = "low" if arg_count <= self.max_arguments + 2 else "medium"
+                    results.append(
+                        {
+                            "severity": severity,
+                            "code": "TOO_MANY_ARGUMENTS",
+                            "message": f"Function '{node.name}' with ({arg_count} arguments)",
+                            "line": node.lineno,
+                            "col": 0,
+                            "hint": f"Consider reducing number of arguments (<= {self.max_arguments}).",
                         }
                     )
 
