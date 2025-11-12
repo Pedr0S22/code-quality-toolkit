@@ -32,6 +32,22 @@ unit_tests:
     - echo $CI_COMMIT_BRANCH
     - make test
 
+test_coverage:
+  stage: integration
+  before_script:
+    - pip install pytest pytest-cov
+  script:
+  - echo "Assessing test coverage... "
+  - echo $CI_COMMIT_BRANCH
+  - cd $CI_PROJECT_DIR/DEV/code_quality_toolkit/
+  - export PYTHONPATH="$CI_PROJECT_DIR/DEV/code_quality_toolkit/src:$PYTHONPATH"
+  - pytest --cov=. --cov-report=html --cov-report=term # report goes to terminal and htmlcov → open 'index.html' in a browser
+  artifacts:
+    paths:
+      - $CI_PROJECT_DIR/DEV/code_quality_toolkit/htmlcov/ # Preserve the html coverage files as an artifact
+    #expire_in: 1 day  # (Optional) Specify how long to keep the artifact
+    # (e.g., 1 week, 1 day, never).
+
 
 # # **************** QUALITY stage ****************************
 
@@ -50,7 +66,7 @@ code_complexity:
   script:
     - echo "Checking code complexity... "
     - echo $CI_COMMIT_BRANCH
-    - xenon -b C -m C -a C --ignore='venv' . 
+    - xenon -b C -m C -a C --ignore='venv' .
             # -b A : At least one block has a complexity rank higher than A (i.e. B, C, D, E or F)
             # -m A : At least one module has a complexity rank higher than A (i.e. B, C, D, E or F)
             # -a A : Average complexity has rank higher than A (i.e. B , C, D, E or F)
@@ -68,23 +84,6 @@ integration:
     - make setup
     - .venv/bin/python -m pytest tests/
 
-test_coverage:
-  stage: integration
-  before_script:
-    - pip install pytest pytest-cov
-  script:
-  - echo "Assessing test coverage... "
-  - echo $CI_COMMIT_BRANCH
-  - cd $CI_PROJECT_DIR/DEV/code_quality_toolkit/
-  - export PYTHONPATH="$CI_PROJECT_DIR/DEV/code_quality_toolkit/src:$PYTHONPATH"
-  - pytest --cov=. --cov-report=html --cov-report=term # report goes to terminal and htmlcov → open 'index.html' in a browser
-  artifacts:
-    paths:
-      - $CI_PROJECT_DIR/DEV/code_quality_toolkit/htmlcov/ # Preserve the html coverage files as an artifact
-    #expire_in: 1 day  # (Optional) Specify how long to keep the artifact
-    # (e.g., 1 week, 1 day, never).
-
-
 
 # # **************** SECURITY stage ****************************
 
@@ -95,5 +94,5 @@ security:
   script:
     - echo "Running security tests at application level... "
     - echo $CI_COMMIT_BRANCH
-    - bandit -r $CI_PROJECT_DIR/DEV/code_quality_toolkit/src   
+    - bandit -r $CI_PROJECT_DIR/DEV/code_quality_toolkit/src
   allow_failure: false # set to false - security should NEVER be compromised
