@@ -33,7 +33,7 @@ unit_tests:
     - make test
 
 test_coverage:
-  stage: integration
+  stage: unit_tests
   before_script:
     - pip install pytest pytest-cov
   script:
