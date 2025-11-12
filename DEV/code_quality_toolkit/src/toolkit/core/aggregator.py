@@ -159,8 +159,7 @@ def aggregate(
     # analysis results (files).
     unified: UnifiedReport = {
         "analysis_metadata": {
-            "timestamp": _dt.datetime.now(_dt.UTC).isoformat(
-                timespec="seconds")+ "Z",
+            "timestamp": _dt.datetime.now(_dt.UTC).isoformat(timespec="seconds") + "Z",
             "tool_version": __version__,
             "plugins_executed": list(plugin_status),
             "status": overall_status,
