@@ -33,7 +33,8 @@ def _compute_top_offenders(files: list[FileReport]) -> list[dict[str, int | str]
     for file_report in files:
         # For each file, it calculates the total number of issues found across
         # all plugins using a generator expression inside the sum() function.
-        # This accumulates all issues reported by individual plugins for that specific file.
+        # This accumulates all issues reported by individual plugins for that
+        # specific file.
         issues = sum(p["summary"]["issues_found"] for p in file_report["plugins"])
         # A list of tuples (offenders) is built, where each tuple contains
         # the file path (file_report["file"]) and the total issue count.
@@ -97,14 +98,16 @@ def aggregate(
     """
     This function is the final step in the analysis, responsible for consolidating
     the detailed per-file results and plugin execution statuses into a single,
-    comprehensive Unified Report (a structured dictionary). It computes various summaries,
-    totals, and metadata required for presenting the final analysis results.
+    comprehensive Unified Report (a structured dictionary). It computes various
+    summaries, totals, and metadata required for presenting the
+    final analysis results.
     """
 
     # == Summary Initialization ==
 
-    # Initializes a dictionary (issues_by_severity) to count the total number of issues
-    # found for each severity level. It starts all counts at 0 using a list of known severities.
+    # Initializes a dictionary (issues_by_severity) to count the total number
+    # of issues found for each severity level. It starts all counts at 0 using
+    # a list of known severities.
     issues_by_severity: dict[Severity, int] = {severity: 0 for severity in SEVERITIES}
     # Initializes a dictionary to count the total number of issues found by each plugin,
     # starting with all known plugins from the input 'splugin_status'.
