@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Dict
+from typing import Any
 
 SEND_LOGS_TO_TERMINAL = False  # appends logs to a log file
 
@@ -60,7 +60,7 @@ def log(event: str, **payload: Any) -> None:
     # A dictionary named record is initialized, and is immediately populated with the required "event" field.
     # The special syntax **payload is used to unpack all the remaining keyword arguments directly into
     # the record dictionary.
-    record: Dict[str, Any] = {"event": event, **payload}
+    record: dict[str, Any] = {"event": event, **payload}
 
     # json.dumps converts the entire Python dictionary (record) into a single JSON formatted string.
     # _LOGGER.info(...) sends the resulting JSON string as the message to the logger (thus print to the console)

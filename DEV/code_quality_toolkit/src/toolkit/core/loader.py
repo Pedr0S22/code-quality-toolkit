@@ -5,9 +5,9 @@ from __future__ import annotations
 import importlib.util
 import inspect
 import sys
+from collections.abc import Iterable
 from pathlib import Path
 from types import ModuleType
-from typing import Dict, Iterable, List
 
 from . import logging
 from .contracts import PluginMetadata, PluginProtocol
@@ -130,7 +130,7 @@ def _instantiate_plugin(module: ModuleType, package_name: str) -> PluginProtocol
 
     # getattr retrieves this attribute. At this point, plugin_cls could be the plugin class itself or
     # an previously (already-) instantiated object (a singleton).
-    plugin_cls = getattr(module, "Plugin")
+    plugin_cls = module.Plugin
 
     # == Instantiation vs. Direct Use ==
 
@@ -202,7 +202,7 @@ def _validate_metadata(metadata: PluginMetadata, package_name: str) -> None:
             )
 
 
-def load_plugins(requested: Iterable[str] | None = None) -> Dict[str, PluginProtocol]:
+def load_plugins(requested: Iterable[str] | None = None) -> dict[str, PluginProtocol]:
     """Load plugins filtered by requested metadata names.
 
     Accepts an optional iterable of plugin names ('requested') and is type-hinted to return
@@ -210,7 +210,7 @@ def load_plugins(requested: Iterable[str] | None = None) -> Dict[str, PluginProt
     """
 
     # == Initialization ==
-    plugin_instances: Dict[str, PluginProtocol] = (
+    plugin_instances: dict[str, PluginProtocol] = (
         {}
     )  # empty dictionary initialized to store the successfully instantiated plugins.
 
@@ -273,7 +273,7 @@ def load_plugins(requested: Iterable[str] | None = None) -> Dict[str, PluginProt
     return plugin_instances
 
 
-def discover_plugins() -> List[str]:
+def discover_plugins() -> list[str]:
     """Return plugin package names discovered on disk."""
 
     return sorted(name for name, _ in _iter_plugin_modules())

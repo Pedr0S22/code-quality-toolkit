@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from ...core.contracts import IssueResult
 from ...utils.config import ToolkitConfig
@@ -23,15 +23,15 @@ class Plugin:
 
         self.max_line_length = config.rules.max_line_length
 
-    def get_metadata(self) -> Dict[str, str]:
+    def get_metadata(self) -> dict[str, str]:
         return {
             "name": "StyleChecker",
             "version": "0.1.0",
             "description": "Valida comprimento de linhas e convenções simples de nomes.",
         }
 
-    def analyze(self, source_code: str, file_path: str | None) -> Dict[str, Any]:
-        results: List[IssueResult] = []
+    def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
+        results: list[IssueResult] = []
         lines = source_code.splitlines()
         for idx, line in enumerate(lines, start=1):
             if len(line) > self.max_line_length:

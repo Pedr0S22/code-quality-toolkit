@@ -4,7 +4,6 @@ from __future__ import annotations
 
 # Each of the following import statements brings functionality from the Python’s standard library:
 import argparse  # Helps parsing command-line arguments → see 'build_parser()'
-
 import json  # This module is used to read and write JSON data (the analysis results)
 import sys  # provides access to system-level information and functions, such as
 
@@ -13,9 +12,6 @@ import sys  # provides access to system-level information and functions, such as
 from pathlib import (
     Path,
 )  # This module provides a way to handle filesystem paths instead of using strings.
-from typing import (
-    List,
-)  # Used to specify which types should have the variables, parameters, or return values.
 
 # These are imports from our own application:
 # → note the relative paths notation (.. and . ), as we are dealing with Python modules
@@ -119,7 +115,7 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _resolve_requested_plugins(option: str, config: ToolkitConfig) -> List[str] | None:
+def _resolve_requested_plugins(option: str, config: ToolkitConfig) -> list[str] | None:
     """
     Determines the final list of analysis plugins to be loaded and run by reconciling the user's command-line input
     with the default plugins specified in the configuration file. If the input is empty or invalid,
@@ -183,7 +179,7 @@ def _should_fail(report: dict, threshold: str) -> bool:
 
 
 def main(
-    argv: List[str] | None = None,
+    argv: list[str] | None = None,
 ) -> int:  # receives command-line arguments, returns status code as integer.
     """This is the main CLI entry point"""
 

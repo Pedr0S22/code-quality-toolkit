@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import datetime as _dt
-from typing import Dict, List
 
 from .. import __version__
 from .contracts import (
@@ -15,10 +14,10 @@ from .contracts import (
 )
 
 # the ordered hierarchy of severity levels used throughout this Code Quality Toolkit
-SEVERITIES: List[Severity] = ["info", "low", "medium", "high"]
+SEVERITIES: list[Severity] = ["info", "low", "medium", "high"]
 
 
-def _compute_top_offenders(files: List[FileReport]) -> List[Dict[str, int | str]]:
+def _compute_top_offenders(files: list[FileReport]) -> list[dict[str, int | str]]:
     """
     This function analyzes the results of the code analysis to identify the files with the highest number of issues.
     It returns a list of the top MAX_NUMBER_OF_TOP_OFFENDERS "offending" files, ranked by issue count.
@@ -27,7 +26,7 @@ def _compute_top_offenders(files: List[FileReport]) -> List[Dict[str, int | str]
     """
     MAX_NUMBER_OF_TOP_OFFENDERS = 5
 
-    offenders: List[tuple[str, int]] = []
+    offenders: list[tuple[str, int]] = []
     # loop through every file_report in the input list
     for file_report in files:
         # For each file, it calculates the total number of issues found across all plugins using a generator expression
@@ -48,7 +47,7 @@ def _compute_top_offenders(files: List[FileReport]) -> List[Dict[str, int | str]
     ]
 
 
-def _derive_status(plugin_status: Dict[str, str]) -> str:
+def _derive_status(plugin_status: dict[str, str]) -> str:
     """
     This function determines the overall success status of the entire analysis run based on the execution results
     of all individual plugins. It prioritizes failure states to give the most conservative assessment.
@@ -80,8 +79,8 @@ def _derive_status(plugin_status: Dict[str, str]) -> str:
 
 
 def aggregate(
-    files: List[FileReport],
-    plugin_status: Dict[str, str],
+    files: list[FileReport],
+    plugin_status: dict[str, str],
 ) -> UnifiedReport:
     """
     This function is the final step in the analysis, responsible for consolidating the detailed per-file results
@@ -93,10 +92,10 @@ def aggregate(
 
     # Initializes a dictionary (issues_by_severity) to count the total number of issues found for each severity level.
     # It starts all counts at 0 using a list of known severities.
-    issues_by_severity: Dict[Severity, int] = {severity: 0 for severity in SEVERITIES}
+    issues_by_severity: dict[Severity, int] = {severity: 0 for severity in SEVERITIES}
     # Initializes a dictionary to count the total number of issues found by each plugin, starting with
     # all known plugins from the input 'splugin_status'.
-    issues_by_plugin: Dict[str, int] = {name: 0 for name in plugin_status}
+    issues_by_plugin: dict[str, int] = {name: 0 for name in plugin_status}
     # 'total_issues' is initialized to track the cumulative count of all issues found.
     total_issues = 0
 
