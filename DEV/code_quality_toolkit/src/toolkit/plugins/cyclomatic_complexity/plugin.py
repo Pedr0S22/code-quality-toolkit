@@ -3,16 +3,18 @@
 from __future__ import annotations
 
 import ast
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ...core.contracts import IssueResult
 from ...utils.config import ToolkitConfig
 
-def _function_length(node: ast.AST) -> Optional[int]:
+
+def _function_length(node: ast.AST) -> int | None:
     """Calcula o numero de linhas em funcao."""
     if hasattr(node, "lineno") and hasattr(node, "end_lineno"):
         return node.end_lineno - node.lineno + 1
     return None
+
 
 def _arg_count(fn: ast.AST) -> int:
     if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -63,14 +65,14 @@ class Plugin:
         self.max_function_length = config.rules.max_function_length
         self.max_arguments = config.rules.max_arguments
 
-    def get_metadata(self) -> Dict[str, str]:
+    def get_metadata(self) -> dict[str, str]:
         return {
             "name": "CyclomaticComplexity",
             "version": "0.1.0",
             "description": "Conta decisões em funções para estimar complexidade.",
         }
 
-    def analyze(self, source_code: str, file_path: str | None) -> Dict[str, Any]:
+    def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
         try:
             tree = ast.parse(source_code)
         except SyntaxError as exc:
@@ -88,48 +90,64 @@ class Plugin:
                 "summary": {"issues_found": 1, "status": "partial"},
             }
 
-        results: List[IssueResult] = []
+        results: list[IssueResult] = []
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 visitor = _ComplexityVisitor()
                 visitor.visit(node)
                 complexity = visitor.complexity
                 if complexity > self.max_complexity:
-                    severity = "medium" if complexity <= self.max_complexity + 4 else "high"
+                    severity = (
+                        "medium" if complexity <= self.max_complexity + 4 else "high"
+                    )
                     results.append(
                         {
                             "severity": severity,
                             "code": "HIGH_COMPLEXITY",
-                            "message": f"Função '{node.name}' com complexidade {complexity}",
+                            "message": f"Função '{node.name}' com complexidade "
+                            + f"{complexity}",
                             "line": node.lineno,
                             "col": 0,
                             "hint": f"Reduza para <= {self.max_complexity}",
                         }
                     )
                 function_length = _function_length(node)
-                if (function_length is not None and function_length > self.max_function_length):
-                    severity = "low" if function_length <= self.max_function_length + 20 else "medium"
+                if (
+                    function_length is not None
+                    and function_length > self.max_function_length
+                ):
+                    severity = (
+                        "low"
+                        if function_length <= self.max_function_length + 20
+                        else "medium"
+                    )
                     results.append(
                         {
                             "severity": severity,
                             "code": "LONG_FUNCTION",
-                            "message": f"Function '{node.name}' with ({function_length} lines)",
+                            "message": f"Function '{node.name}' with "
+                            + f"({function_length} lines)",
                             "line": node.lineno,
                             "col": 0,
-                            "hint": f"Consider dividing to smaller functions (<= {self.max_function_length} lines).",
+                            "hint": "Consider dividing to smaller functions "
+                            + f"(<= {self.max_function_length} lines).",
                         }
                     )
                 arg_count = _arg_count(node)
                 if arg_count > self.max_arguments:
-                    severity = "low" if arg_count <= self.max_arguments + 2 else "medium"
+                    severity = (
+                        "low" if arg_count <= self.max_arguments + 2 else "medium"
+                    )
                     results.append(
                         {
                             "severity": severity,
                             "code": "TOO_MANY_ARGUMENTS",
-                            "message": f"Function '{node.name}' with ({arg_count} arguments)",
+                            "message": f"Function '{node.name}' with "
+                            + f"({arg_count} arguments)",
                             "line": node.lineno,
                             "col": 0,
-                            "hint": f"Consider reducing number of arguments (<= {self.max_arguments}).",
+                            "hint": "Consider reducing number of arguments "
+                            + f"(<= {self.max_arguments}).",
                         }
                     )
 
@@ -140,6 +158,3 @@ class Plugin:
                 "status": "completed",
             },
         }
-
-
-# EXTENSION-POINT: suportar métricas adicionais como tamanho de funções ou número de argumentos.
