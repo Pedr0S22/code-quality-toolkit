@@ -14,7 +14,7 @@ library. Its main purpose is to ensure the application has a working logger with
 a clean output format, avoiding the common issue of adding duplicate handlers
 if the code is executed multiple times (e.g., during testing or module reloading).
 """
-_LOGGER = logging.getLogger("toolkit") # retrieves a logger instance named "toolkit".
+_LOGGER = logging.getLogger("toolkit")  # retrieves a logger instance named "toolkit".
 # If a logger with this name already exists
 # (e.g., if the module was previously imported), it returns
 # the existing instance. If not, it creates a new one

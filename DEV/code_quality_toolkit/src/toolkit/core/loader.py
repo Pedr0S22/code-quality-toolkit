@@ -301,8 +301,8 @@ def load_plugins(requested: Iterable[str] | None = None) -> dict[str, PluginProt
     if requested_set is not None:
         missing = sorted(
             requested_set - set(plugin_instances)
-        )   # set containing all names that were requested but not successfully
-            # added to plugin_instances.
+        )  # set containing all names that were requested but not successfully
+        # added to plugin_instances.
         if missing:
             # a PluginLoadError is raised, detailing exactly which requested
             # plugins could not be loaded.

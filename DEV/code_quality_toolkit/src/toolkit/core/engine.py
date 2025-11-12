@@ -88,9 +88,9 @@ def run_analysis(
                     file=str(file_path),
                     error=str(exc),
                 )
-                plugin_status[plugin_name] = (
-                    "partial"
-                )  # indicates it did not complete successfully for all files.
+                # indicates it did not complete successfully for all files.
+                plugin_status[plugin_name] = "partial"
+
                 report = {
                     # assign a high severity and a standardized PLUGIN_ERROR code.
                     # This ensures that even a crashing plugin generates a structured

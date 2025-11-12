@@ -118,10 +118,8 @@ def load_config(path: str | Path | None) -> ToolkitConfig:
         return config  # immediately returns the default config object.
 
     # == File Validation and Loading ==
-    config_path = Path(
-        path
-    )   # 'path' is converted to a 'pathlib.Path' object for easy
-        # file system interaction.
+    config_path = Path(path)  # 'path' is converted to a 'pathlib.Path' object for easy
+    # file system interaction.
     if not config_path.exists():  # a mandatory check
         raise ConfigurationError(f"Configuration file not found: {config_path}")
 
@@ -137,8 +135,8 @@ def load_config(path: str | Path | None) -> ToolkitConfig:
     # === Plugins sections ===
     plugins = data.get(
         "plugins", {}
-    )   # retrieves the [plugins] section, defaulting to an empty
-        # dictionary if not found.
+    )  # retrieves the [plugins] section, defaulting to an empty
+    # dictionary if not found.
     enabled = plugins.get(
         "enabled"
     )  # checks for the 'enabled' key within that section.
