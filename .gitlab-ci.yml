@@ -76,6 +76,7 @@ test_coverage:
   - echo "Assessing test coverage... "
   - echo $CI_COMMIT_BRANCH
   - cd $CI_PROJECT_DIR/DEV/code_quality_toolkit/
+  - export PYTHONPATH="$CI_PROJECT_DIR/DEV/code_quality_toolkit/src:$PYTHONPATH"
   - pytest --cov=. --cov-report=html --cov-report=term # report goes to terminal and htmlcov → open 'index.html' in a browser
   artifacts:
     paths:
