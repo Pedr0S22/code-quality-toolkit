@@ -139,8 +139,8 @@ def _resolve_requested_plugins(option: str, config: ToolkitConfig) -> list[str] 
     ):  # first, check if the user explicitly requested all plugins
         return (
             config.enabled_plugins
-        )   # If so, it returns the full list of plugins defined
-            #as enabled in the ToolkitConfig object
+        )  # If so, it returns the full list of plugins defined
+        # as enabled in the ToolkitConfig object
         # This is the easiest way for a user to run the default suite.
     # Parses the custom 'option' plugins list:
     # 'item.strip()' removes any leading or trailing whitespace
