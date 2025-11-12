@@ -21,6 +21,9 @@ setup:
 lint:
 	$(BIN)/ruff check src tests
 
+lint_fix:
+	$(BIN)/ruff check --fix src tests
+
 format:
 	$(BIN)/black src tests
 

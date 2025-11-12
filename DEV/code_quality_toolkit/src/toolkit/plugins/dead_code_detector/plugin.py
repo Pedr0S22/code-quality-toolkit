@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import ast
 import re
-from typing import Any, Dict, List, Set
+from typing import Any
 
 from ...core.contracts import IssueResult
 from ...utils.config import ToolkitConfig
@@ -14,9 +14,9 @@ class _DefUseVisitor(ast.NodeVisitor):
     """Coleta definições e usos intra-ficheiro (escopo de módulo)."""
 
     def __init__(self) -> None:
-        self.defs: Dict[str, int] = {}   # nome -> linha onde foi definido
-        self.uses: Set[str] = set()
-        self.imports: Set[str] = set()
+        self.defs: dict[str, int] = {}  # nome -> linha onde foi definido
+        self.uses: set[str] = set()
+        self.imports: set[str] = set()
 
     # ---- definições ----
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
@@ -64,7 +64,9 @@ class Plugin:
 
     def __init__(self) -> None:
         # valores por omissão; podem ser alterados via toolkit.toml
-        self.ignore_patterns: List[re.Pattern[str]] = [re.compile(r"^__")]  # ignora dunders
+        self.ignore_patterns: list[re.Pattern[str]] = [
+            re.compile(r"^__")
+        ]  # ignora dunders
         self.severity: str = "low"
         self.min_name_len: int = 1
 
@@ -81,11 +83,12 @@ class Plugin:
         self.severity = getattr(sect, "severity", self.severity)
         self.min_name_len = int(getattr(sect, "min_name_length", self.min_name_len))
 
-    def get_metadata(self) -> Dict[str, str]:
+    def get_metadata(self) -> dict[str, str]:
         return {
             "name": "DeadCodeDetector",
             "version": "0.1.0",
-            "description": "Deteta funções, classes e variáveis definidas e nunca usadas no mesmo ficheiro.",
+            "description": "Deteta funções, classes e variáveis definidas e "
+            + "nunca usadas no mesmo ficheiro.",
         }
 
     # helpers
@@ -97,7 +100,7 @@ class Plugin:
                 return True
         return False
 
-    def analyze(self, source_code: str, file_path: str | None) -> Dict[str, Any]:
+    def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
         # 1) Parse seguro
         try:
             tree = ast.parse(source_code)
@@ -110,7 +113,8 @@ class Plugin:
                         "message": f"Erro de sintaxe: {exc}",
                         "line": exc.lineno or 0,
                         "col": exc.offset or 0,
-                        "hint": "Corrija a sintaxe para permitir a análise de dead code.",
+                        "hint": "Corrija a sintaxe para permitir a "
+                        + "análise de dead code.",
                     }
                 ],
                 "summary": {"issues_found": 1, "status": "partial"},
@@ -121,7 +125,7 @@ class Plugin:
         v.visit(tree)
 
         # 3) Findings
-        results: List[IssueResult] = []
+        results: list[IssueResult] = []
         for name, line in v.defs.items():
             if self._ignored(name):
                 continue
@@ -135,8 +139,12 @@ class Plugin:
                         "message": f"'{name}' definido e nunca usado.",
                         "line": line or 1,
                         "col": 1,
-                        "hint": "Remover, utilizar, ou suprimir via [plugins.dead_code].ignore_patterns.",
+                        "hint": "Remover, utilizar, ou suprimir via "
+                        + "[plugins.dead_code].ignore_patterns.",
                     }
                 )
 
-        return {"results": results, "summary": {"issues_found": len(results), "status": "completed"}}
+        return {
+            "results": results,
+            "summary": {"issues_found": len(results), "status": "completed"},
+        }

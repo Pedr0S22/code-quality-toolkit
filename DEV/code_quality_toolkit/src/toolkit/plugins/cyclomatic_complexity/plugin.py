@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import ast
-from typing import Any, Dict, List
+from typing import Any
 
 from ...core.contracts import IssueResult
 from ...utils.config import ToolkitConfig
@@ -41,14 +41,14 @@ class Plugin:
     def configure(self, config: ToolkitConfig) -> None:
         self.max_complexity = config.rules.max_complexity
 
-    def get_metadata(self) -> Dict[str, str]:
+    def get_metadata(self) -> dict[str, str]:
         return {
             "name": "CyclomaticComplexity",
             "version": "0.1.0",
             "description": "Conta decisões em funções para estimar complexidade.",
         }
 
-    def analyze(self, source_code: str, file_path: str | None) -> Dict[str, Any]:
+    def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
         try:
             tree = ast.parse(source_code)
         except SyntaxError as exc:
@@ -66,19 +66,22 @@ class Plugin:
                 "summary": {"issues_found": 1, "status": "partial"},
             }
 
-        results: List[IssueResult] = []
+        results: list[IssueResult] = []
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 visitor = _ComplexityVisitor()
                 visitor.visit(node)
                 complexity = visitor.complexity
                 if complexity > self.max_complexity:
-                    severity = "medium" if complexity <= self.max_complexity + 4 else "high"
+                    severity = (
+                        "medium" if complexity <= self.max_complexity + 4 else "high"
+                    )
                     results.append(
                         {
                             "severity": severity,
                             "code": "HIGH_COMPLEXITY",
-                            "message": f"Função '{node.name}' com complexidade {complexity}",
+                            "message": f"Função '{node.name}' com complexidade "
+                            + f"{complexity}",
                             "line": node.lineno,
                             "col": 0,
                             "hint": f"Reduza para <= {self.max_complexity}",
@@ -93,4 +96,5 @@ class Plugin:
         }
 
 
-# EXTENSION-POINT: suportar métricas adicionais como tamanho de funções ou número de argumentos.
+# EXTENSION-POINT: suportar métricas adicionais como tamanho de funções ou
+# número de argumentos.
