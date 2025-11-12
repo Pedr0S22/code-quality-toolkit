@@ -137,4 +137,5 @@ def run_analysis(
     return files, plugin_status
 
 
-# TODO(alunos): suportar execução paralela de plugins ou cache incremental de resultados.
+# TODO(alunos): suportar execução paralela de plugins ou cache
+# incremental de resultados.
