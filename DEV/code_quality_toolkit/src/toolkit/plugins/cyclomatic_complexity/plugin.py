@@ -73,7 +73,9 @@ class Plugin:
                 visitor.visit(node)
                 complexity = visitor.complexity
                 if complexity > self.max_complexity:
-                    severity = "medium" if complexity <= self.max_complexity + 4 else "high"
+                    severity = (
+                        "medium" if complexity <= self.max_complexity + 4 else "high"
+                    )
                     results.append(
                         {
                             "severity": severity,

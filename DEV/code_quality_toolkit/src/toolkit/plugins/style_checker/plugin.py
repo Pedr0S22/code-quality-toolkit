@@ -63,4 +63,6 @@ class Plugin:
                 "status": "completed",
             },
         }
+
+
 # EXTENSION-POINT: adicionar novas regras, p.ex. indentação ou trailing whitespace.

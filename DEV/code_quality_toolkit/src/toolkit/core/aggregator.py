@@ -6,19 +6,25 @@ import datetime as _dt
 from typing import Dict, List
 
 from .. import __version__
-from .contracts import FileReport, Severity, UnifiedReport, validate_plugin_report, validate_unified_report
+from .contracts import (
+    FileReport,
+    Severity,
+    UnifiedReport,
+    validate_plugin_report,
+    validate_unified_report,
+)
 
 # the ordered hierarchy of severity levels used throughout this Code Quality Toolkit
 SEVERITIES: List[Severity] = ["info", "low", "medium", "high"]
 
 
 def _compute_top_offenders(files: List[FileReport]) -> List[Dict[str, int | str]]:
-    '''
+    """
     This function analyzes the results of the code analysis to identify the files with the highest number of issues.
     It returns a list of the top MAX_NUMBER_OF_TOP_OFFENDERS "offending" files, ranked by issue count.
 
     MAX_NUMBER_OF_TOP_OFFENDERS is a magic number.
-    '''
+    """
     MAX_NUMBER_OF_TOP_OFFENDERS = 5
 
     offenders: List[tuple[str, int]] = []
@@ -31,25 +37,27 @@ def _compute_top_offenders(files: List[FileReport]) -> List[Dict[str, int | str]
         offenders.append((file_report["file"], issues))
 
     # The offenders list is sorted by issue count (item[1]) and then file path (item[0])
-    # By using the negative of item[1], the sort is performed in descending order (the most issues come first).    
+    # By using the negative of item[1], the sort is performed in descending order (the most issues come first).
     offenders.sort(key=lambda item: (-item[1], item[0]))
 
     # convert the sorted list of tuples back into a list of dictionaries with clear keys ("file" and "issues").
     # 'if count > 0' ensures that *only* files that have at least one issue are included in the final results.
     # [:N] slices the resulting list to return only the top N files with the highest issue counts.
-    return [{"file": file, "issues": count} for file, count in offenders if count > 0][:MAX_NUMBER_OF_TOP_OFFENDERS]
+    return [{"file": file, "issues": count} for file, count in offenders if count > 0][
+        :MAX_NUMBER_OF_TOP_OFFENDERS
+    ]
 
 
 def _derive_status(plugin_status: Dict[str, str]) -> str:
-    '''
+    """
     This function determines the overall success status of the entire analysis run based on the execution results
     of all individual plugins. It prioritizes failure states to give the most conservative assessment.
 
     The function takes the plugin_status dictionary (where keys are plugin names and values are their status,
     e.g., "completed", "partial", or "failed") and returns a single string representing the overall analysis status.
-    '''
+    """
 
-    # First check if the plugin_status dictionary is empty, which means that no plugins were loaded or run. 
+    # First check if the plugin_status dictionary is empty, which means that no plugins were loaded or run.
     # This is considered an internal failure of the analysis engine, so the function returns "failed".
     if not plugin_status:
         return "failed"
@@ -63,11 +71,11 @@ def _derive_status(plugin_status: Dict[str, str]) -> str:
         return "failed"
 
     # otherwise, if the set contains "partial" (meaning at least one plugin encountered errors on some files
-    # but kept running, the overall status is "partial". This signals to the user that the results may be incomplete.    
+    # but kept running, the overall status is "partial". This signals to the user that the results may be incomplete.
     if "partial" in statuses:
         return "partial"
 
-    # otherwise, all plugins have returned "completed"     
+    # otherwise, all plugins have returned "completed"
     return "completed"
 
 
@@ -102,7 +110,7 @@ def aggregate(
     #       increments the count for the corresponding severity in the issues_by_severity dictionary.
     for file_report in files:
         for plugin_report in file_report["plugins"]:
-            validate_plugin_report(plugin_report)       # again??
+            validate_plugin_report(plugin_report)  # again??
             plugin_name = plugin_report["plugin"]
             plugin_total = plugin_report["summary"]["issues_found"]
             total_issues += plugin_total
@@ -124,7 +132,7 @@ def aggregate(
 
     # Construct the final UnifiedReport dictionary, which is structured into three main sections:
     # i.    analysis metadata: contextual information about the run.
-    # ii.   summary: all the aggregated counts and calculated metrics. 
+    # ii.   summary: all the aggregated counts and calculated metrics.
     # iii.  details: contains the complete, raw list of per-file analysis results (files).
     unified: UnifiedReport = {
         "analysis_metadata": {
@@ -147,6 +155,3 @@ def aggregate(
 
     # returns the consolidated analysis report
     return unified
-
-
-
