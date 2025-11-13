@@ -1,1 +1,1 @@
-#plugin package
+"""Security Checker plugin package."""""
