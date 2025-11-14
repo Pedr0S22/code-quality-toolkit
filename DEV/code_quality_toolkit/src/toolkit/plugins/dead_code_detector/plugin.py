@@ -101,50 +101,80 @@ class Plugin:
         return False
 
     def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
-        # 1) Parse seguro
+        """
+        Run the analysis on a single file.
+        This function MUST NOT raise an exception.
+        """
         try:
-            tree = ast.parse(source_code)
-        except SyntaxError as exc:
-            return {
-                "results": [
+            results: list[IssueResult] = []
+
+            # 1) Tenta fazer o parse do código para AST
+            try:
+                tree = ast.parse(source_code)
+            except SyntaxError as exc:
+                # Erro no código analisado, não é bug do plugin → status partial
+                results.append(
                     {
                         "severity": "high",
                         "code": "SYNTAX_ERROR",
+                        # str(exc) já inclui info de linha/coluna
                         "message": f"Erro de sintaxe: {exc}",
                         "line": exc.lineno or 0,
                         "col": exc.offset or 0,
-                        "hint": "Corrija a sintaxe para permitir a "
-                        + "análise de dead code.",
-                    }
-                ],
-                "summary": {"issues_found": 1, "status": "partial"},
-            }
-
-        # 2) Coleta defs/usos/imports
-        v = _DefUseVisitor()
-        v.visit(tree)
-
-        # 3) Findings
-        results: list[IssueResult] = []
-        for name, line in v.defs.items():
-            if self._ignored(name):
-                continue
-            if name in v.imports:
-                continue
-            if name not in v.uses:
-                results.append(
-                    {
-                        "severity": self.severity,
-                        "code": "DEAD_CODE",
-                        "message": f"'{name}' definido e nunca usado.",
-                        "line": line or 1,
-                        "col": 1,
-                        "hint": "Remover, utilizar, ou suprimir via "
-                        + "[plugins.dead_code].ignore_patterns.",
+                        "hint": "Corrija a sintaxe para permitir a análise "
+                        + "de dead code.",
                     }
                 )
+                return {
+                    "results": results,
+                    "summary": {
+                        "issues_found": len(results),
+                        "status": "partial",
+                    },
+                }
 
-        return {
-            "results": results,
-            "summary": {"issues_found": len(results), "status": "completed"},
-        }
+            # 2) Visita a AST para recolher definições, usos e imports
+            visitor = _DefUseVisitor()
+            visitor.visit(tree)
+
+            # 3) Para cada nome definido, se nunca for usado → DEAD_CODE
+            for name, line in visitor.defs.items():
+                # aplica regras de ignore (dunders, padrões, comprimento mínimo)
+                if self._ignored(name):
+                    continue
+                # não marcamos símbolos importados
+                if name in visitor.imports:
+                    continue
+                # se nunca aparece como uso (Load) → dead code
+                if name not in visitor.uses:
+                    results.append(
+                        {
+                            "severity": self.severity,
+                            "code": "DEAD_CODE",
+                            "message": f"'{name}' definido e nunca usado.",
+                            "line": line or 1,
+                            "col": 1,
+                            "hint": "Remover, utilizar, ou suprimir via "
+                            + "[plugins.dead_code].ignore_patterns.",
+                        }
+                    )
+
+            # Return a Success Response
+            return {
+                "results": results,
+                "summary": {
+                    "issues_found": len(results),
+                    "status": "completed",
+                },
+            }
+
+        except Exception as e:
+            # Catch all errors and Return a Failure Response (Golden Rule)
+            return {
+                "results": [],
+                "summary": {
+                    "issues_found": 0,
+                    "status": "failed",
+                    "error": str(e),
+                },
+            }
