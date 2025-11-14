@@ -192,6 +192,9 @@ class Plugin:
 
             results.extend(self._check_indentation(lines))
 
+            if self.check_naming:
+                results.extend(self._check_naming_conventions(source_code, file_path))
+
             if file_path and not _SNAKE_CASE_RE.match(Path(file_path).name):
                 results.append(
                     {
