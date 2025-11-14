@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -7,11 +8,11 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from toolkit.utils.config import (
-    load_config,
+from toolkit.core.errors import ConfigurationError  # noqa: E402
+from toolkit.utils.config import (  # noqa: E402
     ToolkitConfig,
+    load_config,
 )
-from toolkit.core.errors import ConfigurationError
 
 
 def test_load_config_no_path_returns_defaults():
@@ -95,14 +96,14 @@ def test_load_config_partial_override(tmp_path: Path):
 
     # Test that defaults are kept for non-specified keys
     assert config.strict is False  # Default
-    assert config.enabled_plugins == ["StyleChecker", "CyclomaticComplexity"] # Default
+    assert config.enabled_plugins == ["StyleChecker", "CyclomaticComplexity"]  # Default
 
     # Test mixed rules (one override, one default)
     assert config.rules.max_line_length == 120  # Overridden
-    assert config.rules.max_complexity == 10    # Default
+    assert config.rules.max_complexity == 10  # Default
 
     # Test mixed analyze (one override, one default)
-    assert config.analyze.include == ["**/*.py"] # Default
+    assert config.analyze.include == ["**/*.py"]  # Default
     assert config.analyze.exclude == ["tests/**"]  # Overridden
 
 

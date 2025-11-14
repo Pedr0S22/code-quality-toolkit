@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import get_type_hints
 from pathlib import Path
+from typing import get_type_hints
 
 from ..core.errors import ConfigurationError
 
@@ -156,13 +156,13 @@ def load_config(path: str | Path | None) -> ToolkitConfig:
         ]  # overwrites the default config.enabled_plugins list
         # with the new values,
         # ensuring all list items are converted to strings.
-        
+
     # === Rules Section ===
-    rules_data = data.get("rules", {})# ensures this section is a dictionary
-        # attempts to get the value from the file. If the key is not present,
-        # it uses the existing default value (config.rules.max_line_length)
-        # as the fallback, guaranteeing that only explicitly set values are changed.
-        # The values are explicitly converted to int() to ensure type correctness
+    rules_data = data.get("rules", {})  # ensures this section is a dictionary
+    # attempts to get the value from the file. If the key is not present,
+    # it uses the existing default value (config.rules.max_line_length)
+    # as the fallback, guaranteeing that only explicitly set values are changed.
+    # The values are explicitly converted to int() to ensure type correctness
     if isinstance(rules_data, dict):
         # Dynamically loop over all fields defined in the RulesConfig class
         type_hints = get_type_hints(config.rules)
@@ -174,12 +174,11 @@ def load_config(path: str | Path | None) -> ToolkitConfig:
                     new_value = rules_data[field_name]
                     # Now expected_type is a class (int) and can be called
                     setattr(config.rules, field_name, expected_type(new_value))
-                except (ValueError, TypeError):
-                    # This error message will also work now
+                except (ValueError, TypeError) as ex:
                     raise ConfigurationError(
                         f"Invalid type for '[rules].{field_name}'. "
                         f"Expected {expected_type.__name__} but got '{new_value}'."
-                    )
+                    ) from ex
 
     # === Analyze Section ===
     analyze = data.get("analyze", {})
