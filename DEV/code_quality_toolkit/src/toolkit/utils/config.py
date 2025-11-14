@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import get_type_hints
 
 from ..core.errors import ConfigurationError
 
@@ -83,6 +84,8 @@ class ToolkitConfig:
     # "StyleChecker" and "CyclomaticComplexity" are predefined defaults.
     # 'default_factory' ensures that every new ToolkitConfig instance gets its
     # own independent list object.
+    strict: bool = False
+
     enabled_plugins: list[str] = field(
         default_factory=lambda: ["StyleChecker", "CyclomaticComplexity"]
     )
@@ -138,6 +141,11 @@ def load_config(path: str | Path | None) -> ToolkitConfig:
 
     # == Applying Overrides from TOML Data ==
 
+    # Load top-level settings (e.g., strict mode)
+    strict_value = data.get("strict", config.strict)
+    if isinstance(strict_value, bool):
+        config.strict = strict_value
+
     # === Plugins sections ===
     plugins = data.get(
         "plugins", {}
@@ -156,18 +164,27 @@ def load_config(path: str | Path | None) -> ToolkitConfig:
         # ensuring all list items are converted to strings.
 
     # === Rules Section ===
-    rules = data.get("rules", {})
-    if isinstance(rules, dict):  # ensures this section is a dictionary
-        # attempts to get the value from the file. If the key is not present,
-        # it uses the existing default value (config.rules.max_line_length)
-        # as the fallback, guaranteeing that only explicitly set values are changed.
-        # The values are explicitly converted to int() to ensure type correctness
-        config.rules.max_line_length = int(
-            rules.get("max_line_length", config.rules.max_line_length)
-        )
-        config.rules.max_complexity = int(
-            rules.get("max_complexity", config.rules.max_complexity)
-        )
+    rules_data = data.get("rules", {})  # ensures this section is a dictionary
+    # attempts to get the value from the file. If the key is not present,
+    # it uses the existing default value (config.rules.max_line_length)
+    # as the fallback, guaranteeing that only explicitly set values are changed.
+    # The values are explicitly converted to int() to ensure type correctness
+    if isinstance(rules_data, dict):
+        # Dynamically loop over all fields defined in the RulesConfig class
+        type_hints = get_type_hints(config.rules)
+
+        # Loop over the resolved {field_name: type} pairs
+        for field_name, expected_type in type_hints.items():
+            if field_name in rules_data:
+                try:
+                    new_value = rules_data[field_name]
+                    # Now expected_type is a class (int) and can be called
+                    setattr(config.rules, field_name, expected_type(new_value))
+                except (ValueError, TypeError) as ex:
+                    raise ConfigurationError(
+                        f"Invalid type for '[rules].{field_name}'. "
+                        f"Expected {expected_type.__name__} but got '{new_value}'."
+                    ) from ex
 
     # === Analyze Section ===
     analyze = data.get("analyze", {})
