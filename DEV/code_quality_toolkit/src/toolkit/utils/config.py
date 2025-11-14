@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import List
 
 from ..core.errors import ConfigurationError
 
@@ -32,12 +33,12 @@ class AnalyzeConfig:
     # default_factory=lambda: provides a no-argument function (here, a lambda) that is called to create
     # a new default value every time a new 'AnalyzeConfig' object is created without specifying an include value.
     # ["**/*.py"] is a common glob pattern that means: "recursively include all files ending with .py."
-    include: list[str] = field(default_factory=lambda: ["**/*.py"])
+    include: List[str] = field(default_factory=lambda: ["**/*.py"])
     
     # Similarly defines the list of glob patterns for files/directories to be *excluded* from the analysis.
     # default_factory=lambda: ["venv/**"]: Again, this ensures each instance gets its own list.
     # "venv/**" means: recursively exclude everything inside any directory named venv (the virtual environments.
-    exclude: list[str] = field(default_factory=lambda: ["venv/**"])
+    exclude: List[str] = field(default_factory=lambda: ["venv/**"])
 
     # Whit the statements abovos, when the analysis tool initializes, it can create
     # a configuration object simply by calling:  "config = AnalyzeConfig()""
