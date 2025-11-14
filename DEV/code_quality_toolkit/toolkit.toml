@@ -1,5 +1,5 @@
 [plugins]
-enabled = ["StyleChecker", "CyclomaticComplexity"]
+enabled = ["StyleChecker", "CyclomaticComplexity", "DuplicationChecker"]
 
 [rules]
 max_line_length = 88
