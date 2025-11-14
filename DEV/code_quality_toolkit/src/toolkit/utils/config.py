@@ -62,8 +62,12 @@ class RulesConfig:
     # default rules. These values can then be overridden if a configuration file
     # specifies different limits.
     max_line_length: int = 88
-    max_complexity: int = 10    # This is a widely accepted threshold. Functions with a complexity higher than this
-    check_whitespace: bool = True                             # are generally considered difficult to read, test, and maintain.
+    max_complexity: int = (
+        10  # This is a widely accepted threshold. Functions with a complexity
+    )
+    # higher than this are generally considered difficult to read, test, and
+    # maintain.
+    check_whitespace: bool = True
     indent_style = "spaces" 
     indent_size = 4
     allow_mixed_indentation = False
