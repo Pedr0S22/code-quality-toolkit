@@ -2,9 +2,12 @@
 
 # Importar o plugin (nome da classe 'Plugin')
 from toolkit.plugins.style_checker.plugin import Plugin
+
 # REMOVA: from toolkit.utils.config import ToolkitConfig
 
-# --- Mocks para resolver o erro 'AttributeError: 'RulesConfig' object attribute 'indent_style' is read-only' ---
+# --- Mocks para resolver o erro 'AttributeError: 
+# 'RulesConfig' object attribute 'indent_style' is read-only' 
+# ---
 class MockRulesConfig:
     """Mock 'read-only' para permitir a configuração das regras no teste."""
     max_line_length = 88
@@ -73,7 +76,8 @@ def test_style_checker_flags_indentation_tabs():
     assert report["summary"]["issues_found"] >= 1
     
     # Validar que a regra de indentação correta foi ativada
-    indent_issue = next((r for r in report["results"] if r["code"] == "INDENT_TABS_NOT_ALLOWED"), None)
+    indent_issue = next((r for r in report["results"] 
+                         if r["code"] == "INDENT_TABS_NOT_ALLOWED"), None)
     assert indent_issue is not None
     assert indent_issue["line"] == 1
 
@@ -149,8 +153,10 @@ def test_style_checker_ignores_naming_if_disabled():
     report = plugin.analyze(source_code, "naming.py")
 
     # Garantir que nenhuma issue de nomeação foi reportada
-    class_issue = next((r for r in report["results"] if r["code"] == "CLASS_NAMING"), None)
-    func_issue = next((r for r in report["results"] if r["code"] == "FUNC_NAMING"), None)
+    class_issue = next((r for r in report["results"] 
+                        if r["code"] == "CLASS_NAMING"), None)
+    func_issue = next((r for r in report["results"] 
+                       if r["code"] == "FUNC_NAMING"), None)
 
     assert class_issue is None
     assert func_issue is None
