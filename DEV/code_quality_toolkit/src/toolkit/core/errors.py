@@ -1,5 +1,6 @@
 """Custom exception types for the toolkit core."""
 
+
 class ToolkitError(Exception):
     """Base class for toolkit-specific exceptions."""
 

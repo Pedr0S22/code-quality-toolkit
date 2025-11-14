@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Protocol
+from typing import Any, Protocol
 
 from ..core.contracts import PluginMetadata
 
@@ -13,7 +13,7 @@ class BasePlugin(Protocol):
     def get_metadata(self) -> PluginMetadata:
         """Return plugin metadata including name, version and description."""
 
-    def analyze(self, source_code: str, file_path: str | None) -> Dict[str, Any]:
+    def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
         """Execute the analysis and return a plugin report."""
 
 

@@ -8,13 +8,14 @@ from pathlib import Path
 def test_cli_generates_report(tmp_path: Path) -> None:
     source = tmp_path / "demo.py"
     source.write_text(
-        "print('hello world with a very very long line to trigger style check warnings and exceed the default limit easily')\n",
+        "print('hello world with a very very long line to trigger style check"
+        "warnings and exceed the default limit easily')\n",
         encoding="utf-8",
     )
     report_path = tmp_path / "report.json"
 
     env = os.environ.copy()
-    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1] / "src")
+    env["PYTHONPATH"] = os.environ.get("PYTHONPATH", "")
 
     result = subprocess.run(
         [
