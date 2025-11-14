@@ -71,7 +71,7 @@ integration:
 test_coverage:
   stage: integration
   before_script:
-    - pip install pytest pytest-cov
+    - pip install pytest pytest-cov bandit
   script:
   - echo "Assessing test coverage... "
   - echo $CI_COMMIT_BRANCH
