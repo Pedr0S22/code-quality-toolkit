@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Dict, List, Tuple
 
 from ..plugins.base import BasePlugin
 from ..utils import fs
@@ -16,8 +17,8 @@ It orchestrates the process of file discovery, configuration setup, iterating th
 all enabled plugins on each file's source code, handling errors during plugin execution,
 and aggregating the final results.
 '''
-def run_analysis( root: str | Path, plugins: dict[str, BasePlugin], config: ToolkitConfig,
-) -> tuple[list[FileReport], dict[str, str]]:
+def run_analysis( root: str | Path, plugins: Dict[str, BasePlugin], config: ToolkitConfig,
+) -> Tuple[List[FileReport], Dict[str, str]]:
     """Execute all plugins over files discovered under root."""
 
     # Iterate over all loaded plugins looking for a configuration setup
@@ -30,10 +31,10 @@ def run_analysis( root: str | Path, plugins: dict[str, BasePlugin], config: Tool
 
     # plugin_status is initialized: It's a dictionary used to track whether each plugin executed successfully
     # across all files. It defaults to "completed" for every plugin.
-    plugin_status: dict[str, str] = {name: "completed" for name in plugins}
+    plugin_status: Dict[str, str] = {name: "completed" for name in plugins}
     
     # initialize 'files' as an empty list that will store the detailed analysis results for every file scanned.
-    files: list[FileReport] = []
+    files: List[FileReport] = []
 
     # == File discovery ==
 
