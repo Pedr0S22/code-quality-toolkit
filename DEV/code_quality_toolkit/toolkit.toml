@@ -1,5 +1,5 @@
 [plugins]
-enabled = ["StyleChecker","CommentDensity"]
+enabled = ["StyleChecker","CyclomaticComplexity","CommentDensity"]
 
 [rules]
 max_line_length = 88
