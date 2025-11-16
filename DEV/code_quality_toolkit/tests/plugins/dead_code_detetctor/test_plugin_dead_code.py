@@ -1,33 +1,34 @@
-import ast 
-import re
+import ast
 from textwrap import dedent
-from typing import Any
 
-import pytest
-# Assumindo que a estrutura de importação funciona para os testes
-from toolkit.plugins.dead_code_detector.plugin import Plugin, _DefUseVisitor 
+# I001: Bloco de importações locais/do projeto
+from toolkit.plugins.dead_code_detector.plugin import Plugin, _DefUseVisitor
 from toolkit.utils.config import ToolkitConfig
 
+# ======================================================================
+# Classes Mock para Simular a Configuração
+# ======================================================================
 
-# ======================================================================
-# Classes Mock para Simular a Configuração 
-# ======================================================================
 
 class MockSection:
     """Simula a secção [plugins.dead_code]."""
+
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
+
 class MockToolkitConfig:
     """Simula o objeto ToolkitConfig com a secção plugins."""
+
     def __init__(self, dead_code_config):
         # Cria um objeto que simula config.plugins.dead_code
-        self.plugins = type('Plugins', (object,), {'dead_code': dead_code_config})()
+        self.plugins = type("Plugins", (object,), {"dead_code": dead_code_config})()
 
 
 # ======================================================================
-# 1. Testes do Visitor (Lógica Central - AST Traversal)
+# 1. Testes do Visitor (Lógica Central)
 # ======================================================================
+
 
 def test_defuse_visitor_basic_logic() -> None:
     """Verifica se o visitor coleta definições e usos básicos corretamente."""
@@ -50,6 +51,7 @@ def test_defuse_visitor_basic_logic() -> None:
     dead_candidates = set(visitor.defs.keys()) - visitor.uses
     assert "unused_func" in dead_candidates
     assert "VAR_B" in dead_candidates
+
 
 def test_defuse_visitor_imports() -> None:
     """Verifica se o visitor identifica nomes importados."""
@@ -74,8 +76,11 @@ def test_defuse_visitor_imports() -> None:
     assert "local_func" in visitor.defs
 
     # ======================================================================
+
+
 # 2. Testes de Metadados e Configuração
 # ======================================================================
+
 
 def test_plugin_metadata() -> None:
     """Verifica se get_metadata() retorna as informações corretas."""
@@ -84,45 +89,50 @@ def test_plugin_metadata() -> None:
     assert metadata["name"] == "DeadCodeDetector"
     assert metadata["version"] == "0.1.0"
 
+
 def test_plugin_configuration_defaults() -> None:
     """Verifica os valores por omissão."""
     plugin = Plugin()
     assert len(plugin.ignore_patterns) == 1
     assert plugin.ignore_patterns[0].pattern == r"^__"
 
+
 def test_plugin_configuration_custom_settings() -> None:
     """Verifica se a configuração personalizada é aplicada corretamente."""
     dead_code_config = MockSection(
-        ignore_patterns = ["^test_", "TEMP$"],
-        severity = "medium",
-        min_name_length = 5
+        ignore_patterns=["^test_", "TEMP$"],
+        severity="medium",
+        min_name_length=5,
     )
     config = MockToolkitConfig(dead_code_config)
 
     plugin = Plugin()
     plugin.configure(config)
 
-    assert len(plugin.ignore_patterns) == 2 
+    assert len(plugin.ignore_patterns) == 2
     assert plugin.ignore_patterns[0].pattern == r"^test_"
     assert plugin.min_name_len == 5
-    
+
+
 def test_plugin_ignored_helper() -> None:
     """Testa a função interna _ignored, verificando min_name_len e patterns."""
     dead_code_config = MockSection(
-        ignore_patterns = ["^test_"],
-        min_name_length = 5
+        ignore_patterns=["^test_"],
+        min_name_length=5,
     )
     config = MockToolkitConfig(dead_code_config)
 
     plugin = Plugin()
     plugin.configure(config)
 
-    assert plugin.min_name_len == 5 
-    assert plugin._ignored("a") is True 
-    assert plugin._ignored("abcde") is False 
+    assert plugin.min_name_len == 5
+    assert plugin._ignored("a") is True
+    assert plugin._ignored("abcde") is False
+
 
 def test_plugin_configuration_no_section() -> None:
     """Verifica que a ausência de secção de plugin não causa erro."""
+
     class MockNoPluginsConfig:
         plugins = None
 
@@ -131,8 +141,11 @@ def test_plugin_configuration_no_section() -> None:
     assert plugin.severity == "low"
 
     # ======================================================================
+
+
 # 3. Testes da Lógica de Análise (analyze) e Resultados
 # ======================================================================
+
 
 def test_analyze_dead_code_basic() -> None:
     """Caso básico: deteta função e variável não utilizadas."""
@@ -149,8 +162,8 @@ def test_analyze_dead_code_basic() -> None:
     out = plugin.analyze(src, "sample.py")
 
     assert out["summary"]["status"] == "completed"
-    assert out["summary"]["issues_found"] == 2 
-    
+    assert out["summary"]["issues_found"] == 2
+
     codes = {issue["code"] for issue in out["results"]}
     assert "DEAD_CODE" in codes
 
@@ -188,30 +201,28 @@ def test_analyze_dead_code_in_class_variable_and_function() -> None:
     plugin.configure(ToolkitConfig())
 
     out = plugin.analyze(src, "class_test.py")
-    
+
     # O plugin reporta 4 problemas (UNUSED_GLOBAL, MyClass, used_method, unused_method).
-    assert out["summary"]["issues_found"] == 4 
-    
+    assert out["summary"]["issues_found"] == 4
+
     dead_names = {issue["message"].split("'")[1] for issue in out["results"]}
     assert "UNUSED_GLOBAL" in dead_names
     assert "unused_method" in dead_names
 
 
 def test_analyze_ignore_patterns() -> None:
-    """Verifica se nomes ignorados pela configuração não são reportados. (CORREÇÃO FINAL)"""
+    """Verifica se nomes ignorados pela configuração não são reportados."""
     src = dedent(
         """
-        def __private_func(): pass # Esperado: IGNORADO
-        def test_helper(): pass # Esperado: IGNORADO
-        x = 5 # DEAD_CODE
-        def regular_dead_func(): pass # DEAD_CODE
+        def __private_func(): pass 
+        def test_helper(): pass 
+        x = 5 
+        def regular_dead_func(): pass 
         """
     )
-    # CORREÇÃO: Incluímos explicitamente a regra por omissão '^__'
-    # junto com a regra customizada '^test_' para evitar que a dunder func seja reportada.
     dead_code_config = MockSection(
-        ignore_patterns = ["^test_", "^__"], 
-        min_name_length = 1
+        ignore_patterns=["^test_", "^__"],
+        min_name_length=1,
     )
     config = MockToolkitConfig(dead_code_config)
 
@@ -221,9 +232,8 @@ def test_analyze_ignore_patterns() -> None:
     out = plugin.analyze(src, "ignore_test.py")
 
     assert out["summary"]["status"] == "completed"
-    # Agora a contagem deve ser 2 ('x' e 'regular_dead_func').
     assert out["summary"]["issues_found"] == 2
-    
+
     dead_names = {issue["message"].split("'")[1] for issue in out["results"]}
     assert "regular_dead_func" in dead_names
     assert "x" in dead_names
