@@ -26,28 +26,6 @@ python -m toolkit.core.cli analyze examples/sample_project --out report.json
 
 ### Opções da CLI
 
-1. Ao usar o comando
-```bash
-make run
-```
-utilizar um dos argumentos (optional):
-
-```
-make run arg=
-  "--plugins all | StyleChecker,CyclomaticComplexity"
-  "--out report.json"
-  "--include-glob "**/*.py" (repetível)"
-  "--exclude-glob "tests/**" (repetível)"
-  "--config toolkit.toml"
-  "--fail-on-severity low|medium|high"
-```
-
-2. Usando o CLI com: 
-
-```bash
-python -m toolkit.core.cli analyze examples/sample_project --out report.json
-```
-utilizar um dos argumentos (optional):
 ```
 toolkit analyze <path>
   --plugins all | StyleChecker,CyclomaticComplexity
@@ -96,6 +74,103 @@ resultados detalhados por ficheiro e plugin.
 
 Teste o plugin com `pytest` e execute a CLI para gerar relatórios que o incluam.
 
+## Plugins incluídos
+
+O Code Quality Toolkit já inclui dois plugins de análise de código: complexity e dead_code.
+Ambos seguem o contrato definido em plugins/base.py e são descobertos automaticamente via loader.discover_plugins().
+
+### Plugin complexity — Cyclomatic Complexity
+
+Este plugin calcula a complexidade ciclomática de cada função e método presente nos ficheiros analisados.
+A métrica segue o modelo clássico de McCabe, incrementando a complexidade em pontos de decisão, tais como:
+
+instruções de controlo (if, elif, else);
+
+ciclos (for, while);
+
+blocos de exceção (try, except);
+
+operadores booleanos (and, or);
+
+compreensões com condições ([x for ... if cond]).
+
+A complexidade calculada é comparada com o limiar configurado em toolkit.toml:
+
+[rules]
+max_complexity = 10
+
+
+#### Comportamento do plugin:
+
+Para cada função/método cuja complexidade seja superior ao limiar definido, o plugin emite uma issue com:
+
+plugin: "complexity"
+
+code: "HIGH_COMPLEXITY"
+
+severity: "medium" ou "high"
+
+line: linha de definição da função
+
+message: explicação da complexidade calculada e sugestão de refatoração
+
+#### Erros de sintaxe:
+
+Se ocorrer um SyntaxError ao analisar o ficheiro:
+
+é emitida uma issue com code = "SYNTAX_ERROR"
+
+o estado do plugin para esse ficheiro é marcado como partial
+
+### Plugin dead_code — Detecção de código não utilizado
+
+Este plugin identifica código potencialmente morto — símbolos definidos mas nunca utilizados.
+Pode detetar:
+
+funções definidas mas nunca chamadas;
+
+imports não utilizados;
+
+variáveis atribuídas mas nunca lidas;
+
+símbolos ignorados por padrão conforme configuração.
+
+A configuração pode incluir regras opcionais:
+
+[rules.dead_code]
+ignore_paths = ["tests/**", "*/migrations/**"]
+
+
+#### Comportamento do plugin:
+
+Para cada símbolo considerado “morto”, o plugin gera uma issue com:
+
+plugin: "dead_code"
+
+code: "UNUSED_FUNCTION" ou "UNUSED_IMPORT", entre outros
+
+severity: "low" ou "medium"
+
+line: posição exata da definição
+
+message: sugestão para remoção ou justificativa
+
+### Aparição no report.json
+
+Todas as issues geradas pelos plugins surgem no relatório final, organizadas por:
+
+ficheiro
+
+plugin
+
+severidade
+
+localização
+
+mensagem e código
+
+O pipeline de agregação (aggregate()) inclui estas issues nas métricas globais, garantindo que validate_unified_report() mantém o formato esperado.
+
 ## Documentação adicional
 
 - [`web/SPEC.md`](web/SPEC.md): proposta de interface Web que consome o
@@ -104,3 +179,4 @@ Teste o plugin com `pytest` e execute a CLI para gerar relatórios que o incluam
 ## Licença
 
 Distribuído sob licença MIT. Consulte `LICENSE` para detalhes.
+
