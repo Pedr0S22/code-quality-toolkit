@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
+from typing import Tuple
 
 REPORT_FILE = Path("report.json")
 
@@ -51,7 +52,7 @@ class ReportHandler(BaseHTTPRequestHandler):
 
 # EXTENSION-POINT: substituir por framework completo (FastAPI/Starlette) conforme necessário.
 
-def run_server(address: tuple[str, int] = ("127.0.0.1", 8000)) -> None:
+def run_server(address: Tuple[str, int] = ("127.0.0.1", 8000)) -> None:
     """Run the development HTTP server."""
 
     httpd = HTTPServer(address, ReportHandler)

@@ -5,7 +5,7 @@ from __future__ import annotations
 import ast
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List
 
 from ...core.contracts import IssueResult
 from ...utils.config import ToolkitConfig
@@ -37,7 +37,7 @@ class Plugin:
         self.allow_mixed_indentation = config.rules.allow_mixed_indentation
         self.check_naming = config.rules.check_naming
 
-    def get_metadata(self) -> dict[str, str]:
+    def get_metadata(self) -> Dict[str, str]:
         return {
             "name": "StyleChecker",
             "version": "0.1.3",
@@ -212,6 +212,9 @@ class Plugin:
                 results.extend(self._check_trailing_whitespace(lines))
 
             results.extend(self._check_indentation(lines))
+
+            if self.check_naming:
+                results.extend(self._check_naming_conventions(source_code, file_path))
 
             if file_path and not _SNAKE_CASE_RE.match(Path(file_path).name):
                 results.append(

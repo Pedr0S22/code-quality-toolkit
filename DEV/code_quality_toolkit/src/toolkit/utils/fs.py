@@ -18,7 +18,10 @@ def match_any(path: str, patterns: Iterable[str]) -> bool:
 
 # EXTENSION-POINT: substituir por implementação assíncrona ou com cache de glob.
 
-def discover_files(root: str | Path, include: Iterable[str], exclude: Iterable[str]) -> list[Path]:
+
+def discover_files(
+    root: str | Path, include: Iterable[str], exclude: Iterable[str]
+) -> list[Path]:
     """Return a sorted list of files under root matching include patterns."""
 
     root_path = Path(root)

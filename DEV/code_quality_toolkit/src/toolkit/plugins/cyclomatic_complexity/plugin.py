@@ -1,5 +1,4 @@
 """Cyclomatic complexity plugin with a lightweight heuristic."""
-
 from __future__ import annotations
 
 import ast
@@ -37,7 +36,6 @@ class Plugin:
 
     def __init__(self) -> None:
         self.max_complexity = 10
-
     def configure(self, config: ToolkitConfig) -> None:
         self.max_complexity = config.rules.max_complexity
 
@@ -73,7 +71,9 @@ class Plugin:
                 visitor.visit(node)
                 complexity = visitor.complexity
                 if complexity > self.max_complexity:
-                    severity = "medium" if complexity <= self.max_complexity + 4 else "high"
+                    severity = (
+                        "medium" if complexity <= self.max_complexity + 4 else "high"
+                    )
                     results.append(
                         {
                             "severity": severity,
