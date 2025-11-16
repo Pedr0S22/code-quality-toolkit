@@ -5,7 +5,7 @@ from __future__ import annotations
 import ast
 import re
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from ...core.contracts import IssueResult
 from ...utils.config import ToolkitConfig
@@ -37,7 +37,7 @@ class Plugin:
         self.allow_mixed_indentation = config.rules.allow_mixed_indentation
         self.check_naming = config.rules.check_naming
 
-    def get_metadata(self) -> Dict[str, str]:
+    def get_metadata(self) -> dict[str, str]:
         return {
             "name": "StyleChecker",
             "version": "0.1.3",
@@ -166,7 +166,7 @@ class Plugin:
                             "code": "CLASS_NAMING",
                             "message": 
                                 f"Class name '{node.name}'" 
-                                f"deve usar o CamelCase.",
+                                f" deve usar o CamelCase.",
                             "line": node.lineno,
                             "col": node.col_offset + 1,
                             "hint": "Utilize nomes como 'MyClass', 'UserProfile', etc.",
@@ -181,7 +181,7 @@ class Plugin:
                             "code": "FUNC_NAMING",
                             "message": 
                                     f"Function name '{node.name}'" 
-                                    f"deve usar o snake_case.",
+                                    f" deve usar o snake_case.",
                             "line": node.lineno,
                             "col": node.col_offset + 1,
                             "hint": "Utilize nomes como "
