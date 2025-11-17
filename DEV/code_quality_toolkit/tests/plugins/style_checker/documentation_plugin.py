@@ -8,7 +8,7 @@ class DocumentationPlugin(CodeQualityPlugin):
             "name": "DocumentationQuality",
             "version": "1.0.0",
             "author": "@Chege39226912",
-            "description": "Analiza densidad de comentarios y docstrings - by the GOAT"
+            "description": "Analiza densidad de comentarios y docstrings"
         }
 
     def analyze(self, source_code: str, file_path: str = None) -> dict:
