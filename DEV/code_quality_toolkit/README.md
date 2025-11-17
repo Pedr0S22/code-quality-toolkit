@@ -96,6 +96,76 @@ resultados detalhados por ficheiro e plugin.
 
 Teste o plugin com `pytest` e execute a CLI para gerar relatórios que o incluam.
 
+#  Dead Code Detector Plugin
+
+O plugin **Dead Code Detector** identifica elementos definidos mas nunca utilizados, ajudando a eliminar código redundante e melhorar a manutenibilidade.
+
+---
+
+##  User Documentation
+
+###  O que este plugin deteta
+- Funções nunca chamadas  
+- Classes não utilizadas  
+- Variáveis atribuídas mas nunca lidas  
+- Imports não utilizados  
+- Elementos ignoráveis via configuração (nomes curtos, padrões a ignorar, dunders)
+
+---
+
+##  Configuração em `toolkit.toml`
+
+```toml
+[rules.dead_code]
+ignore_patterns = ["tests/**", "*/migrations/**"]
+min_name_len = 3
+severity = "low"
+```
+
+O utilizador pode ajustar:
+
+- `ignore_patterns` → padrões que devem ser sempre ignorados  
+- `min_name_len` → nomes demasiado curtos são considerados irrelevantes  
+- `severity` → nível associado às issues detetadas
+
+---
+
+##  Como executar
+
+```bash
+python -m toolkit.core.cli analyze <path> --out report.json
+# ou
+make run
+```
+
+---
+
+##  Porque é importante usar este plugin?
+
+Código morto dificulta a leitura do projeto, aumenta o tamanho da base de código e gera confusão entre componentes ativos e obsoletos.  
+Este plugin ajuda a manter o projeto limpo, claro e mais fácil de manter ao longo do tempo.
+
+---
+
+##  Developer Documentation
+
+O plugin utiliza um visitante de AST (`_DefUseVisitor`) para recolher:
+
+- definições de funções, classes, variáveis e imports;  
+- localizações de todas as utilizações destes símbolos;  
+- símbolos nunca utilizados dentro do mesmo ficheiro.
+
+Após a análise, o plugin emite issues como:
+
+- **`UNUSED_FUNCTION`**  
+- **`UNUSED_CLASS`**  
+- **`UNUSED_IMPORT`**  
+- **`DEAD_CODE`**
+
+Cada issue contém: `plugin`, `code`, `line`, `severity` e `message`.
+
+A integração e estrutura seguem rigorosamente o contrato do Toolkit.
+
 ## Documentação adicional
 
 - [`web/SPEC.md`](web/SPEC.md): proposta de interface Web que consome o
