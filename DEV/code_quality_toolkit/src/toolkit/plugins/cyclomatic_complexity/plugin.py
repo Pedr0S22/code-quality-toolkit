@@ -73,26 +73,25 @@ class Plugin:
                 visitor.visit(node)
                 complexity = visitor.complexity
                 if complexity > self.max_complexity:
-                    severity = (
-                        "medium" if complexity <= self.max_complexity + 4 else "high"
-                    )
-                    results.append(
-                        {
-                            "severity": severity,
-                            "code": "HIGH_COMPLEXITY",
-                            "message": f"Função '{node.name}' com complexidade {complexity}",
-                            "line": node.lineno,
-                            "col": 0,
-                            "hint": f"Reduza para <= {self.max_complexity}",
-                        }
-                    )
+                    severity = "medium"
+                    if (complexity <= self.max_complexity+4):
+                        severity = "high"
+                    d = {}
+                    d["severity"] = severity
+                    d["code"] = "HIGH_COMPLEXITY"
+                    d["message"] = f"Função '{node.name}' com complexidade {complexity}"
+                    d["line"] = node.lineno
+                    d["col"] = 0
+                    d["hint"] = f"Reduza para <= {self.max_complexity}"
+                    results.append(d)
         return {
-            "results": results,
-            "summary": {
-                "issues_found": len(results),
-                "status": "completed",
-            },
-        }
+                "results": results,
+                "summary": {
+                    "issues_found": len(results),
+                    "status": "completed",
+                    },
+                }
 
 
-# EXTENSION-POINT: suportar métricas adicionais como tamanho de funções ou número de argumentos.
+# EXTENSION-POINT: suportar métricas adicionais como tamanho
+# de funções ou número de argumentos.

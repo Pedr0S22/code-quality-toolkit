@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from textwrap import dedent
 from typing import Any
 
 from ...core.contracts import IssueResult
@@ -27,7 +28,9 @@ class Plugin:
         return {
             "name": "StyleChecker",
             "version": "0.1.0",
-            "description": "Valida comprimento de linhas e convenções simples de nomes.",
+            "description": dedent("""
+            Valida comprimento de linhas e convenções simples de nomes.
+            """),
         }
 
     def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
