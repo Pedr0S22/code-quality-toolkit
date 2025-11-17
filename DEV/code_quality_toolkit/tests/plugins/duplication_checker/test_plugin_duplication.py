@@ -1,6 +1,6 @@
 from textwrap import dedent
 
-from toolkit.plugins.duplicate_code_checker.plugin import Plugin, DuplicateCodeChecker
+from toolkit.plugins.duplicate_code_checker.plugin import DuplicateCodeChecker, Plugin
 from toolkit.utils.config import ToolkitConfig
 
 """ --- Integration Tests --- """
@@ -61,7 +61,7 @@ def test_duplicate_code_checker_no_duplicates():
     )
 
     dc = DuplicateCodeChecker()
-    results = dc.check(src)
+    results = dc.check(src, window=2)
 
     assert results == []
 
@@ -71,8 +71,11 @@ def test_plugin_analyze_wraps_results():
         """
         a = 1
         b = 2
+        c = a + b
+
         a = 1
         b = 2
+        c = a + b
         """
     )
 
