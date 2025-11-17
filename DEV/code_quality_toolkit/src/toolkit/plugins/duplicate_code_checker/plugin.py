@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 from ...core.contracts import IssueResult
 from ...utils.config import ToolkitConfig
 
-class _DuplicateCodeChecker:
+class DuplicateCodeChecker:
 
     def normalize(self, data: str):
         out = []
@@ -40,7 +40,7 @@ class _DuplicateCodeChecker:
                     duplicates.append(res)
         return duplicates
 
-dc = _DuplicateCodeChecker()
+dc = DuplicateCodeChecker()
 
 class Plugin:
     def __init__(self) -> None:
