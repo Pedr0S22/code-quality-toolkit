@@ -67,6 +67,8 @@ class RulesConfig:
     )
     # higher than this are generally considered difficult to read, test, and
     # maintain.
+    min_comment_density: float = 0.1
+    max_comment_density: float = 0.5
 
 
 # -------------ToolkitConfig -----------------------
@@ -161,6 +163,12 @@ def load_config(path: str | Path | None) -> ToolkitConfig:
         )
         config.rules.max_complexity = int(
             rules.get("max_complexity", config.rules.max_complexity)
+        )
+        config.rules.min_comment_density = float(
+            rules.get("min_comment_density", config.rules.min_comment_density)
+        )
+        config.rules.max_comment_density = float(
+            rules.get("max_comment_density", config.rules.max_comment_density)
         )
 
     # === Analyze Section ===

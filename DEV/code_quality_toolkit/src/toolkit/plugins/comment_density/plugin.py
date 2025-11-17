@@ -1,6 +1,6 @@
-from typing import Dict, List, Any
 import ast
-import re
+from typing import Any
+
 from toolkit.utils.config import ToolkitConfig
 
 
@@ -18,7 +18,7 @@ class Plugin:
         self.min_density = getattr(config.rules, 'min_comment_density', 0.1)
         self.max_density = getattr(config.rules, 'max_comment_density', 0.5)
     
-    def get_metadata(self) -> Dict[str, str]:
+    def get_metadata(self) -> dict[str, str]:
         """Return plugin metadata"""
         return {
             "name": "CommentDensity",
@@ -34,7 +34,7 @@ class Plugin:
         in_multiline_comment = False
         multiline_comment_char = None
         
-        for line_num, line in enumerate(lines, 1):
+        for _line_num, line in enumerate(lines, 1):
             stripped_line = line.strip()
             if not stripped_line:
                 continue
@@ -47,7 +47,10 @@ class Plugin:
                 continue
             if stripped_line.startswith('"""') or stripped_line.startswith("'''"):
                 comment_lines += 1
-                multiline_comment_char = '"""' if stripped_line.startswith('"""') else "'''"
+                if stripped_line.startswith('"""'):
+                    multiline_comment_char = '"""'
+                else:
+                    multiline_comment_char = "'''"
                 if (stripped_line.endswith(multiline_comment_char) and 
                     len(stripped_line) > 3 and 
                     stripped_line.count(multiline_comment_char) == 2):
@@ -72,7 +75,7 @@ class Plugin:
         
         return code_lines, comment_lines
     
-    def analyze(self, source: str, filename: str) -> Dict[str, Any]:
+    def analyze(self, source: str, filename: str) -> dict[str, Any]:
         """Analyze comment density in source code"""
         try:
             ast.parse(source)
@@ -85,16 +88,22 @@ class Plugin:
                 issues.append({
                     "line": 1,
                     "column": 0,
-                    "message": f"Low comment density: {density:.1%} (minimum: {self.min_density:.1%})",
+                    "message": (
+                        f"Low comment density: {density:.1%} "
+                        f"(minimum: {self.min_density:.1%})"
+                    ),
                     "code": "LOW_COMMENT_DENSITY",
                     "severity": "high",
-                    "hint": f"Consider adding more comments to improve documentation"
+                    "hint": "Consider adding more comments to improve documentation"
                 })
             elif density > self.max_density:
                 issues.append({
                     "line": 1, 
                     "column": 0,
-                    "message": f"High comment density: {density:.1%} (maximum: {self.max_density:.1%})",
+                    "message": (
+                        f"High comment density: {density:.1%} "
+                        f"(maximum: {self.max_density:.1%})"
+                    ),
                     "code": "HIGH_COMMENT_DENSITY",
                     "severity": "high",
                     "hint": "Consider if some comments could be removed or simplified"

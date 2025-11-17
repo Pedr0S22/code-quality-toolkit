@@ -5,6 +5,9 @@ enabled = ["StyleChecker","CyclomaticComplexity","CommentDensity"]
 max_line_length = 88
 max_complexity = 10
 
+min_comment_density = 0.1  
+max_comment_density = 0.5  
+
 [analyze]
 include = ["**/*.py"]
 exclude = ["venv/**", "tests/**"]
