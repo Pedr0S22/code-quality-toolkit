@@ -34,9 +34,10 @@ class Plugin:
     def __init__(self) -> None:
         """Inicializa o plugin."""
         # Verifica se o import do Bandit funcionou
-        if BanditManager is None:
-            print("AVISO: Dependência 'bandit' não instalada. O SecurityChecker não vai funcionar.")
-            
+        print(
+            "AVISO: Dependência 'bandit' não instalada. "
+            "O SecurityChecker não vai funcionar."
+        )
         # TAREFA 7: Configuração (TOML)
         # O Bandit usa o seu próprio ficheiro, mas podemos definir o nível
         # de severidade que queremos reportar.
@@ -46,7 +47,9 @@ class Plugin:
         return {
             "name": "SecurityChecker",
             "version": "1.0.0",
-            "description": "Deteta vulnerabilidades (eval, pickle, SQLi, etc.) usando o Bandit.",
+            "description": (
+                "Deteta vulnerabilidades (eval, pickle, SQLi, etc.) usando o Bandit."
+            ),
         }
 
     def configure(self, config: ToolkitConfig) -> None:
@@ -72,15 +75,21 @@ class Plugin:
         # Implementa a "Golden Rule" do Mathias
         try:
             if BanditManager is None:
-                raise ImportError("Dependência 'bandit' não encontrada. Instale-a com 'make setup'.")
-
+                raise ImportError(
+                    "Dependência 'bandit' não encontrada. Instale-a com 'make setup'."
+                )
             results: list[IssueResult] = []
             
             # Como o bandit analisa ficheiros e não linha a linha
             # Criamos um ficheiro temporário para ele analisar
             # Usamos 'delete=False' para o ficheiro não ser apagado
             # imediatamente, para que o Bandit o possa ler.
-            with tempfile.NamedTemporaryFile(suffix=".py", delete=False, mode='w', encoding='utf-8') as temp_file:
+            with tempfile.NamedTemporaryFile(
+                suffix=".py",
+                delete=False,
+                mode="w",
+                encoding="utf-8",
+            ) as temp_file:
                 temp_file.write(source_code)
                 temp_file_path = temp_file.name # Guardamos o caminho do ficheiro
 
