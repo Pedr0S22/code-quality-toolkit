@@ -1,13 +1,12 @@
-import pytest
 from textwrap import dedent
 
 from toolkit.plugins.cyclomatic_complexity.plugin import Plugin
 from toolkit.utils.config import ToolkitConfig
 
-
 # ------------------------------
 # Helpers para criar configuração
 # ------------------------------
+
 
 def make_config(max_complexity=10, max_length=50, max_args=5):
     """Creates a ToolkitConfig object with rules adjusted."""
@@ -22,6 +21,7 @@ def make_config(max_complexity=10, max_length=50, max_args=5):
 # METADATA TESTS
 # ------------------------------
 
+
 def test_metadata():
     plugin = Plugin()
     m = plugin.get_metadata()
@@ -35,8 +35,10 @@ def test_metadata():
 # COMPLEXITY DETECTION
 # ------------------------------
 
+
 def test_high_complexity_violation():
-    source = dedent("""
+    source = dedent(
+        """
         def f(x):
             if x:
                 for i in range(5):
@@ -46,7 +48,8 @@ def test_high_complexity_violation():
                         except:
                             pass
             return x
-    """)
+    """
+    )
 
     plugin = Plugin()
     plugin.configure(make_config(max_complexity=2))
@@ -65,15 +68,12 @@ def test_high_complexity_violation():
 # LONG FUNCTION DETECTION
 # ------------------------------
 
+
 def test_long_function_detection():
     # 60 linhas dentro da função, todas com indentação correta
     long_body = "\n".join("        x = 1" for _ in range(60))
 
-    source = (
-        "def big():\n"
-        f"{long_body}\n"
-        "        return x\n"
-    )
+    source = "def big():\n" f"{long_body}\n" "        return x\n"
 
     plugin = Plugin()
     plugin.configure(make_config(max_length=20))
@@ -91,11 +91,14 @@ def test_long_function_detection():
 # TOO MANY ARGUMENTS
 # ------------------------------
 
+
 def test_too_many_arguments():
-    source = dedent("""
+    source = dedent(
+        """
         def f(a, b, c, d, e, f, g):
             return 1
-    """)
+    """
+    )
 
     plugin = Plugin()
     plugin.configure(make_config(max_args=3))
@@ -112,6 +115,7 @@ def test_too_many_arguments():
 # ------------------------------
 # SYNTAX ERROR HANDLING
 # ------------------------------
+
 
 def test_syntax_error_handling():
     source = "def broken(:\n   pass"
@@ -132,8 +136,10 @@ def test_syntax_error_handling():
 # MULTIPLE ISSUES IN SAME FUNCTION
 # ------------------------------
 
+
 def test_multiple_issues_detected():
-    source = dedent("""
+    source = dedent(
+        """
         def messy(a, b, c, d, e, f):
             if a:
                 if b:
@@ -142,7 +148,8 @@ def test_multiple_issues_detected():
                             if e:
                                 return 1
             return 0
-    """)
+    """
+    )
 
     plugin = Plugin()
     plugin.configure(make_config(max_complexity=2, max_args=3, max_length=5))
@@ -159,11 +166,14 @@ def test_multiple_issues_detected():
 # NO ISSUES FOUND
 # ------------------------------
 
+
 def test_no_issues_found():
-    source = dedent("""
+    source = dedent(
+        """
         def ok():
             return 123
-    """)
+    """
+    )
 
     plugin = Plugin()
     plugin.configure(make_config(max_complexity=20, max_length=1000, max_args=10))
