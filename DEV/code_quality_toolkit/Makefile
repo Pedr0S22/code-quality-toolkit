@@ -1,16 +1,28 @@
 PYTHON := python
 VENV := .venv
-BIN := $(VENV)/bin
+
+# If Windows, then use 'Scripts', else use 'bin'
+ifeq ($(OS),Windows_NT)
+    BIN_DIR := $(VENV)/Scripts
+else
+    BIN_DIR := $(VENV)/bin
+endif
+
+BIN := $(BIN_DIR)
 
 .PHONY: setup lint format typecheck test run report clean
 
+# Use of "python -m"
 setup:
 	$(PYTHON) -m venv $(VENV)
-	$(BIN)/pip install --upgrade pip
-	$(BIN)/pip install -e .[dev]
+	$(BIN)/python -m pip install --upgrade pip
+	$(BIN)/python -m pip install -e .[dev]
 
 lint:
 	$(BIN)/ruff check src tests
+
+lint_fix:
+	$(BIN)/ruff check --fix src tests
 
 format:
 	$(BIN)/black src tests
@@ -22,7 +34,7 @@ test:
 	$(BIN)/pytest
 
 run:
-	$(BIN)/python -m toolkit.core.cli analyze examples/sample_project --out report.json
+	$(BIN)/python -m toolkit.core.cli analyze examples/sample_project --out report.json $(arg)
 
 report: run
 

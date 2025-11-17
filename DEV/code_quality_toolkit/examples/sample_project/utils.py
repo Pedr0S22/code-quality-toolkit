@@ -5,8 +5,9 @@ def format_message(name: str) -> str:
     greeting = "Olá, " + name
     return greeting + "!" * 3
 
+# Testing stylecheck plugin making the plugin detect comment lines with extension greater than #<lines>
 
-def complex_branching(value: int) -> int:
+def complex_branching(value: int) -> int: 
     if value < 0:
         return -1
     elif value == 0:
@@ -15,7 +16,6 @@ def complex_branching(value: int) -> int:
         return value // 2
     else:
         return value * 2
-
 
 def number_to_name():
     number = input()
