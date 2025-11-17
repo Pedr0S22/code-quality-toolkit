@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+import ast
 import re
-import ast 
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from ...core.contracts import IssueResult
 from ...utils.config import ToolkitConfig
@@ -37,11 +37,13 @@ class Plugin:
         self.allow_mixed_indentation = config.rules.allow_mixed_indentation
         self.check_naming = config.rules.check_naming
 
-    def get_metadata(self) -> Dict[str, str]:
+    def get_metadata(self) -> dict[str, str]:
         return {
             "name": "StyleChecker",
             "version": "0.1.3",
-            "description": "Valida comprimento de linhas, convenções simples de nomes, trailingwhitespace, identation e naming convention.",
+            "description": 
+                "Valida comprimento de linhas, convenções simples"
+                " de nomes, trailingwhitespace, identation e naming convention.",
         }
     
     def _check_trailing_whitespace(self, lines: list[str]) -> list[IssueResult]:
@@ -81,10 +83,14 @@ class Plugin:
                     {
                         "severity": "low",
                         "code": "INDENT_MIXED",
-                        "message": "Mistura de tabulações e espaços no início da linha.",
+                        "message": 
+                            "Mistura de tabulações e"
+                            " espaços no início da linha.",
                         "line": idx,
                         "col": 1,
-                        "hint": "Utilize apenas um estilo: defina o ficheiro rules.indent_style e ajuste o seu editor.",
+                        "hint": 
+                            "Utilize apenas um estilo: defina o ficheiro" 
+                            " rules.indent_style e ajuste o seu editor.",
                     }
                 )
 
@@ -93,10 +99,14 @@ class Plugin:
                     {
                         "severity": "low",
                         "code": "INDENT_TABS_NOT_ALLOWED",
-                        "message": "Os recuos com tabulações não são permitidos (os espaços são obrigatórios).",
+                        "message": 
+                            "Os recuos com tabulações não são permitidos"
+                            " (os espaços são obrigatórios).",
                         "line": idx,
                         "col": 1,
-                        "hint": f"Converter tabulações em espaços (múltiplos de {self.indent_size}).",
+                        "hint": 
+                            f"Converter tabulações em espaços"
+                            f" (múltiplos de {self.indent_size}).",
                     }
                 )
 
@@ -107,7 +117,9 @@ class Plugin:
                     {
                         "severity": "low",
                         "code": "INDENT_SPACES_NOT_ALLOWED",
-                        "message": "Não são permitidos recuos com espaços (tabulações são obrigatórias).",
+                        "message": 
+                            "Não são permitidos recuos "
+                            "com espaços (tabulações são obrigatórias).",
                         "line": idx,
                         "col": 1,
                         "hint": "Converter espaços em tabulações para criar avanços.",
@@ -122,10 +134,14 @@ class Plugin:
                         {
                             "severity": "low",
                             "code": "INDENT_WIDTH",
-                            "message": f"O recuo não é um múltiplo de espaços {self.indent_size}.",
+                            "message": 
+                                f"O recuo não é um múltiplo"
+                                f" de espaços {self.indent_size}.",
                             "line": idx,
                             "col": 1,
-                            "hint": f"Ajuste o recuo para múltiplos de {self.indent_size}.",
+                            "hint": 
+                                f"Ajuste o recuo para "
+                                f"múltiplos de {self.indent_size}.",
                         }
                     )
 
@@ -133,8 +149,8 @@ class Plugin:
     
     def _check_naming_conventions(
         self, source_code: str, file_path: str | None
-    ) -> List[IssueResult]:
-        results: List[IssueResult] = []
+    ) -> list[IssueResult]:
+        results: list[IssueResult] = []
 
         try:
             tree = ast.parse(source_code, filename=file_path or "<unknown>")
@@ -148,7 +164,9 @@ class Plugin:
                         {
                             "severity": "low",
                             "code": "CLASS_NAMING",
-                            "message": f"Class name '{node.name}' deve usar o CamelCase.",
+                            "message": 
+                                f"Class name '{node.name}'" 
+                                f" deve usar o CamelCase.",
                             "line": node.lineno,
                             "col": node.col_offset + 1,
                             "hint": "Utilize nomes como 'MyClass', 'UserProfile', etc.",
@@ -161,10 +179,13 @@ class Plugin:
                         {
                             "severity": "low",
                             "code": "FUNC_NAMING",
-                            "message": f"Function name '{node.name}' deve usar o snake_case.",
+                            "message": 
+                                    f"Function name '{node.name}'" 
+                                    f" deve usar o snake_case.",
                             "line": node.lineno,
                             "col": node.col_offset + 1,
-                            "hint": "Utilize nomes como 'process_data', 'get_user', etc.",
+                            "hint": "Utilize nomes como "
+                            "'process_data', 'get_user', etc.",
                         }
                     )
 
