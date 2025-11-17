@@ -1,15 +1,15 @@
 #Security checker to see any malicious intent that might be present on any file
 from __future__ import annotations
 
-from typing import Any
-import tempfile
 import os
+import tempfile
+from typing import Any
 
 #Imports do Bandit (a ferramenta que faz o trabalho)
 try:
     from bandit.core.config import BanditConfig
+    from bandit.core.constants import HIGH, LOW, MEDIUM
     from bandit.core.manager import BanditManager
-    from bandit.core.constants import LOW, MEDIUM, HIGH 
     
 except ImportError:
     # Se o Bandit não estiver instalado, estas classes não existem.
@@ -21,6 +21,7 @@ except ImportError:
 # 2. Imports do Core do Projeto
 from ...core.contracts import IssueResult
 from ...utils.config import ToolkitConfig
+
 
 # --- TAREFA 9: Implementação da API  ---
 class Plugin:

@@ -49,6 +49,11 @@ allow_subclassing_any = false
 testpaths = ["tests"]
 addopts = "-q"
 
+filterwarnings = [
+    'ignore:.*ast\..* is deprecated:DeprecationWarning',
+    'ignore:Attribute .* is deprecated:DeprecationWarning',
+]
+
 [tool.coverage.run]
 branch = true
 source = ["toolkit"]
