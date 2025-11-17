@@ -1,8 +1,19 @@
 # Code Quality Toolkit
 
-O Code Quality Toolkit é um MVP de um
-motor de análise baseado em plugins, capaz de produzir relatórios de qualidade de código unificados em
-JSON e consumidos por uma CLI e uma Web UI leve.
+O Code Quality Toolkit é um MVP de um motor de análise baseado em plugins, capaz de produzir relatórios de qualidade de código unificados em JSON e consumidos por uma CLI e uma Web UI leve.
+
+## Equipa e Autores
+
+Este projeto foi desenvolvido no âmbito da unidade curricular de Engenharia de Software (2025/26) pelos seguintes elementos:
+
+| Nome | Número de Aluno | GitLab |
+| :--- | :--- | :--- |
+| **Carlos Lomelín Valdés** | 2025154763 | @carloslomelinv |
+| **Samuel Gomes Estebab** | 2025178876 | @samuugomes |
+| **Mathias Gustavo Welz** | 2025167903 | @mathiasgwelz |
+| **Miguel Carvalho** | 2021128260 | @parzival3301 |
+
+---
 
 ## Instalação rápida
 
@@ -23,6 +34,7 @@ ou diretamente com a CLI:
 ```bash
 python -m toolkit.core.cli analyze examples/sample_project --out report.json
 ```
+Para um guia detalhado sobre todas as opções e como interpretar os resultados, consulte o ficheiro HOWTO.md.
 
 ### Opções da CLI
 
@@ -83,6 +95,28 @@ resultados detalhados por ficheiro e plugin.
 3. **Execução:** `toolkit.core.engine.run_analysis()` recebe o mapa de instâncias carregadas, configura cada plugin (caso exponha `configure`) e executa `analyze()` para cada ficheiro descoberto por `toolkit.utils.fs.discover_files()`. Exceções são transformadas em relatórios estruturados, registando o estado `partial` em `plugin_status`.
 4. **Agregação:** `toolkit.core.aggregator.aggregate()` consolida os relatórios por ficheiro e o estado final de cada plugin, calcula métricas (por severidade, por plugin, top offenders) e valida a estrutura final com `validate_unified_report()`.
 5. **Integração na CLI:** `toolkit.core.cli._run_analyze()` orquestra o fluxo chamando `load_plugins()`, `run_analysis()` e `aggregate()`, produzindo o `report.json` com data, versão da ferramenta e estatísticas de execução.
+
+## Arquitetura de Tratamento de Erros
+O sistema foi desenhado com uma arquitetura de resiliência robusta, assegurando que a falha individual de qualquer plugin não comprometa a conclusão da análise do projeto.
+
+### 1. Camada da Interface de Linha de Comandos (CLI - `cli.py`)
+
+A CLI funciona como a principal linha de defesa externa para o sistema:
+  * **Gestão de Erros Previstos:** Captura e trata exceções operacionais esperadas (`ConfigurationError`, `PluginLoadError`, `AnalysisExecutionError`), terminando a execução com o código de saída `1`.
+  * **Gestão de Erros Imprevistos (Crashes):** Inclui um bloco `except Exception` genérico para intercetar falhas inesperadas. Estes erros são registados detalhadamente antes do sistema terminar com o código de saída `2`.
+
+### 2. Camada do Motor de Análise (`engine.py`)
+
+A lógica principal de resiliência reside no motor, especificamente na função `run_analysis`, que garante o isolamento da execução:
+
+**Isolamento e Continuidade dos Plugins:**
+
+* A execução de cada plugin é encapsulada num bloco `try...except`.
+* **Em caso de acontecer o except no `analyze()`:**
+    * O erro é capturado e registado (etiqueta `plugin.failure`).
+    * O plugin que falhou é assinalado como `"partial"` no relatório final.
+    * É gerado um relatório de erro sintético no JSON de saída com nível de severidade `high` e o código `PLUGIN_ERROR`.
+* **Continuidade:** O motor ignora a falha do plugin e prossegue com a execução dos plugins que faltam e o processamento de outros ficheiros. Isto garante que o utilizador receba um relatório parcial útil, em vez de uma falha completa e vazia.
 
 ## Criar um novo plugin
 
