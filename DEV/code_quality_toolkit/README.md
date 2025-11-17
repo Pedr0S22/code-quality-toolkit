@@ -96,96 +96,10 @@ resultados detalhados por ficheiro e plugin.
 
 Teste o plugin com `pytest` e execute a CLI para gerar relatórios que o incluam.
 
-## Plugins incluídos
+## Documentação adicional
 
-O Code Quality Toolkit inclui dois plugins principais: **Cyclomatic Complexity** e **Dead Code Detector**.  
-Ambos seguem o contrato definido em `plugins/base.py`, são carregados automaticamente pelo motor e suportam configuração via `toolkit.toml`.
-
----
-
-#  Cyclomatic Complexity Plugin
-
-O plugin **Cyclomatic Complexity** avalia a complexidade de funções e métodos, seguindo o modelo clássico de McCabe.  
-Além disso, implementa duas métricas adicionais requeridas no issue: **tamanho da função** e **número de argumentos**.
-
----
-
-##  User Documentation
-
-###  O que este plugin analisa
-O plugin produz três tipos de verificações:
-
-1. **Cyclomatic Complexity**  
-   - Incrementa a complexidade para cada ponto de decisão (`if`, `elif`, `while`, `for`, `and`, `or`, `except`, compreensões condicionais).  
-   - Funções acima do limite configurado são sinalizadas com:  
-     **`HIGH_COMPLEXITY`**
-
-2. **Function Length**  
-   - Mede o número de linhas reais de cada função.  
-   - Funções maiores que o valor configurado são marcadas como:  
-     **`LONG_FUNCTION`**
-
-3. **Argument Count**  
-   - Conta os argumentos definidos pela função.  
-   - Funções que excedem o limite são marcadas como:  
-     **`TOO_MANY_ARGUMENTS`**
-
----
-
-##  Configuração em `toolkit.toml`
-
-O comportamento deste plugin é controlado pela secção:
-
-```toml
-[rules.complexity]
-max_complexity = 10
-max_function_length = 50
-max_arguments = 5
-```
-
-O utilizador pode ajustar estes valores para tornar a análise mais ou menos permissiva.  
-O plugin é carregado automaticamente pelo motor de análise.
-
----
-
-##  Como executar
-
-```bash
-python -m toolkit.core.cli analyze <path> --out report.json
-# ou
-make run
-```
-
----
-
-##  Porque é importante usar este plugin?
-
-Funções demasiado complexas tornam-se difíceis de testar, modificar e manter.  
-Funções demasiado longas acumulam responsabilidades, violando princípios de design.  
-Um número elevado de argumentos aumenta o acoplamento e reduz a legibilidade.
-
-Este plugin permite detetar automaticamente estes problemas, ajudando o utilizador a melhorar a qualidade do código.
-
----
-##  Developer Documentation
-
-Internamente, o plugin:
-
-- estende o contrato definido em `BasePlugin`;  
-- analisa o AST de cada ficheiro Python;  
-- soma pontos de decisão para calcular a complexidade ciclomática;  
-- mede a extensão do corpo da função;  
-- recolhe o número de argumentos formais;  
-- devolve issues estruturadas no formato esperado pelo motor.
-
-Todos os erros de sintaxe são convertidos em issues com o código:  
-**`SYNTAX_ERROR`**,  
-e o estado do plugin para esse ficheiro passa a **partial** (comportamento padrão do engine).
-
----
-
-
- 
+- [`web/SPEC.md`](web/SPEC.md): proposta de interface Web que consome o
+  `report.json`.
 
 ## Licença
 
