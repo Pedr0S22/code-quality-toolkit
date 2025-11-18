@@ -22,7 +22,7 @@ class DuplicateCodeChecker:
 
         sig_map = {}
         for i in range(len(lines) - window + 1):
-            block = "\n".join(lines[i:i + window])
+            block = "\n".join(lines[i : i + window])
             sig = hash(block)
             sig_map.setdefault(sig, []).append(i + 1)
 
@@ -41,7 +41,9 @@ class DuplicateCodeChecker:
                     duplicates.append(res)
         return duplicates
 
+
 dc = DuplicateCodeChecker()
+
 
 class Plugin:
     def __init__(self) -> None:
@@ -60,12 +62,11 @@ class Plugin:
 
     def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
         dup = dc.check(source_code)
-        results: list[IssueResult] = [ x for x in dup ]
+        results: list[IssueResult] = [x for x in dup]
         return {
-                "results": results,
-                "summary": {
-                    "issues_found": len(results),
-                    "status": "completed",
-                    },
-                }
-
+            "results": results,
+            "summary": {
+                "issues_found": len(results),
+                "status": "completed",
+            },
+        }

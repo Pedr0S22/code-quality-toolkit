@@ -1,4 +1,5 @@
 """Cyclomatic complexity plugin with a lightweight heuristic."""
+
 from __future__ import annotations
 
 import ast

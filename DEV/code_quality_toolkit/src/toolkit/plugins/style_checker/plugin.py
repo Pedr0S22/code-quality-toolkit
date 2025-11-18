@@ -5,7 +5,6 @@ from __future__ import annotations
 import ast
 import re
 from pathlib import Path
-from textwrap import dedent
 from typing import Any
 
 from ...core.contracts import IssueResult
@@ -14,8 +13,9 @@ from ...utils.config import ToolkitConfig
 _SNAKE_CASE_RE = re.compile(r"^[a-z0-9_]+\.py$")
 _TRAILING_WS_RE = re.compile(r"[ \t]+$")
 _LEADING_WS_RE = re.compile(r"^([ \t]+)")
-_CLASS_NAME_RE = re.compile(r"^[A-Z][A-Za-z0-9]*$")          
-_FUNC_NAME_RE = re.compile(r"^[a-z_][a-z0-9_]*$") 
+_CLASS_NAME_RE = re.compile(r"^[A-Z][A-Za-z0-9]*$")
+_FUNC_NAME_RE = re.compile(r"^[a-z_][a-z0-9_]*$")
+
 
 class Plugin:
     """Plugin que valida regras de estilo básicas."""
@@ -23,7 +23,7 @@ class Plugin:
     def __init__(self) -> None:
         self.max_line_length = 88
         self.check_whitespace = True
-        self.indent_style = "spaces" 
+        self.indent_style = "spaces"
         self.indent_size = 4
         self.allow_mixed_indentation = False
         self.check_naming = False
@@ -42,11 +42,10 @@ class Plugin:
         return {
             "name": "StyleChecker",
             "version": "0.1.3",
-            "description": 
-                "Valida comprimento de linhas, convenções simples"
-                " de nomes, trailingwhitespace, identation e naming convention.",
+            "description": "Valida comprimento de linhas, convenções simples"
+            " de nomes, trailingwhitespace, identation e naming convention.",
         }
-    
+
     def _check_trailing_whitespace(self, lines: list[str]) -> list[IssueResult]:
         results: list[IssueResult] = []
         for idx, line in enumerate(lines, start=1):
@@ -68,14 +67,14 @@ class Plugin:
     def _check_indentation(self, lines: list[str]) -> list[IssueResult]:
         results: list[IssueResult] = []
         for idx, line in enumerate(lines, start=1):
-            if not line:  
+            if not line:
                 continue
 
             m = _LEADING_WS_RE.match(line)
             if not m:
-                continue  
+                continue
 
-            leading = m.group(1)  
+            leading = m.group(1)
             has_tab = "\t" in leading
             has_space = " " in leading
 
@@ -84,14 +83,12 @@ class Plugin:
                     {
                         "severity": "low",
                         "code": "INDENT_MIXED",
-                        "message": 
-                            "Mistura de tabulações e"
-                            " espaços no início da linha.",
+                        "message": "Mistura de tabulações e"
+                        " espaços no início da linha.",
                         "line": idx,
                         "col": 1,
-                        "hint": 
-                            "Utilize apenas um estilo: defina o ficheiro" 
-                            " rules.indent_style e ajuste o seu editor.",
+                        "hint": "Utilize apenas um estilo: defina o ficheiro"
+                        " rules.indent_style e ajuste o seu editor.",
                     }
                 )
 
@@ -100,14 +97,12 @@ class Plugin:
                     {
                         "severity": "low",
                         "code": "INDENT_TABS_NOT_ALLOWED",
-                        "message": 
-                            "Os recuos com tabulações não são permitidos"
-                            " (os espaços são obrigatórios).",
+                        "message": "Os recuos com tabulações não são permitidos"
+                        " (os espaços são obrigatórios).",
                         "line": idx,
                         "col": 1,
-                        "hint": 
-                            f"Converter tabulações em espaços"
-                            f" (múltiplos de {self.indent_size}).",
+                        "hint": f"Converter tabulações em espaços"
+                        f" (múltiplos de {self.indent_size}).",
                     }
                 )
 
@@ -118,9 +113,8 @@ class Plugin:
                     {
                         "severity": "low",
                         "code": "INDENT_SPACES_NOT_ALLOWED",
-                        "message": 
-                            "Não são permitidos recuos "
-                            "com espaços (tabulações são obrigatórias).",
+                        "message": "Não são permitidos recuos "
+                        "com espaços (tabulações são obrigatórias).",
                         "line": idx,
                         "col": 1,
                         "hint": "Converter espaços em tabulações para criar avanços.",
@@ -129,25 +123,23 @@ class Plugin:
                 continue
 
             if self.indent_style == "spaces" and has_space and not has_tab:
-                width = len(leading)  
+                width = len(leading)
                 if width % self.indent_size != 0:
                     results.append(
                         {
                             "severity": "low",
                             "code": "INDENT_WIDTH",
-                            "message": 
-                                f"O recuo não é um múltiplo"
-                                f" de espaços {self.indent_size}.",
+                            "message": f"O recuo não é um múltiplo"
+                            f" de espaços {self.indent_size}.",
                             "line": idx,
                             "col": 1,
-                            "hint": 
-                                f"Ajuste o recuo para "
-                                f"múltiplos de {self.indent_size}.",
+                            "hint": f"Ajuste o recuo para "
+                            f"múltiplos de {self.indent_size}.",
                         }
                     )
 
         return results
-    
+
     def _check_naming_conventions(
         self, source_code: str, file_path: str | None
     ) -> list[IssueResult]:
@@ -165,9 +157,8 @@ class Plugin:
                         {
                             "severity": "low",
                             "code": "CLASS_NAMING",
-                            "message": 
-                                f"Class name '{node.name}'" 
-                                f" deve usar o CamelCase.",
+                            "message": f"Class name '{node.name}'"
+                            f" deve usar o CamelCase.",
                             "line": node.lineno,
                             "col": node.col_offset + 1,
                             "hint": "Utilize nomes como 'MyClass', 'UserProfile', etc.",
@@ -180,9 +171,8 @@ class Plugin:
                         {
                             "severity": "low",
                             "code": "FUNC_NAMING",
-                            "message": 
-                                    f"Function name '{node.name}'" 
-                                    f" deve usar o snake_case.",
+                            "message": f"Function name '{node.name}'"
+                            f" deve usar o snake_case.",
                             "line": node.lineno,
                             "col": node.col_offset + 1,
                             "hint": "Utilize nomes como "
@@ -247,4 +237,3 @@ class Plugin:
                     "error": str(e),
                 },
             }
-# EXTENSION-POINT: adicionar novas regras, p.ex. indentação ou trailing whitespace.

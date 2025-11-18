@@ -4,6 +4,8 @@ from toolkit.plugins.duplicate_code_checker.plugin import DuplicateCodeChecker, 
 from toolkit.utils.config import ToolkitConfig
 
 """ --- Integration Tests --- """
+
+
 def test_duplication_plugin_reports_duplicates() -> None:
     source = dedent(
         """
@@ -31,6 +33,8 @@ def test_duplication_plugin_reports_duplicates() -> None:
 
 
 """ --- Unit Tests --- """
+
+
 def test_duplicate_code_checker_finds_duplicates():
     src = dedent(
         """
