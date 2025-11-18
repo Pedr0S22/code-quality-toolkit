@@ -1,5 +1,5 @@
 [plugins]
-enabled = ["StyleChecker", "CyclomaticComplexity", "DeadCodeDetector"]
+enabled = ["StyleChecker","CyclomaticComplexity","CommentDensity", "DeadCodeDetector"]
 
 [plugins.dead_code]
 ignore_patterns = ["^__", "^test_"]
@@ -16,6 +16,9 @@ indent_style = "spaces"
 indent_size = 4
 allow_mixed_indentation = false
 check_naming = true
+
+min_comment_density = 0.1  
+max_comment_density = 0.5  
 
 [analyze]
 include = ["**/*.py"]

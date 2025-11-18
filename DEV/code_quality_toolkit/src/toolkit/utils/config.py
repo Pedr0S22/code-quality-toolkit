@@ -79,6 +79,8 @@ class RulesConfig:
     max_arguments: int = (
         5  # New rule: maximum number of arguments allowed in a function
     )
+    min_comment_density: float = 0.1
+    max_comment_density: float = 0.5
 
 
 # -------------ToolkitConfig -----------------------
