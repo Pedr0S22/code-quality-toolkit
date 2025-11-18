@@ -1,5 +1,10 @@
 [plugins]
-enabled = ["StyleChecker", "CyclomaticComplexity"]
+enabled = ["StyleChecker", "CyclomaticComplexity", "DeadCodeDetector"]
+
+[plugins.dead_code]
+ignore_patterns = ["^__", "^test_"]
+min_name_length = 2
+severity = "low"
 
 [rules]
 max_line_length = 88
