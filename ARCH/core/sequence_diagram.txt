@@ -1,29 +1,86 @@
-Plugin-Based Code Quality Toolkit - Component Diagram
+@startuml
+title "Sequence Diagram: Plugin Failure Handling"
 
-+-------------------------------------------------------------------------------------+
-| Core System                                                                         |
-|                                                                                     |
-|  +-----------------+   +------------------+   +---------------+   +--------------+  |
-|  | Plugin Manager  |   | Execution Engine |   | Report Merger |   | CLI / Web UI |  |
-|  +-----------------+   +------------------+   +---------------+   +--------------+  |
-|          |                     |                    |                               |
-+----------|---------------------|--------------------|-------------------------------+
-           |                     |                    |
-            \                    |                   /
-             \                   |                  /
-              \                  v                 /
-               +----------( Plugin API )----------+
-              /                  ^                 \
-             /                   |                  \
-            /                    |                   \
- +-------------------+  +-------------------+   +---------------------+
- | Duplication Plugin|  | Style Check Plugin|   |  Complexity Plugin  |
- +-------------------+  +-------------------+   +---------------------+
-  |
-  |    +-----------------------------+
-  '--->| Additional plugins can be   |
-       | added as long as they       |
-       | implement the Plugin API.   |
-       | Check the REAME.md file in  |
-       | plugin's folder             |
-       +-----------------------------+
+' === Style & Theme ===
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam sequenceMessageAlign center
+skinparam participantPadding 20
+skinparam boxPadding 10
+
+' Define fonts
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+
+' Actors & Participants
+actor "User" as User
+participant ":cli" as CLI <<module>>
+participant ":engine" as Engine <<module>>
+participant ":logging" as Logging <<module>>
+participant "Plugin A" as PluginA <<PluginProtocol>>
+participant "Plugin B" as PluginB <<PluginProtocol>>
+participant "Plugin C" as PluginC <<PluginProtocol>>
+
+' --- Sequence Start ---
+User -> CLI : analyze(path, plugins=all)
+activate CLI
+
+    CLI -> Engine : run_analysis(path, plugins, config)
+    activate Engine
+    
+    ' --- Plugin A (Success) ---
+    Engine -> PluginA : analyze(source, path)
+    activate PluginA
+    PluginA --> Engine : report (success)
+    deactivate PluginA
+
+    ' --- Plugin B (Failure) ---
+    Engine -> PluginB : analyze(source, path)
+    activate PluginB
+    
+    note right of PluginB #Fdedec
+        Runtime Error!
+        (e.g. "ZeroDivisionError")
+    end note
+    
+    PluginB --> Engine : raise Exception("Error details")
+    deactivate PluginB
+    
+    ' Engine catches the exception
+    group "Exception Handling (try...except)"
+        Engine -> Engine : catch Exception
+        
+        ' Log the failure
+        Engine -> Logging : log("plugin.failure", plugin="Plugin B", error="...")
+        activate Logging
+        Logging --> Engine
+        deactivate Logging
+        
+        ' Mark status as partial
+        Engine -> Engine : plugin_status["Plugin B"] = "partial"
+        
+        ' Create synthetic error report
+        Engine -> Engine : create error_report (code="PLUGIN_ERROR")
+    end
+
+    ' --- Plugin C (Continues) ---
+    note right of Engine #E8F6F3
+        Execution continues
+        despite previous error
+    end note
+    
+    Engine -> PluginC : analyze(source, path)
+    activate PluginC
+    PluginC --> Engine : report (success)
+    deactivate PluginC
+
+    ' Return results
+    Engine --> CLI : (files, plugin_status)
+    deactivate Engine
+
+    CLI -> CLI : aggregate()
+    CLI --> User : report.json (status="partial")
+    deactivate CLI
+
+@enduml
