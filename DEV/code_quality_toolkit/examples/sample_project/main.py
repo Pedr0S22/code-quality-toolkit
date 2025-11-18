@@ -2,6 +2,7 @@
 
 
 def main() -> None:
+    
     value = helper(5)
     if value > 0:
         print(f"Result: {value}")

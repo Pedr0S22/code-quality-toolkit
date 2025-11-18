@@ -4,6 +4,8 @@ enabled = ["StyleChecker", "CyclomaticComplexity"]
 [rules]
 max_line_length = 88
 max_complexity = 10
+max_function_length = 50
+max_arguments = 5
 
 [analyze]
 include = ["**/*.py"]

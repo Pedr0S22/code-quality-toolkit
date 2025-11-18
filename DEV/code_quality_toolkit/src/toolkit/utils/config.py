@@ -66,8 +66,14 @@ class RulesConfig:
     max_complexity: int = (
         10  # This is a widely accepted threshold. Functions with a complexity
     )
-    # higher than this are generally considered difficult to read, test, and
-    # maintain.
+    # higher than this are generally considered difficult to read, test,
+    # and maintain.
+    max_function_length: int = (
+        50  # New rule: maximum number of lines allowed in a function
+    )
+    max_arguments: int = (
+        5  # New rule: maximum number of arguments allowed in a function
+    )
 
 
 # -------------ToolkitConfig -----------------------

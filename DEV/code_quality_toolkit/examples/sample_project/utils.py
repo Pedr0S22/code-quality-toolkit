@@ -46,3 +46,6 @@ def number_to_name():
         print("eight")
     elif number == 9:
         print("nine")
+
+def utils_args(arg1, arg2, arg3, arg4, arg5, arg6, arg7):
+    return arg1 + arg2 + arg3 + arg4 + arg5 + arg6 + arg7
