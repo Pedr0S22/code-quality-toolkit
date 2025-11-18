@@ -35,3 +35,5 @@ O relatório final é um ficheiro JSON dividido em três secções.
     * **Nota sobre o estado `partial`**: Se o campo `status` for `"partial"`, significa que **um ou mais plugins falharam**, mas a análise continuou para os restantes. Verifique os erros nos detalhes.
 **`summary`**: Estatísticas globais (total de erros, contagem por severidade).
 **`details`**: Lista detalhada de todas as ocorrências encontradas, agrupadas por ficheiro.
+
+Integration Testing (CLI Failure Modes):Prove that the CLI executable fails gracefully from a user's perspective.Tests must show the CLI exits with the correct, non-zero error codes (e.g., `EXIT_MANAGED_ERROR`) when a plugin fails to load or run.The final `report.json` must still be generated successfully, showing a "partial" status.
