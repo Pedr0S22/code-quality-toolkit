@@ -1,5 +1,5 @@
 [plugins]
-enabled = ["StyleChecker","CyclomaticComplexity", "DuplicationChecker","CommentDensity", "DeadCodeDetector"]
+enabled = ["StyleChecker","CyclomaticComplexity", "SecurityChecker", "DuplicationChecker","CommentDensity", "DeadCodeDetector"]
 
 [plugins.dead_code]
 ignore_patterns = ["^__", "^test_"]

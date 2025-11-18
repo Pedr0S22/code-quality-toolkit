@@ -22,6 +22,7 @@ dev = [
     "black>=24.4",
     "ruff>=0.4.0",
     "typing_extensions>=4.9",
+    "bandit>=1.8.6"
 ]
 
 [tool.setuptools.packages.find]
@@ -47,6 +48,11 @@ allow_subclassing_any = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+
+filterwarnings = [
+    'ignore:.*ast\..* is deprecated:DeprecationWarning',
+    'ignore:Attribute .* is deprecated:DeprecationWarning',
+]
 
 [tool.coverage.run]
 branch = true
