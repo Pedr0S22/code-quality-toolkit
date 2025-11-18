@@ -5,7 +5,7 @@
 Using this plugin helps you automatically detect functions that are becoming too complex. By fixing these issues, you can improve your code's quality, making it easier to test, modify, and maintain.
 
 ## Version
-0.1.1
+0.1.2
 
 ### What This Plugin Does
 
@@ -77,7 +77,7 @@ to help discover where the error was detected.
 ## TECHNICAL DOCUMENTATION
 
 ### Description
-The `CyclomaticComplexity` plugin performs static analysis on Python source code by parsing it into an Abstract Syntax Tree (AST). It extends the `BasePlugin` contract and implements the golden rule refered in [`src/toolkit/plugins/README.md`](src/toolkit/plugins/README.md). It analyzes each function for three metrics (complexity, length, arguments) and returns structured issues in the format expected by the core engine.
+The `CyclomaticComplexity` plugin performs static analysis on Python source code by parsing it into an Abstract Syntax Tree (AST). It extends the `BasePlugin` contract and implements the golden rule refered in [`src\toolkit\plugins\README.md`](..\README.md). It analyzes each function for three metrics (complexity, length, arguments) and returns structured issues in the format expected by the core engine.
 
 ## 1. Purpose
 The plugin's purpose is to provide automated, configurable checks for common code "smells" related to complexity. This helps developers adhere to quality standards and catch hard-to-maintain code early.
