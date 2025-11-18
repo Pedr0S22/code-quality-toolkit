@@ -26,6 +26,28 @@ python -m toolkit.core.cli analyze examples/sample_project --out report.json
 
 ### Opções da CLI
 
+1. Ao usar o comando
+```bash
+make run
+```
+utilizar um dos argumentos (optional):
+
+```
+make run arg=
+  "--plugins all | StyleChecker,CyclomaticComplexity"
+  "--out report.json"
+  "--include-glob "**/*.py" (repetível)"
+  "--exclude-glob "tests/**" (repetível)"
+  "--config toolkit.toml"
+  "--fail-on-severity low|medium|high"
+```
+
+2. Usando o CLI com: 
+
+```bash
+python -m toolkit.core.cli analyze examples/sample_project --out report.json
+```
+utilizar um dos argumentos (optional):
 ```
 toolkit analyze <path>
   --plugins all | StyleChecker,CyclomaticComplexity
