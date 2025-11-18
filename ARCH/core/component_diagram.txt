@@ -1,0 +1,47 @@
+Plugin-Based Code Quality Toolkit - Component Diagram
+
++-------------------------------------------------------------------------------------+
+| Core System                                                                         |
+|                                                                                     |
+|  +-----------------+   +------------------+   +---------------+   +--------------+  |
+|  | Plugin Manager  |   | Execution Engine |   | Report Merger |   | CLI / Web UI |  |
+|  +-----------------+   +------------------+   +---------------+   +--------------+  |
+|          |                     |                    |                               |
++----------|---------------------|--------------------|-------------------------------+
+           |                     |                    |
+            \                    |                   /
+             \                   |                  /
+              \                  v                 /
+               +----------( Plugin API )----------+
+                                 |
+                                 v
+                    +---------------------------+
+                    |          Plugins          |
+                    | +-----------------------+ |
+                    | | Duplication Plugin    | |
+                    | +-----------------------+ |
+                    | | Style Check Plugin    | |
+                    | +-----------------------+ |
+                    | | Complexity Plugin     | |
+                    | +-----------------------+ |
+                    | | Dead Code Plugin      | |
+                    | +-----------------------+ |
+                    | | Comment Density Plugin| |
+                    | +-----------------------+ |
+                    | | Security Checker Plug | |
+                    | +-----------------------+ |
+                    | | Duplicate Code Plugin | |
+                    | +-----------------------+ |
+                    | | Basic Metrics Plugin  | |
+                    | +-----------------------+ |
+                    +---------------------------+
+                                  |
+                                  v
+                    +-----------------------------+
+                    | Additional plugins can be   |
+                    | added as long as they       |
+                    | implement the Plugin API.   |
+                    | Check the REAME.md file in  |
+                    | plugin's folder (src\toolki |
+                    | t\plugins)                  |
+                    +-----------------------------+
