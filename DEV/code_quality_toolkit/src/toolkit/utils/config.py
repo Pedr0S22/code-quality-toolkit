@@ -69,10 +69,11 @@ class RulesConfig:
     # higher than this are generally considered difficult to read, test,
     # and maintain.
     check_whitespace: bool = True
-    indent_style = "spaces" 
+    indent_style = "spaces"
     indent_size = 4
     allow_mixed_indentation = False
-    check_naming = False    max_function_length: int = (
+    check_naming = False
+    max_function_length: int = (
         50  # New rule: maximum number of lines allowed in a function
     )
     max_arguments: int = (
