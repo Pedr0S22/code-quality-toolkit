@@ -15,7 +15,7 @@ def test_cli_generates_report(tmp_path: Path) -> None:
     report_path = tmp_path / "report.json"
 
     env = os.environ.copy()
-    env["PYTHONPATH"] = os.environ.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[2] / "src")
 
     result = subprocess.run(
         [
