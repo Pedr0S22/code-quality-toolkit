@@ -1,6 +1,5 @@
-import pytest
 
-from toolkit.core.cli import _should_fail, SEVERITY_ORDER
+from toolkit.core.cli import SEVERITY_ORDER, _should_fail
 
 
 def test_should_fail_returns_false_when_no_issues() -> None:
