@@ -1,29 +1,128 @@
-Plugin-Based Code Quality Toolkit - Component Diagram
+@startuml
+title "Core System Class Diagram (ES2025)"
 
-+-------------------------------------------------------------------------------------+
-| Core System                                                                         |
-|                                                                                     |
-|  +-----------------+   +------------------+   +---------------+   +--------------+  |
-|  | Plugin Manager  |   | Execution Engine |   | Report Merger |   | CLI / Web UI |  |
-|  +-----------------+   +------------------+   +---------------+   +--------------+  |
-|          |                     |                    |                               |
-+----------|---------------------|--------------------|-------------------------------+
-           |                     |                    |
-            \                    |                   /
-             \                   |                  /
-              \                  v                 /
-               +----------( Plugin API )----------+
-              /                  ^                 \
-             /                   |                  \
-            /                    |                   \
- +-------------------+  +-------------------+   +---------------------+
- | Duplication Plugin|  | Style Check Plugin|   |  Complexity Plugin  |
- +-------------------+  +-------------------+   +---------------------+
-  |
-  |    +-----------------------------+
-  '--->| Additional plugins can be   |
-       | added as long as they       |
-       | implement the Plugin API.   |
-       | Check the REAME.md file in  |
-       | plugin's folder             |
-       +-----------------------------+
+' === Style & Theme ===
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+
+' Define fonts
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+
+' Class Styling
+skinparam class {
+    BackgroundColor #FDFEFE
+    ArrowColor #2C3E50
+    BorderColor #2C3E50
+    HeaderBackgroundColor #ECF0F1
+}
+
+' Specific styling for 'modules' to make them stand out
+skinparam class {
+    BackgroundColor<<module>> #E8F6F3
+    BorderColor<<module>> #1ABC9C
+    HeaderBackgroundColor<<module>> #D0ECE7
+}
+
+' Specific styling for exceptions
+skinparam class {
+    BackgroundColor<<exception>> #Fdedec
+    BorderColor<<exception>> #E74C3C
+    HeaderBackgroundColor<<exception>> #Fadbd8
+}
+
+package "Core System" {
+
+    ' --- Custom Exceptions Group ---
+    package "Error Handling" <<Rectangle>> #F8F9F9 {
+        class ToolkitError <<exception>> {}
+        class PluginLoadError <<exception>>
+        class PluginValidationError <<exception>>
+        class ConfigurationError <<exception>>
+        class AnalysisExecutionError <<exception>>
+
+        ToolkitError <|-- PluginLoadError
+        ToolkitError <|-- PluginValidationError
+        ToolkitError <|-- ConfigurationError
+        ToolkitError <|-- AnalysisExecutionError
+    }
+
+    ' --- Configuration ---
+    class ToolkitConfig {
+        + strict: bool
+        + enabled_plugins: list[str]
+        + rules: RulesConfig
+        + analyze: AnalyzeConfig
+    }
+
+    ' --- The Plugin Interface ---
+    interface "PluginProtocol" as PluginProtocol {
+        + get_metadata() : dict
+        + analyze(source: str, file_path: str) : dict
+    }
+
+    ' --- Core Modules ---
+    class "cli" as CLI <<module>> {
+        + main(argv) : int
+        __
+        - _build_parser() : ArgumentParser
+        - _resolve_requested_plugins() : list
+        - _run_analyze(args) : int
+        - _should_fail(report, threshold) : bool
+    }
+
+    class "loader" as Loader <<module>> {
+        + load_plugins(requested) : dict
+        + discover_plugins() : list
+        __
+        - _iter_plugin_modules()
+        - _import_module_from_path()
+        - _instantiate_plugin()
+        - _validate_metadata()
+    }
+
+    class "engine" as Engine <<module>> {
+        + run_analysis(root, plugins, config) : tuple
+    }
+
+    class "aggregator" as Aggregator <<module>> {
+        + aggregate(files, plugin_status) : UnifiedReport
+        __
+        - _compute_top_offenders()
+        - _derive_status()
+    }
+    
+    class "logging" as Logging <<module>> {
+        + log(event, **payload)
+    }
+
+    ' --- Relationships ---
+
+    ' Main flow
+    CLI .down.> Loader : uses
+    CLI .down.> Engine : uses
+    CLI .down.> Aggregator : uses
+    CLI .right.> ToolkitConfig : loads
+    CLI .left.> Logging : uses
+    
+    ' Error handling links
+    CLI ..> ToolkitError : catches
+
+    ' Loader internals
+    Loader ..> PluginProtocol : instantiates
+    Loader ..> PluginLoadError : raises
+    Loader ..> PluginValidationError : raises
+
+    ' Engine internals
+    Engine -right-> PluginProtocol : executes >
+    Engine ..> ToolkitConfig : reads
+    Engine ..> Logging : logs
+
+    ' Aggregator internals
+    Aggregator ..> Logging : logs
+}
+
+@enduml
