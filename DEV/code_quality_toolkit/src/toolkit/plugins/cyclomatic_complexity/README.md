@@ -29,7 +29,7 @@ enabled = ["CyclomaticComplexity","<OtherPlugin>",etc]
 To configure it, edit the rules described below in your `toolkit.toml` configuration file. The plugin reads its settings from the `[rules.complexity]` section:
 
 ```toml
-[rules.complexity]
+[rules]
 max_complexity = 10
 max_function_length = 50
 max_arguments = 5
