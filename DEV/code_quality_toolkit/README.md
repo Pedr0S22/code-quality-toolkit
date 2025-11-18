@@ -2,19 +2,6 @@
 
 O Code Quality Toolkit é um MVP de um motor de análise baseado em plugins, capaz de produzir relatórios de qualidade de código unificados em JSON e consumidos por uma CLI e uma Web UI leve.
 
-## Equipa e Autores
-
-Este projeto foi desenvolvido no âmbito da unidade curricular de Engenharia de Software (2025/26) pelos seguintes elementos:
-
-| Nome | Número de Aluno | GitLab |
-| :--- | :--- | :--- |
-| **Carlos Lomelín Valdés** | 2025154763 | @carloslomelinv |
-| **Samuel Gomes Estebab** | 2025178876 | @samuugomes |
-| **Mathias Gustavo Welz** | 2025167903 | @mathiasgwelz |
-| **Miguel Carvalho** | 2021128260 | @parzival3301 |
-
----
-
 ## Instalação rápida
 
 ```bash
