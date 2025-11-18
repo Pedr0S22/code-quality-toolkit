@@ -1,0 +1,3 @@
+__pycache__/
+*.log
+code_quality_toolkit.egg-info/

@@ -1,0 +1,15 @@
+{"event": "plugin.loaded", "plugin": "CyclomaticComplexity", "module": "/home/vasco/uni/sem1/es/es2025-pl8/DEV/code_quality_toolkit/src/toolkit/plugins/cyclomatic_complexity/plugin.py"}
+{"event": "plugin.loaded", "plugin": "StyleChecker", "module": "/home/vasco/uni/sem1/es/es2025-pl8/DEV/code_quality_toolkit/src/toolkit/plugins/style_checker/plugin.py"}
+{"event": "plugin.skipped", "plugin": "DuplicationChecker", "reason": "filtered"}
+{"event": "engine.files_discovered", "count": 2}
+{"event": "cli.report_written", "path": "report.json", "issues": 1}
+{"event": "plugin.loaded", "plugin": "CyclomaticComplexity", "module": "/home/vasco/uni/sem1/es/es2025-pl8/DEV/code_quality_toolkit/src/toolkit/plugins/cyclomatic_complexity/plugin.py"}
+{"event": "plugin.loaded", "plugin": "StyleChecker", "module": "/home/vasco/uni/sem1/es/es2025-pl8/DEV/code_quality_toolkit/src/toolkit/plugins/style_checker/plugin.py"}
+{"event": "plugin.skipped", "plugin": "DuplicationChecker", "reason": "filtered"}
+{"event": "engine.files_discovered", "count": 2}
+{"event": "cli.report_written", "path": "report.json", "issues": 1}
+{"event": "plugin.loaded", "plugin": "CyclomaticComplexity", "module": "/home/vasco/uni/sem1/es/es2025-pl8/DEV/code_quality_toolkit/src/toolkit/plugins/cyclomatic_complexity/plugin.py"}
+{"event": "plugin.loaded", "plugin": "StyleChecker", "module": "/home/vasco/uni/sem1/es/es2025-pl8/DEV/code_quality_toolkit/src/toolkit/plugins/style_checker/plugin.py"}
+{"event": "plugin.skipped", "plugin": "DuplicationChecker", "reason": "filtered"}
+{"event": "engine.files_discovered", "count": 2}
+{"event": "cli.report_written", "path": "report.json", "issues": 1}

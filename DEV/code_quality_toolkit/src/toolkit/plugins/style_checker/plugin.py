@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import re
 from pathlib import Path
+from textwrap import dedent
 from typing import Any
 
 from ...core.contracts import IssueResult
