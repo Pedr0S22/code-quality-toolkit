@@ -1,4 +1,4 @@
-from toolkit.core.aggregator import _derive_status
+from src.toolkit.core.aggregator import _derive_status
 
 
 def test_derive_status_failed_when_empty() -> None:
