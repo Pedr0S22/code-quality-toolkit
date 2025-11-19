@@ -34,10 +34,11 @@ class Plugin:
     def __init__(self) -> None:
         """Inicializa o plugin."""
         # Verifica se o import do Bandit funcionou
-        print(
-            "AVISO: Dependência 'bandit' não instalada. "
-            "O SecurityChecker não vai funcionar."
-        )
+        if BanditManager is None:
+            print(
+                "AVISO: Dependência 'bandit' não instalada. "
+                "O SecurityChecker não vai funcionar."
+            )
         # TAREFA 7: Configuração (TOML)
         # O Bandit usa o seu próprio ficheiro, mas podemos definir o nível
         # de severidade que queremos reportar.
@@ -55,9 +56,9 @@ class Plugin:
     def configure(self, config: ToolkitConfig) -> None:
         """
         TAREFA 7: Configura o plugin a partir do ficheiro TOML global.
-       
+        
         """
-       
+        
         # Como não podemos mudar o config.py, temos de verificar se o atributo
         # 'security_report_level' existe ANTES de tentar ler.
         # Se não existir, ele simplesmente ignora e usa o valor 'default' ('LOW')
@@ -151,7 +152,7 @@ class Plugin:
             }
 
         except Exception as e:
-            # TAREFA 13: Error Handling 
+            # TAREFA 13: Error Handling
             # Apanha todos os outros erros e Devolve uma Resposta de Falha
             return {
                 "results": [],
