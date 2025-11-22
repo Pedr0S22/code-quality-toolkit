@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import get_type_hints
+from typing import get_type_hints, Any
 
 from ..core.errors import ConfigurationError
 
@@ -128,6 +128,67 @@ class ToolkitConfig:
 
 # EXTENSION-POINT HERE: adicionar campos de configuração específicos de plugins aqui.
 
+def _apply_linter_wrapper_config(
+    config: ToolkitConfig,
+    plugins_section: dict[str, Any],
+) -> None:
+    """Apply [plugins.linter_wrapper] configuration to ToolkitConfig."""
+    linter_data = plugins_section.get("linter_wrapper")
+    if not isinstance(linter_data, dict):
+        return
+
+    # enabled
+    if "enabled" in linter_data:
+        value = linter_data["enabled"]
+        if not isinstance(value, bool):
+            raise ConfigurationError(
+                "Invalid type for '[plugins.linter_wrapper].enabled'. Expected bool."
+            )
+        config.linter_wrapper.enabled = value
+
+    # linters
+    linters = linter_data.get("linters")
+    if isinstance(linters, list) and linters:
+        config.linter_wrapper.linters = [str(item) for item in linters]
+
+    # timeout_seconds
+    if "timeout_seconds" in linter_data:
+        try:
+            config.linter_wrapper.timeout_seconds = int(
+                linter_data["timeout_seconds"]
+            )
+        except (ValueError, TypeError) as ex:
+            raise ConfigurationError(
+                "Invalid type for '[plugins.linter_wrapper].timeout_seconds'. "
+                "Expected int."
+            ) from ex
+
+    # max_issues
+    if "max_issues" in linter_data:
+        try:
+            config.linter_wrapper.max_issues = int(linter_data["max_issues"])
+        except (ValueError, TypeError) as ex:
+            raise ConfigurationError(
+                "Invalid type for '[plugins.linter_wrapper].max_issues'. "
+                "Expected int."
+            ) from ex
+
+    # pylint_args
+    pylint_args = linter_data.get("pylint_args")
+    if isinstance(pylint_args, list):
+        config.linter_wrapper.pylint_args = [str(item) for item in pylint_args]
+
+    # fail_on_severity
+    if "fail_on_severity" in linter_data:
+        value = str(linter_data["fail_on_severity"])
+        allowed = {"none", "low", "medium", "high"}
+        if value not in allowed:
+            raise ConfigurationError(
+                "Invalid value for '[plugins.linter_wrapper].fail_on_severity'. "
+                f"Expected one of {sorted(allowed)}, got '{value}'."
+            )
+        config.linter_wrapper.fail_on_severity = value
+
 
 def load_config(path: str | Path | None) -> ToolkitConfig:
     """Load configuration from a TOML file or return defaults.
@@ -180,61 +241,8 @@ def load_config(path: str | Path | None) -> ToolkitConfig:
         ]  # overwrites the default config.enabled_plugins list
         # with the new values,
         # ensuring all list items are converted to strings.
-    linter_data = plugins.get("linter_wrapper")
-    if isinstance(linter_data, dict):
-        # [plugins.linter_wrapper].enabled
-        if "enabled" in linter_data:
-            value = linter_data["enabled"]
-            if not isinstance(value, bool):
-                raise ConfigurationError(
-                    "Invalid type for '[plugins.linter_wrapper].enabled'. Expected bool."
-                )
-            config.linter_wrapper.enabled = value
-
-        # [plugins.linter_wrapper].linters
-        linters = linter_data.get("linters")
-        if isinstance(linters, list) and linters:
-            config.linter_wrapper.linters = [str(item) for item in linters]
-
-        # [plugins.linter_wrapper].timeout_seconds
-        if "timeout_seconds" in linter_data:
-            try:
-                config.linter_wrapper.timeout_seconds = int(
-                    linter_data["timeout_seconds"]
-                )
-            except (ValueError, TypeError) as ex:
-                raise ConfigurationError(
-                    "Invalid type for '[plugins.linter_wrapper].timeout_seconds'. "
-                    "Expected int."
-                ) from ex
-
-        # [plugins.linter_wrapper].max_issues
-        if "max_issues" in linter_data:
-            try:
-                config.linter_wrapper.max_issues = int(
-                    linter_data["max_issues"]
-                )
-            except (ValueError, TypeError) as ex:
-                raise ConfigurationError(
-                    "Invalid type for '[plugins.linter_wrapper].max_issues'. "
-                    "Expected int."
-                ) from ex
-
-        # [plugins.linter_wrapper].pylint_args
-        pylint_args = linter_data.get("pylint_args")
-        if isinstance(pylint_args, list):
-            config.linter_wrapper.pylint_args = [str(item) for item in pylint_args]
-
-        # [plugins.linter_wrapper].fail_on_severity
-        if "fail_on_severity" in linter_data:
-            value = str(linter_data["fail_on_severity"])
-            allowed = {"none", "low", "medium", "high"}
-            if value not in allowed:
-                raise ConfigurationError(
-                    "Invalid value for '[plugins.linter_wrapper].fail_on_severity'. "
-                    f"Expected one of {sorted(allowed)}, got '{value}'."
-                )
-            config.linter_wrapper.fail_on_severity = value
+    if isinstance(plugins, dict):
+        _apply_linter_wrapper_config(config, plugins)
 
     # === Rules Section ===
     rules_data = data.get("rules", {})  # ensures this section is a dictionary
