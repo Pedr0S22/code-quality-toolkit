@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
+import subprocess # nosec B404 - usamos subprocess apenas para invocar 'pylint' localmente com argumentos controlados
 import tempfile
 from typing import Any, Dict, List, Optional
 
@@ -175,7 +175,7 @@ class Plugin:
         ]
 
         try:
-            proc = subprocess.run(
+            proc = subprocess.run( # nosec B603 - comando 'pylint' com lista de argumentos controlados, sem shell=True nem input do utilizador
                 cmd,
                 capture_output=True,
                 text=True,
