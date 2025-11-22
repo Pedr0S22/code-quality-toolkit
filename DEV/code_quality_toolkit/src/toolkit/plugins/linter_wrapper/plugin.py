@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess # nosec B404 - usamos subprocess apenas para invocar 'pylint' localmente com argumentos controlados
+import subprocess  # nosec B404 - usamos subprocess apenas para invocar 'pylint' localmente com argumentos controlados
 import tempfile
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ...core.contracts import IssueResult
 from ...utils.config import ToolkitConfig
@@ -75,7 +75,7 @@ class Plugin:
                     },
                 }
 
-            temp_path: Optional[str] = None
+            temp_path: str | None = None
             if file_path:
                 target_path = file_path
             else:
@@ -91,7 +91,7 @@ class Plugin:
                 if temp_path and os.path.exists(temp_path):
                     os.remove(temp_path)
 
-            issues_by_severity: Dict[str, int] = {}
+            issues_by_severity: dict[str, int] = {}
             for issue in results:
                 sev = issue.get("severity", "low")
                 issues_by_severity[sev] = issues_by_severity.get(sev, 0) + 1
@@ -123,10 +123,10 @@ class Plugin:
     def _run_linters_on_file(
         self,
         file_path: str,
-    ) -> tuple[list[IssueResult], Optional[str]]:
+    ) -> tuple[list[IssueResult], str | None]:
         """Executa todos os linters configurados num único ficheiro."""
         all_results: list[IssueResult] = []
-        highest_severity: Optional[str] = None
+        highest_severity: str | None = None
         order = {"low": 0, "medium": 1, "high": 2}
 
         for linter in self.enabled_linters:
@@ -137,7 +137,10 @@ class Plugin:
                     {
                         "severity": "medium",
                         "code": "LINTER_UNSUPPORTED",
-                        "message": f"Linter '{linter}' não é suportado pelo LinterWrapper.",
+                        "message": (
+                            f"Linter '{linter}' não é suportado pelo "
+                            "LinterWrapper."
+                        ),
                         "line": 1,
                         "col": 1,
                         "hint": (
@@ -259,8 +262,11 @@ class Plugin:
 
             line = int(msg.get("line", 0) or 0)
             col = int(msg.get("column", 0) or 0)
-            path = str(msg.get("path", file_path))
-            msg_id = str(msg.get("message-id", "")) or str(msg.get("symbol", "")) or "PYLINT"
+            msg_id = (
+                str(msg.get("message-id", ""))
+                or str(msg.get("symbol", ""))
+                or "PYLINT"
+            )
             text = str(msg.get("message", "")) or ""
 
             results.append(
@@ -282,7 +288,7 @@ class Plugin:
 
         return results
 
-    def _should_fail_build(self, highest_severity: Optional[str]) -> bool:
+    def _should_fail_build(self, highest_severity: str | None) -> bool:
         if not highest_severity:
             return False
         if self.fail_on_severity == "none":

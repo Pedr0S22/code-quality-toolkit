@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import get_type_hints, Any
+from typing import Any, get_type_hints
 
 from ..core.errors import ConfigurationError
 
