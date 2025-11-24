@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from toolkit import __version__
-from toolkit.core.aggregator import aggregate, _compute_top_offenders, _derive_status
+from toolkit.core.aggregator import _compute_top_offenders, _derive_status, aggregate
 
 
 
