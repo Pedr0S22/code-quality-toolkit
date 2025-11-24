@@ -1,6 +1,7 @@
-from toolkit.core.aggregator import _derive_status, aggregate
-from toolkit import __version__
 from datetime import datetime
+
+from toolkit import __version__
+from toolkit.core.aggregator import _compute_top_offenders, _derive_status, aggregate
 
 
 def test_derive_status_failed_when_empty() -> None:
@@ -133,3 +134,43 @@ def test_aggregate_computes_summary_metrics_and_metadata() -> None:
     # timestamp ISO válido e termina em Z
     assert meta["timestamp"].endswith("Z")
     datetime.fromisoformat(meta["timestamp"][:-1])  # não deve lançar exceção
+
+def test_compute_top_offenders_sorted_and_limited() -> None:
+    # 6 ficheiros, um com 0 issues (deve ser excluído).
+    counts = {
+        "a.py": 5,
+        "b.py": 0,
+        "c.py": 2,
+        "d.py": 5,
+        "e.py": 3,
+        "f.py": 1,
+    }
+
+    files = []
+    for file, n in counts.items():
+        files.append(
+            {
+                "file": file,
+                "plugins": [
+                    {
+                        "plugin": "P",
+                        "results": [
+                            {"severity": "low", "code": "X", "message": "m"}
+                            for _ in range(n)
+                        ],
+                        "summary": {"issues_found": n, "status": "completed"},
+                    }
+                ],
+            }
+        )
+
+    offenders = _compute_top_offenders(files)
+
+    # top 5, sem zeros, ordena por issues desc e nome asc em empate
+    assert offenders == [
+        {"file": "a.py", "issues": 5},
+        {"file": "d.py", "issues": 5},
+        {"file": "e.py", "issues": 3},
+        {"file": "c.py", "issues": 2},
+        {"file": "f.py", "issues": 1},
+    ]
