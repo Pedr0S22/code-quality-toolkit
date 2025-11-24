@@ -4,7 +4,6 @@ from toolkit import __version__
 from toolkit.core.aggregator import _compute_top_offenders, _derive_status, aggregate
 
 
-
 def test_derive_status_failed_when_empty() -> None:
     plugin_status = {}
     assert _derive_status(plugin_status) == "failed"
