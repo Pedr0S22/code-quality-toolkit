@@ -36,6 +36,12 @@ test:
 run:
 	$(BIN)/python -m toolkit.core.cli analyze examples/sample_project --out report.json $(arg)
 
+run_server:
+	$(BIN)/python -m toolkit.web.server
+
+run_client:
+	$(BIN)/python -m toolkit.web.client
+
 report: run
 
 clean:
