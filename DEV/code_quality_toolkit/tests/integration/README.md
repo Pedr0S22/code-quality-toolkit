@@ -1,10 +1,30 @@
-# Testes de Integração com Métricas - Resumo Executivo
+# Testes de Integração com Métricas
+
+## ⚡ TL;DR (2 minutos)
+
+```
+✅ 20/20 testes integração passando
+✅ 123/123 suite completa passando
+✅ 9 arquivos essenciais (.md)
+✅ 493 linhas código (test + conftest)
+
+Como começar:
+$ cd tests/integration
+$ pytest test_metrics_integration.py -v
+
+Documentação:
+• Rápido:   QUICK_START.md
+• Exemplos: EXAMPLES.md
+• Técnico:  README_INTEGRATION_TESTS.md
+• Design:   ARCHITECTURE_AND_DESIGN.md
+```
 
 ## 📊 Status
 
 ✅ **123 testes totais passando**
-- **20 novos testes de integração** com métricas
-- **Cobertura completa** de análise → agregação → validação → complexidade
+- **20 testes de integração** com validação completa
+- **Cobertura**: análise → agregação → validação → complexidade
+- **Qualidade**: Simples + Intuitivo + Correto
 
 ## 🎯 O que foi criado
 
