@@ -132,6 +132,6 @@ def resolve_plugins(requested: str, config: ToolkitConfig) -> List[str]:
 
 
 if __name__ == "__main__":
-    # Allows running this script directly with the VS Code "Play" button
+    # Run the Server
     print("Starting Code Quality Server on http://127.0.0.1:8000")
-    uvicorn.run("toolkit.web.server:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("web.server:app", host="127.0.0.1", port=8000, reload=True)
