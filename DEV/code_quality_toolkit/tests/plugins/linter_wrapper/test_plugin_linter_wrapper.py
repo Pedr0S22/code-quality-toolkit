@@ -9,9 +9,7 @@ import json
 from subprocess import TimeoutExpired
 from unittest.mock import MagicMock, patch
 
-# Importar do pacote correto 'linter_wrapper'
 from toolkit.plugins.linter_wrapper.plugin import Plugin
-
 
 # --- Mocks de Configuração ---
 
