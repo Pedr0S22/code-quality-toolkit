@@ -35,17 +35,15 @@ unit_tests:
 test_coverage:
   stage: unit_tests
   before_script:
-    - pip install pytest pytest-cov bandit
     - pip install pytest pytest-cov
   script:
   - echo "Assessing test coverage... "
   - echo $CI_COMMIT_BRANCH
-  - cd $CI_PROJECT_DIR/DEV/code_quality_toolkit/
   - export PYTHONPATH="$CI_PROJECT_DIR/DEV/code_quality_toolkit/src:$PYTHONPATH"
-  - pytest --cov=. --cov-report=html --cov-report=term # report goes to terminal and htmlcov → open 'index.html' in a browser
+  - pytest --cov=src/ --cov-report=html --cov-report=term **--cov-fail-under=70** # report goes to terminal and htmlcov → open 'index.html' in a browser
   artifacts:
     paths:
-      - $CI_PROJECT_DIR/DEV/code_quality_toolkit/htmlcov/ # Preserve the html coverage files as an artifact
+      - $CI_PROJECT_DIR/DEV/code_quality_toolkit/htmlcov_unit/ # Preserve the html coverage files as an artifact
     #expire_in: 1 day  # (Optional) Specify how long to keep the artifact
     # (e.g., 1 week, 1 day, never).
 
@@ -58,7 +56,7 @@ lint_code:
     - echo "Checking coding style... "
     - echo $CI_COMMIT_BRANCH
     - make lint
-  allow_failure: true #default is false;
+  allow_failure: false #default is false;
 
 code_complexity:
   stage: quality
@@ -71,19 +69,33 @@ code_complexity:
             # -b A : At least one block has a complexity rank higher than A (i.e. B, C, D, E or F)
             # -m A : At least one module has a complexity rank higher than A (i.e. B, C, D, E or F)
             # -a A : Average complexity has rank higher than A (i.e. B , C, D, E or F)
-  allow_failure: true #default is false;
+  allow_failure: false #default is false;
 
 
 # # **************** INTEGRATION stage ****************************
 
-integration:
+integration_tests:
   stage: integration
   script:
     - echo "Running integration tests ... "
     - echo $CI_COMMIT_BRANCH
-    - cd $CI_PROJECT_DIR/DEV/code_quality_toolkit/
     - make setup
-    - .venv/bin/python -m pytest tests/
+    - .venv/bin/python -m pytest tests/integration
+
+integration_tests_coverage:
+  stage: integration
+  before_script:
+    - pip install pytest pytest-cov
+  script:
+  - echo "Assessing integration test coverage... "
+  - echo $CI_COMMIT_BRANCH
+  - export PYTHONPATH="$CI_PROJECT_DIR/DEV/code_quality_toolkit/src:$PYTHONPATH"
+  - pytest --cov=src/ --cov-report=term --cov-report=html tests/integration **--cov-fail-under=30** # report goes to terminal and htmlcov → open 'index.html' in a browser
+  artifacts:
+    paths:
+      - $CI_PROJECT_DIR/DEV/code_quality_toolkit/htmlcov_integration/ # Preserve the html coverage files as an artifact
+    #expire_in: 1 day  # (Optional) Specify how long to keep the artifact
+    # (e.g., 1 week, 1 day, never).
 
 
 # # **************** SECURITY stage ****************************
