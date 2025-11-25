@@ -14,11 +14,11 @@ def write_file(path: Path, content: str):
 
 def test_engine_runs_linterwrapper_successfully(tmp_path):
     """
-    Integration Test A: Engine + LintWrapper (Pylint) integration.
-    - Core debe cargar LintWrapper desde toolkit.toml
+    Integration Test A: Engine + LinterWrapper (Pylint) integration.
+    - Core debe cargar LinterWrapper desde toolkit.toml
     - Ejecutar análisis sobre un archivo Python
     - Recibir issues del plugin
-    - Generar un reporte JSON con resultados de LintWrapper
+    - Generar un reporte JSON con resultados de LinterWrapper
     """
 
     # ─────────────────────────────────────────────
@@ -58,7 +58,9 @@ fail_on_severity = "high"
         "analyze",
         str(project_dir),
         "--out", str(report_path),
+        "--plugins", "LinterWrapper",
     ]
+
 
     result = subprocess.run(
         cmd,
@@ -73,7 +75,7 @@ fail_on_severity = "high"
     print("STDERR:", result.stderr)
 
     # CLI must NOT crash
-    assert result.returncode == 0, "CLI crashed when running LintWrapper"
+    assert result.returncode == 0, "CLI crashed when running LinterWrapper"
 
     # ─────────────────────────────────────────────
     # 4. Validar que el reporte JSON existe y es válido
