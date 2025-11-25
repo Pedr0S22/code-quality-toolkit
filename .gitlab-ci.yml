@@ -30,7 +30,7 @@ unit_tests:
   script:
     - echo "Running unit tests ... "
     - echo $CI_COMMIT_BRANCH
-    - .venv/Scripts/python -m pytest --ignore=tests/integration
+    - .venv/bin/python -m pytest --ignore=tests/integration
 
 unit_coverage:
   stage: unit_tests
@@ -79,7 +79,7 @@ integration_tests:
   script:
     - echo "Running integration tests ... "
     - echo $CI_COMMIT_BRANCH
-    - .venv/Scripts/python -m pytest tests/integration
+    - .venv/bin/python -m pytest tests/integration
 
 integration_coverage:
   stage: integration
