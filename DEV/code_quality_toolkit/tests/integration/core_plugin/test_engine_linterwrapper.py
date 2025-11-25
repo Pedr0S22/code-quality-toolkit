@@ -276,7 +276,7 @@ def test_linterwrapper_fail_on_severity_high(tmp_path):
         f"CLI should fail with exit code 3, got {result.returncode}\n"
         f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
     )
-
+    
     # el reporte debe existir
     assert report_path.exists(), "Missing report.json when fail_on_severity was triggered."
 
@@ -287,4 +287,4 @@ def test_linterwrapper_fail_on_severity_high(tmp_path):
         if det["plugin"] == "LinterWrapper"
     ]
     assert len(linter_issues) > 0
-    
+
