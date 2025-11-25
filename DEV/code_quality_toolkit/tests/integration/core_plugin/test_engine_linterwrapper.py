@@ -40,7 +40,7 @@ def test_engine_runs_linterwrapper_successfully(tmp_path):
     write_file(
         config_file,
         """
-[plugins.LintWrapper]
+[plugins.LinterWrapper]
 enabled = true
 pylint_args = ["--disable=C0114"]    # disable 'missing module docstring'
 fail_on_severity = "high"
@@ -93,7 +93,7 @@ fail_on_severity = "high"
     # Debe haber una sección 'details'
     assert "details" in report
     assert isinstance(report["details"], list)
-    
+
     # Debe haber issues reportados por LintWrapper
     lint_issues = [
         issue for issue in report["details"]
