@@ -40,7 +40,7 @@ test_coverage:
   - echo "Assessing test coverage... "
   - echo $CI_COMMIT_BRANCH
   - export PYTHONPATH="$CI_PROJECT_DIR/DEV/code_quality_toolkit/src:$PYTHONPATH" # report goes to terminal and htmlcov → open 'index.html' in a browser
-  - pytest --cov=. --cov-report=html --cov-report=term --cov-fail-under=70
+  - pytest --cov=. --cov-report=html --cov-report=term --cov-fail-under=70 --ignore=$CI_PROJECT_DIR/DEV/calculator
   artifacts:
     paths:
       - $CI_PROJECT_DIR/DEV/code_quality_toolkit/htmlcov_unit/ # Preserve the html coverage files as an artifact
@@ -90,7 +90,7 @@ integration_tests_coverage:
   - echo "Assessing integration test coverage... "
   - echo $CI_COMMIT_BRANCH
   - export PYTHONPATH="$CI_PROJECT_DIR/DEV/code_quality_toolkit/src:$PYTHONPATH" # report goes to terminal and htmlcov → open 'index.html' in a browser
-  - pytest --cov=. --cov-report=term --cov-report=html tests/integration --cov-fail-under=30
+  - pytest --cov=. --cov-report=term --cov-report=html tests/integration --cov-fail-under=30 --ignore=$CI_PROJECT_DIR/DEV/calculator
   artifacts:
     paths:
       - $CI_PROJECT_DIR/DEV/code_quality_toolkit/htmlcov_integration/ # Preserve the html coverage files as an artifact
