@@ -30,7 +30,7 @@ unit_tests:
   script:
     - echo "Running unit tests ... "
     - echo $CI_COMMIT_BRANCH
-    - make test
+    - venv/bin/python -m pytest --ignore=tests/integration
 
 unit_coverage:
   stage: unit_tests
@@ -40,7 +40,7 @@ unit_coverage:
   - echo "Assessing test coverage... "
   - echo $CI_COMMIT_BRANCH
   - export PYTHONPATH="$CI_PROJECT_DIR/DEV/code_quality_toolkit/src:$PYTHONPATH" # report goes to terminal and htmlcov → open 'index.html' in a browser
-  - pytest --cov=toolkit --cov-report=html --cov-report=term --cov-fail-under=70 --ignore=$CI_PROJECT_DIR/DEV/calculator
+  - pytest --cov=toolkit --cov-report=html --cov-report=term --cov-fail-under=70 --ignore=$CI_PROJECT_DIR/DEV/calculator --ignore=tests/integration
   #artifacts:
   #  paths:
   #    - DEV/code_quality_toolkit/htmlcov_unit/ # Preserve the html coverage files as an artifact
