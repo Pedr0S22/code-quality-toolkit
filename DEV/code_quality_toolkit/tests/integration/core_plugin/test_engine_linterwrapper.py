@@ -81,7 +81,7 @@ fail_on_severity = "high"
     assert report_path.exists(), "Report file was not created"
 
     report = json.loads(report_path.read_text())
-
+    
     # ─────────────────────────────────────────────
     # 5. Validar estructura del reporte unificado
     # ─────────────────────────────────────────────
