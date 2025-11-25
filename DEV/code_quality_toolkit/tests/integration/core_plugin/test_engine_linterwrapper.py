@@ -24,10 +24,10 @@ def test_engine_runs_linterwrapper_successfully(tmp_path):
     # ─────────────────────────────────────────────
     # 1. Crear proyecto temporal con archivo Python
     # ─────────────────────────────────────────────
-    project_dir = tmp_path / "sample_project"
-    project_dir.mkdir()
+    project_dir = tmp_path  # usar directamente tmp_path como proyecto
 
     sample_file = project_dir / "example.py"
+
     write_file(
         sample_file,
         "def bad_function():\n    a=1\n    return a\n"
