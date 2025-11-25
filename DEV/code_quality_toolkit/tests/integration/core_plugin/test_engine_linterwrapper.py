@@ -2,7 +2,6 @@ import os
 import sys
 import json
 import subprocess
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -192,7 +191,11 @@ def test_linterwrapper_timeout(tmp_path):
 # B3 — invalid output
 # ─────────────────────────────────────────────
 def test_linterwrapper_invalid_json_output(tmp_path):
-    """LinterWrapper must return LINTER_OUTPUT_INVALID when pylint returns invalid JSON."""
+    """
+    LinterWrapper must return LINTER_OUTPUT_INVALID when pylint returns
+    invalid JSON.
+    """
+
 
     project = tmp_path / "projB3"
     project.mkdir()
@@ -276,9 +279,12 @@ def test_linterwrapper_fail_on_severity_high(tmp_path):
         f"CLI should fail with exit code 3, got {result.returncode}\n"
         f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
     )
-    
+
     # el reporte debe existir
-    assert report_path.exists(), "Missing report.json when fail_on_severity was triggered."
+    assert report_path.exists(), (
+    "Missing report.json when fail_on_severity was triggered."
+    )
+
 
     # y tener issues del plugin
     report = json.loads(report_path.read_text())
