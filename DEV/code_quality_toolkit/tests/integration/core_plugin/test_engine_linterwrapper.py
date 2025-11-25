@@ -21,35 +21,28 @@ def test_engine_runs_linterwrapper_successfully(tmp_path):
     - Generar un reporte JSON con resultados de LinterWrapper
     """
 
-    # ─────────────────────────────────────────────
-    # 1. Crear proyecto temporal con archivo Python
-    # ─────────────────────────────────────────────
-    project_dir = tmp_path  # usar directamente tmp_path como proyecto
+    # 1) Crear proyecto temporal **dentro del repositorio**
+    project_dir = ROOT / "_tmp_project"
+    project_dir.mkdir(exist_ok=True)
 
     sample_file = project_dir / "example.py"
-
     write_file(
         sample_file,
         "def bad_function():\n    a=1\n    return a\n"
     )
 
-    # ─────────────────────────────────────────────
-    # 2. Crear toolkit.toml con LintWrapper activado
-    # ─────────────────────────────────────────────
+    # 2) Crear toolkit.toml
     config_file = project_dir / "toolkit.toml"
     write_file(
         config_file,
-        """
-[plugins.linter_wrapper]
-enabled = true
-pylint_args = ["--disable=C0114"]    # disable 'missing module docstring'
-fail_on_severity = "high"
-"""
+        "[plugins.linter_wrapper]\n"
+        "enabled = true\n"
+        'pylint_args = ["--disable=C0114"]\n'
+        'fail_on_severity = "high"\n'
     )
 
-    # ─────────────────────────────────────────────
-    # 3. Ejecutar CLI sobre el proyecto
-    # ─────────────────────────────────────────────
+
+    # 3) Ejecutar CLI
     report_path = project_dir / "report.json"
 
     cmd = [
@@ -60,6 +53,7 @@ fail_on_severity = "high"
         "--out", str(report_path),
         "--plugins", "LinterWrapper",
     ]
+
 
 
     result = subprocess.run(
