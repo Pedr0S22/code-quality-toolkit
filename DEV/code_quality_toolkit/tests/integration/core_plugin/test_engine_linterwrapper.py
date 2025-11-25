@@ -81,7 +81,7 @@ fail_on_severity = "high"
     assert report_path.exists(), "Report file was not created"
 
     report = json.loads(report_path.read_text())
-    
+
     # ─────────────────────────────────────────────
     # 5. Validar estructura del reporte unificado
     # ─────────────────────────────────────────────
@@ -93,7 +93,7 @@ fail_on_severity = "high"
     # Debe haber una sección 'details'
     assert "details" in report
     assert isinstance(report["details"], list)
-
+    
     # Debe haber issues reportados por LintWrapper
     lint_issues = [
         issue for issue in report["details"]
