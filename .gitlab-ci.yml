@@ -41,9 +41,9 @@ test_coverage:
   - echo $CI_COMMIT_BRANCH
   - export PYTHONPATH="$CI_PROJECT_DIR/DEV/code_quality_toolkit/src:$PYTHONPATH" # report goes to terminal and htmlcov → open 'index.html' in a browser
   - pytest --cov=. --cov-report=html --cov-report=term --cov-fail-under=70 --ignore=$CI_PROJECT_DIR/DEV/calculator
-  artifacts:
-    paths:
-      - DEV/code_quality_toolkit/htmlcov_unit/ # Preserve the html coverage files as an artifact
+  #artifacts:
+  #  paths:
+  #    - DEV/code_quality_toolkit/htmlcov_unit/ # Preserve the html coverage files as an artifact
     #expire_in: 1 day  # (Optional) Specify how long to keep the artifact
     # (e.g., 1 week, 1 day, never)
 
