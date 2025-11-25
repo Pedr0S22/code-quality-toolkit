@@ -85,12 +85,14 @@ integration_tests:
 integration_coverage:
   stage: integration
   before_script:
+    - cd $CI_PROJECT_DIR/DEV/code_quality_toolkit
     - pip install pytest pytest-cov bandit
+    - pip install -e .
   script:
   - echo "Assessing integration test coverage... "
   - echo $CI_COMMIT_BRANCH
   - export PYTHONPATH="$CI_PROJECT_DIR/DEV/code_quality_toolkit/src:$PYTHONPATH" # report goes to terminal and htmlcov → open 'index.html' in a browser
-  - python -m pytest --cov=src/. --cov-report=term --cov-report=html:htmlcov_integration tests/integration --cov-fail-under=30
+  - python -m pytest --cov=. --cov-report=term --cov-report=html:htmlcov_integration tests/integration --cov-fail-under=30 --ignore=$CI_PROJECT_DIR/DEV/calculator
   #artifacts:
   #  paths:
   #    - DEV/code_quality_toolkit/htmlcov_integration/ # Preserve the html coverage files as an artifact
