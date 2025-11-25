@@ -93,9 +93,10 @@ def test_engine_runs_linterwrapper_successfully(tmp_path):
     # Debe haber issues reportados por LinterWrapper
     lint_issues = [
         issue for issue in report["details"]
-        if issue.get("plugin") == "linter_wrapper"
+        if issue.get("plugin") == "LinterWrapper"
     ]
     assert len(lint_issues) > 0, "LinterWrapper returned no issues"
+
 
     # Los issues deben tener campos obligatorios
     first = lint_issues[0]
