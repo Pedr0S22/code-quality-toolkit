@@ -17,10 +17,21 @@ from fastapi.responses import FileResponse
 
 from toolkit.core.engine import run_analysis
 from toolkit.core.aggregator import aggregate
-from toolkit.core.loader import load_plugins
+from toolkit.core.loader import load_plugins, discover_plugins
 from toolkit.utils.config import load_config, ToolkitConfig
 
 app = FastAPI(title="Code Quality Toolkit API", version="0.2.0")
+
+
+@app.get("/api/v1/plugins", summary="List all available plugins")
+def list_available_plugins():
+    """Returns a list of all plugins detected in the system by reading their metadata."""
+    try:
+        names = get_all_plugin_names()
+        return {"plugins": names}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to discover plugins: {e}")
+
 
 @app.post("/api/v1/analyze", summary="Analyze a project zip archive")
 async def analyze_project(
@@ -36,6 +47,8 @@ async def analyze_project(
     5. Cleans up the sandbox.
     """
     
+    print(f"DEBUG: Received plugins value = '{plugins}'")
+
     # 1. Create a unique sandbox for this request
     session_id = str(uuid.uuid4())
     temp_dir = Path(tempfile.gettempdir()) / "toolkit_sessions" / session_id
@@ -78,7 +91,8 @@ async def analyze_project(
         # 4. Resolve and Load Plugins
         plugin_names = resolve_plugins(plugins, config)
         loaded_plugins = load_plugins(plugin_names)
-        
+        print(f"DEBUG: Running plugins: {plugin_names}")
+
         if not loaded_plugins:
             raise HTTPException(status_code=400, detail="No valid plugins could be loaded.")
 
@@ -122,11 +136,75 @@ def cleanup_sandbox(path: Path):
         print(f"Error cleaning up {path}: {e}")
 
 
+def _to_pascal_case(snake_str: str) -> str:
+    """
+    Converts snake_case to PascalCase.
+    Example: 'dead_code_detector' -> 'DeadCodeDetector'
+    """
+    return "".join(word.title() for word in snake_str.split("_"))
+
+def get_all_plugin_names() -> List[str]:
+    """
+    Helper to discover and load all plugins to get their proper metadata names.
+    Robustly handles broken/incomplete plugins by ignoring them.
+    """
+    real_names = []
+    try:
+        # Find all potential plugin folders/modules
+        discovered = discover_plugins()
+        
+        # handle if it returns dict or list
+        if isinstance(discovered, dict):
+            plugin_folders = list(discovered.keys())
+        else:
+            plugin_folders = discovered
+
+        # Try loading each plugin individually
+        for folder_name in plugin_folders:
+            try:
+                # Convert folder names to PascalCase to try loading them
+                potential_name = _to_pascal_case(folder_name)
+                
+                # Load specific plugin (List of 1) to isolate failures.
+                # If this specific plugin is broken/incomplete, load_plugins will raise an error.
+                loaded = load_plugins([potential_name])
+                
+                # Extract metadata from the loaded instance
+                for plugin_instance in loaded.values():
+                    try:
+                        # This calls the get_metadata() method you showed in the snippet
+                        meta = plugin_instance.get_metadata()
+                        # We use the "name" field from the metadata (e.g. "DuplicationChecker")
+                        real_names.append(meta.get("name", potential_name))
+                    except Exception:
+                        # Fallback if get_metadata crashes
+                        real_names.append(potential_name)
+            
+            except Exception as e:
+                # This block catches "Requested plugins not found" or syntax errors
+                # and allows the loop to continue to the next plugin.
+                print(f"Skipping broken/incomplete plugin '{folder_name}': {e}")
+                continue
+                
+    except Exception as e:
+        print(f"Error exploring plugins: {e}")
+        
+    return real_names
+
 def resolve_plugins(requested: str, config: ToolkitConfig) -> List[str]:
     """Resolves the comma-separated string from the form into a list of plugin names."""
     if requested.lower() == "all":
-        return config.enabled_plugins
+        try:
+            # Try to get all available plugins dynamically
+            all_plugins = get_all_plugin_names()
+            if all_plugins:
+                return all_plugins
+            return config.enabled_plugins
+        except Exception as e:
+            print(f"Discovery failed, falling back to config: {e}")
+            return config.enabled_plugins
     
+    # If specific plugins were requested
     plugins = [p.strip() for p in requested.split(",") if p.strip()]
     return plugins if plugins else config.enabled_plugins
 
