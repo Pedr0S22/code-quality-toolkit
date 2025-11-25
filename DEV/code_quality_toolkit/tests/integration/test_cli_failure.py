@@ -33,7 +33,7 @@ class Plugin:
 
 def test_cli_exit_code_on_plugin_load_failure(tmp_path: Path, capsys):
     """
-    Requirement: CLI must exit with a specific error code (1) 
+    Requirement: CLI must exit with a specific error code (1)
     when a plugin fails to load.
     """
     # Create a dummy project to analyze
@@ -41,7 +41,7 @@ def test_cli_exit_code_on_plugin_load_failure(tmp_path: Path, capsys):
     project_dir.mkdir()
     (project_dir / "main.py").write_text("print('hello')", encoding="utf-8")
 
-    # Mock load_plugins to simulate a failure 
+    # Mock load_plugins to simulate a failure
     # (e.g., missing dependency or syntax error in plugin)
     with patch(
         "toolkit.core.cli.load_plugins",
@@ -98,7 +98,7 @@ def test_cli_partial_report_on_plugin_runtime_failure(tmp_path: Path):
     assert data["analysis_metadata"]["status"] == "partial"
 
     # Check that the plugin error was recorded in the details
-    # The engine should have caught the RuntimeError and logged it as 
+    # The engine should have caught the RuntimeError and logged it as
     # a High Severity issue
     file_details = data["details"][0]
     plugin_results = file_details["plugins"][0]
