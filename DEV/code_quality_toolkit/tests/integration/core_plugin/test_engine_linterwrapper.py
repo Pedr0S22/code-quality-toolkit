@@ -90,7 +90,7 @@ fail_on_severity = "high"
 
     # Plugin debe aparecer como ejecutado
     assert "plugins_executed" in report["analysis_metadata"]
-    assert "linter_wrapper" in report["analysis_metadata"]["plugins_executed"]
+    assert "LinterWrapper" in report["analysis_metadata"]["plugins_executed"]
 
     # Debe haber una sección 'details'
     assert "details" in report
@@ -101,7 +101,6 @@ fail_on_severity = "high"
         issue for issue in report["details"]
         if issue.get("plugin") == "linter_wrapper"
     ]
-
     assert len(lint_issues) > 0, "LinterWrapper returned no issues"
 
     # Los issues deben tener campos obligatorios
@@ -110,3 +109,4 @@ fail_on_severity = "high"
     assert "metric" in first
     assert "severity" in first
     assert "message" in first
+
