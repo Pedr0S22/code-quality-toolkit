@@ -90,7 +90,7 @@ integration_coverage:
   - echo "Assessing integration test coverage... "
   - echo $CI_COMMIT_BRANCH
   - export PYTHONPATH="$CI_PROJECT_DIR/DEV/code_quality_toolkit/src:$PYTHONPATH" # report goes to terminal and htmlcov → open 'index.html' in a browser
-  - pytest --cov=. --cov-report=term --cov-report=html tests/integration --cov-fail-under=30 --ignore=$CI_PROJECT_DIR/DEV/calculator
+  - python -m pytest --cov=src/. --cov-report=term --cov-report=html:htmlcov_integration tests/integration --cov-fail-under=30
   #artifacts:
   #  paths:
   #    - DEV/code_quality_toolkit/htmlcov_integration/ # Preserve the html coverage files as an artifact
