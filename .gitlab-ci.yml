@@ -32,7 +32,7 @@ unit_tests:
     - echo $CI_COMMIT_BRANCH
     - make test
 
-test_coverage:
+unit_coverage:
   stage: unit_tests
   before_script:
     - pip install pytest pytest-cov bandit
@@ -82,7 +82,7 @@ integration_tests:
     - make setup
     - .venv/bin/python -m pytest tests/integration
 
-integration_tests_coverage:
+integration_coverage:
   stage: integration
   before_script:
     - pip install pytest pytest-cov bandit
