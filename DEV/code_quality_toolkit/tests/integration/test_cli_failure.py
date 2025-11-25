@@ -30,6 +30,19 @@ class Plugin:
 
 # --- Tests ---
 
+def test_cli_crash_safety_net(tmp_path: Path):
+    """
+    Requirement: CLI must return EXIT_UNEXPECTED_ERROR (2) if the core system crashes.
+    """
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    
+    # Mock the entire engine to raise a generic Exception
+    with patch("toolkit.core.cli.run_analysis", side_effect=Exception("Core Meltdown")):
+        exit_code = main(["analyze", str(project_dir)])
+        
+    assert exit_code == 2  # EXIT_UNEXPECTED_ERROR
+
 
 def test_cli_exit_code_on_plugin_load_failure(tmp_path: Path, capsys):
     """
