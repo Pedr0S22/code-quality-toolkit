@@ -90,10 +90,12 @@ def test_engine_runs_linterwrapper_successfully(tmp_path):
     assert isinstance(report["details"], list)
 
     # Debe haber issues reportados por LinterWrapper
-    lint_issues = [
-        issue for issue in report["details"]
-        if issue.get("plugin") == "LinterWrapper"
-    ]
+    lint_issues = []
+    for det in report["details"]:
+        for plug in det["plugins"]:
+            if plug["plugin"] == "LinterWrapper":
+                lint_issues.append(plug)
+
     assert len(lint_issues) > 0, "LinterWrapper returned no issues"
 
 
@@ -137,10 +139,12 @@ def test_linterwrapper_handles_missing_pylint(tmp_path):
 
     report = json.loads(report_path.read_text())
 
-    issues = [
-        i for i in report["details"]
-        if i["plugin"] == "LinterWrapper"
-    ]
+    issues = []
+    for det in report["details"]:
+        for plug in det["plugins"]:
+            if plug["plugin"] == "LinterWrapper":
+                issues.append(plug)
+
 
     assert len(issues) > 0
     first = issues[0]["results"][0]
@@ -180,7 +184,12 @@ def test_linterwrapper_timeout(tmp_path):
 
     report = json.loads(report_path.read_text())
 
-    issues = [i for i in report["details"] if i["plugin"] == "LinterWrapper"]
+    issues = []
+    for det in report["details"]:
+        for plug in det["plugins"]:
+            if plug["plugin"] == "LinterWrapper":
+                issues.append(plug)
+
 
     assert len(issues) > 0
     first = issues[0]["results"][0]
@@ -231,7 +240,12 @@ def test_linterwrapper_invalid_json_output(tmp_path):
 
     report = json.loads(report_path.read_text())
 
-    issues = [i for i in report["details"] if i["plugin"] == "LinterWrapper"]
+    issues = []
+    for det in report["details"]:
+        for plug in det["plugins"]:
+            if plug["plugin"] == "LinterWrapper":
+                issues.append(plug)
+
 
     assert len(issues) > 0
     first = issues[0]["results"][0]
@@ -288,9 +302,11 @@ def test_linterwrapper_fail_on_severity_high(tmp_path):
 
     # y tener issues del plugin
     report = json.loads(report_path.read_text())
-    linter_issues = [
-        det for det in report["details"]
-        if det["plugin"] == "LinterWrapper"
-    ]
+    linter_issues = []
+    for det in report["details"]:
+        for plug in det["plugins"]:
+            if plug["plugin"] == "LinterWrapper":
+                linter_issues.append(plug)
+
     assert len(linter_issues) > 0
 
