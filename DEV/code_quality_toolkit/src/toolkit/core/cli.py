@@ -295,7 +295,6 @@ def _run_analyze(args: argparse.Namespace) -> int:
 
     # == Analysis Execution ==
 
-
     # Executes the core function of the tool:
     # - scans the directory/file specified by args.path.
     # - applies the loaded plugins to the files it finds.
