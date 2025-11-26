@@ -9,14 +9,12 @@ Este módulo testa a integração completa entre:
 """
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
 
 from toolkit.core.aggregator import aggregate
 from toolkit.core.engine import run_analysis
-from toolkit.core.contracts import UnifiedReport, validate_unified_report
 from toolkit.plugins.basic_metrics.plugin import Plugin as basicMetricsPlugin 
 from toolkit.utils.config import ToolkitConfig
 
@@ -213,7 +211,7 @@ class TestMetricsIntegration:
         assert "BasicMetrics" in issues_by_plugin
 
         # Verify counts
-        for plugin_name, count in issues_by_plugin.items():
+        for _plugin_name, count in issues_by_plugin.items():
             assert isinstance(count, int)
             assert count >= 0
 
