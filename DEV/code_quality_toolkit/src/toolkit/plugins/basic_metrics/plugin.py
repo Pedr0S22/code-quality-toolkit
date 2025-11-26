@@ -38,7 +38,7 @@ class Plugin:
         self.report_level = "LOW"
 
     # ------------------------------------------------------------------
-    # Metadados e configuração
+    # Metadados e configuração 
     # ------------------------------------------------------------------
     def get_metadata(self) -> dict[str, str]:
         return {
