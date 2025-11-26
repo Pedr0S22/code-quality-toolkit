@@ -4,331 +4,322 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
-
 import ast
 import io
 import tokenize
+from typing import Any
 
-# Imports antigos mantidos como comentário para histórico:
+# Import opcional do radon: se não estiver instalado, o plugin continua a funcionar.
+try:
+    from radon.raw import analyze as raw_analyze
+    from radon.metrics import h_visit
+
+    RADON_AVAILABLE = True
+except Exception:  # pragma: no cover - ambiente sem radon
+    raw_analyze = None
+    h_visit = None
+    RADON_AVAILABLE = False
+
+# Imports antigos mantidos como comentário para histórico (pedido do enunciado):
 # import os
 # import tempfile
 # from radon.raw import analyze as raw_analyze
 # from radon.metrics import h_visit, HalsteadReport
 
-from ...utils.config import ToolkitConfig
 from ...core.contracts import IssueResult
+from ...utils.config import ToolkitConfig
 
 
 def issue() -> None:
-    """Placeholder mantido apenas para compatibilidade."""
-    pass
+    """
+    Função dummy mantida por compatibilidade com versões antigas do carregador
+    de plugins. Não é usada nos testes atuais.
+    """
+    return None
 
 
 class Plugin:
     """
     Basic Metrics Plugin
 
-    - Conta linhas totais, lógicas, de comentário, em branco e docstrings
-    - Calcula métricas de Halstead (via radon, se disponível)
-    - Devolve sempre as métricas em summary["metrics"]
+    Calcula métricas simples:
+        - total_lines
+        - logical_lines
+        - comment_lines
+        - blank_lines
+        - docstring_lines
+    e algumas métricas de Halstead (volume, dificuldade, esforço, bugs).
+    As métricas ficam em summary["metrics"].
     """
 
     def __init__(self) -> None:
-        self.report_level = "LOW"
+        # Nível de detalhe configurável via ToolkitConfig.rules.metrics_report_level
+        self.report_level: str = "LOW"
 
-    # ------------------------------------------------------------------
-    # Metadados e configuração 
-    # ------------------------------------------------------------------
     def get_metadata(self) -> dict[str, str]:
         return {
             "name": "BasicMetrics",
             "version": "1.0.0",
-            "description": (
-                "Reports basic code metrics like LOC, comments, docstrings "
-                "and Halstead metrics."
-            ),
+            "description": "Reports basic code metrics like LOC, comments, blanks and Halstead metrics.",
         }
 
     def configure(self, config: ToolkitConfig) -> None:
-        # Mantemos esta API porque o restante toolkit usa isto.
+        # Leitura da config, como no enunciado original.
         if hasattr(config.rules, "metrics_report_level"):
             self.report_level = config.rules.metrics_report_level
 
     # ------------------------------------------------------------------
-    # Helpers internos
+    # Helpers para descobrir docstrings, comentários e linhas em branco
     # ------------------------------------------------------------------
-    def _count_comment_lines(self, source_code: str) -> int:
+
+    @staticmethod
+    def _docstring_line_numbers(source_code: str) -> set[int]:
         """
-        Conta linhas de comentário verdadeiras usando tokenize.
-
-        Isto conta:
-        - linhas só com `# ...`
-        - comentários inline: `return x + y  # comentário`
-
-        Mas NÃO conta docstrings (são tokens STRING, não COMMENT).
+        Devolve o conjunto de números de linha físicos que pertencem a docstrings.
+        Usa AST para encontrar docstrings de módulo, classe e função.
         """
-        comment_lines: set[int] = set()
-
-        buf = io.StringIO(source_code)
-        try:
-            for tok in tokenize.generate_tokens(buf.readline):
-                if tok.type == tokenize.COMMENT:
-                    comment_lines.add(tok.start[0])
-        except tokenize.TokenError:
-            # Fallback simples caso o código esteja muito partido
-            for lineno, line in enumerate(source_code.splitlines(), start=1):
-                if line.lstrip().startswith("#"):
-                    comment_lines.add(lineno)
-
-        return len(comment_lines)
-
-    def _count_docstring_lines(self, source_code: str) -> int:
-        """
-        Conta linhas pertencentes a docstrings "verdadeiros" (módulo, funções, classes).
-        """
+        doc_lines: set[int] = set()
         try:
             tree = ast.parse(source_code)
         except SyntaxError:
-            return 0
+            return doc_lines
 
-        doc_lines = 0
+        for node in ast.walk(tree):
+            if isinstance(
+                node,
+                (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef),
+            ):
+                if not node.body:
+                    continue
 
-        # Candidatos que podem ter docstring: módulo, funções, classes.
-        candidates = [tree] + [
-            node
-            for node in ast.walk(tree)
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
-        ]
-
-        for node in candidates:
-            doc = ast.get_docstring(node, clean=False)
-            if doc:
-                doc_lines += len(doc.splitlines())
+                first_stmt = node.body[0]
+                if (
+                    isinstance(first_stmt, ast.Expr)
+                    and isinstance(first_stmt.value, ast.Constant)
+                    and isinstance(first_stmt.value.value, str)
+                ):
+                    lineno = first_stmt.lineno
+                    end_lineno = getattr(first_stmt, "end_lineno", lineno)
+                    for line_no in range(lineno, end_lineno + 1):
+                        doc_lines.add(line_no)
 
         return doc_lines
 
-    def _compute_raw_metrics(self, source_code: str) -> Dict[str, int]:
+    @staticmethod
+    def _count_comments_and_blanks(
+        source_code: str, docstring_lines: set[int]
+    ) -> tuple[int, int]:
         """
-        Usa radon.raw.analyze se estiver disponível para LOC/LLOC/blank,
-        mas calcula comment_lines e docstring_lines à parte, de forma mais
-        controlada e compatível com os testes.
+        Conta:
+          - linhas de comentário (excluindo linhas de docstring)
+          - linhas em branco
         """
-        raw = None
-        try:
-            from radon.raw import analyze as raw_analyze  # type: ignore[import]
+        comment_lines: set[int] = set()
 
-            try:
-                raw = raw_analyze(source_code)
-            except Exception:
-                raw = None
-        except Exception:
-            raw = None
+        try:
+            for token in tokenize.generate_tokens(io.StringIO(source_code).readline):
+                if token.type == tokenize.COMMENT:
+                    line_no = token.start[0]
+                    if line_no not in docstring_lines:
+                        comment_lines.add(line_no)
+        except tokenize.TokenError:
+            # Código possivelmente incompleto – faz-se o melhor possível.
+            pass
 
         lines = source_code.splitlines()
+        blank_count = sum(1 for line in lines if not line.strip())
 
-        if raw is not None:
-            total_lines = int(raw.loc)
-            logical_lines = int(raw.lloc)
-            blank_lines = int(raw.blank)
-        else:
-            total_lines = len(lines)
-            blank_lines = sum(1 for line in lines if not line.strip())
-            # Aproximação: linhas não em branco
-            logical_lines = total_lines - blank_lines
-
-        comment_lines = self._count_comment_lines(source_code)
-        docstring_lines = self._count_docstring_lines(source_code)
-
-        return {
-            "total_lines": total_lines,
-            "logical_lines": logical_lines,
-            "comment_lines": comment_lines,
-            "blank_lines": blank_lines,
-            "docstring_lines": docstring_lines,
-        }
-
-    def _compute_halstead_metrics(self, source_code: str) -> Dict[str, float]:
-        """
-        Calcula métricas de Halstead via radon.metrics.h_visit, se estiver instalado.
-
-        Se radon não estiver disponível (como no job de coverage), devolve {}.
-        """
-        try:
-            from radon.metrics import h_visit  # type: ignore[import]
-        except Exception:
-            return {}
-
-        try:
-            report = h_visit(source_code)
-        except Exception:
-            return {}
-
-        total = report.total
-
-        return {
-            "halstead_volume": float(total.volume),
-            "halstead_difficulty": float(total.difficulty),
-            "halstead_effort": float(total.effort),
-        }
+        return len(comment_lines), blank_count
 
     # ------------------------------------------------------------------
-    # Método principal exigido pelo toolkit
+    # Helpers para calcular métricas numéricas
     # ------------------------------------------------------------------
-    def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
-        try:
-            results: list[IssueResult] = []
 
-            # ----------------- Métricas básicas -----------------
-            raw_metrics = self._compute_raw_metrics(source_code)
-            halstead_metrics = self._compute_halstead_metrics(source_code)
+    def _compute_raw_metrics(self, source_code: str) -> dict[str, int]:
+        """
+        Calcula:
+            - total_lines
+            - logical_lines
+            - comment_lines
+            - blank_lines
+            - docstring_lines
 
-            # Este é o dicionário que os testes usam:
-            metrics: Dict[str, Any] = {**raw_metrics, **halstead_metrics}
+        Se `radon` existir, usa radon.raw.analyze para ter valores consistentes
+        com o resto do toolkit. Se não existir, usa um fallback textual simples.
+        """
+        doc_lines = self._docstring_line_numbers(source_code)
+        comment_count, blank_count = self._count_comments_and_blanks(
+            source_code, doc_lines
+        )
 
-            total_lines = raw_metrics["total_lines"] or 0
-
-            # Usamos só as métricas "de linhas" para gerar avisos.
-            # Nomes ajustados para bater certo com os testes:
-            inspect_metrics = {
-                "total_lines": raw_metrics["total_lines"],
-                "logical_lines": raw_metrics["logical_lines"],
-                "comment_lines": raw_metrics["comment_lines"],
-                "blank_lines": raw_metrics["blank_lines"],
-                "docstring_lines": raw_metrics["docstring_lines"],
+        if RADON_AVAILABLE and raw_analyze is not None:
+            raw = raw_analyze(source_code)
+            return {
+                "total_lines": raw.loc,
+                "logical_lines": raw.lloc,
+                "comment_lines": comment_count,
+                "blank_lines": blank_count,
+                "docstring_lines": len(doc_lines),
             }
 
-            for key, value in inspect_metrics.items():
-                res: IssueResult = {
-                    "severity": "low",
-                    "code": key,
-                    "message": f"{key.replace('_', ' ').title()}: {value}",
-                    "hint": "",
-                }
+        # Fallback sem radon: aproximação razoável.
+        lines = source_code.splitlines()
+        total = len(lines)
+        logical = total - blank_count
 
-                # Evita divisão por zero se o ficheiro estiver vazio
-                percent = (value / total_lines * 100) if total_lines > 0 else 0.0
+        return {
+            "total_lines": total,
+            "logical_lines": logical,
+            "comment_lines": comment_count,
+            "blank_lines": blank_count,
+            "docstring_lines": len(doc_lines),
+        }
 
-                # total_lines thresholds
-                if key == "total_lines":
-                    if value > 3000:
-                        res["severity"] = "high"
-                        res["hint"] = (
-                            "File is larger than 3000 lines, consider splitting "
-                            "functionality across multiple files."
-                        )
-                    elif value > 2000:
-                        res["severity"] = "medium"
-                        res["hint"] = (
-                            "File is larger than 2000 lines, consider splitting "
-                            "functionality across multiple files."
-                        )
-                    elif value > 1000:
-                        res["hint"] = (
-                            "File is larger than 1000 lines, consider splitting "
-                            "functionality across multiple files."
-                        )
-                    else:
-                        # Sem problema → não criar issue
-                        continue
+    def _compute_halstead_metrics(self, source_code: str) -> dict[str, float]:
+        """
+        Calcula algumas métricas de Halstead via radon.metrics.h_visit.
+        Se radon não estiver disponível, devolve zeros estáveis.
+        """
+        if not (RADON_AVAILABLE and h_visit is not None):
+            return {
+                "h_volume": 0.0,
+                "h_difficulty": 0.0,
+                "h_effort": 0.0,
+                "h_bugs": 0.0,
+            }
 
-                # logical_lines
-                elif key == "logical_lines":
-                    if value > 300:
-                        res["severity"] = "high"
-                        res["hint"] = (
-                            "Very large logical code blocks. Consider splitting "
-                            "into smaller functions."
-                        )
-                    elif value > 200:
-                        res["severity"] = "medium"
-                        res["hint"] = (
-                            "Long logical blocks. Consider splitting into "
-                            "smaller functions."
-                        )
-                    elif value > 100:
-                        res["hint"] = (
-                            "Logical size is manageable but consider splitting "
-                            "into smaller functions."
-                        )
-                    else:
-                        continue
+        reports = list(h_visit(source_code))
+        if not reports:
+            return {
+                "h_volume": 0.0,
+                "h_difficulty": 0.0,
+                "h_effort": 0.0,
+                "h_bugs": 0.0,
+            }
 
-                # comment_lines – AGORA conta também comentários inline via tokenize
-                elif key == "comment_lines":
-                    if percent < 2:
-                        res["severity"] = "high"
-                        res["hint"] = (
-                            "Very few comments. Add documentation to "
-                            "improve readability."
-                        )
-                    elif percent < 5:
-                        res["severity"] = "medium"
-                        res["hint"] = (
-                            "Low comment count, consider adding documentation."
-                        )
-                    elif percent < 10:
-                        res["hint"] = "Consider adding documentation."
-                    else:
-                        continue
+        rep = reports[0]
+        return {
+            "h_volume": float(getattr(rep, "volume", 0.0)),
+            "h_difficulty": float(getattr(rep, "difficulty", 0.0)),
+            "h_effort": float(getattr(rep, "effort", 0.0)),
+            "h_bugs": float(getattr(rep, "bugs", 0.0)),
+        }
 
-                # blank_lines
-                elif key == "blank_lines":
-                    if value < 1:
-                        res["severity"] = "high"
-                        res["hint"] = "No blank lines. Seriously?"
-                    elif percent < 5:
-                        res["severity"] = "medium"
-                        res["hint"] = (
-                            "Very few blank lines. Consider adding spacing "
-                            "to improve readability."
-                        )
-                    elif percent < 10:
-                        res["hint"] = (
-                            "Consider adding spacing to improve readability."
-                        )
-                    else:
-                        continue
+    def _compute_basic_metrics(self, source_code: str) -> dict[str, Any]:
+        """
+        Junta métricas "raw" e Halstead num só dicionário.
+        """
+        raw_metrics = self._compute_raw_metrics(source_code)
+        halstead_metrics = self._compute_halstead_metrics(source_code)
+        metrics: dict[str, Any] = {**raw_metrics, **halstead_metrics}
+        return metrics
 
-                # docstring_lines
-                elif key == "docstring_lines":
-                    if percent < 2:
-                        res["severity"] = "high"
-                        res["hint"] = (
-                            "Very few docstrings. Add documentation for "
-                            "functions and classes."
-                        )
-                    elif percent < 4:
-                        res["severity"] = "medium"
-                        res["hint"] = (
-                            "Low docstring count, consider adding documentation."
-                        )
-                    elif percent < 8:
-                        res["hint"] = (
-                            "Consider adding docstrings for functions and classes."
-                        )
-                    else:
-                        continue
+    # ------------------------------------------------------------------
+    # Helpers para gerar issues a partir das métricas
+    # ------------------------------------------------------------------
 
-                results.append(res)
+    def _maybe_build_issue(
+        self, metric_name: str, value: int | float, total_lines: int
+    ) -> IssueResult | None:
+        """
+        Cria um IssueResult simples para algumas métricas.
+
+        Mantemos esta função pequena em termos de decisões para não rebentar a
+        análise de complexidade do Xenon (limite C).
+        """
+        # 1) total_lines – ficheiros muito grandes
+        if metric_name == "total_lines":
+            if value <= 1000:
+                return None
+
+            severity = "low"
+            if value > 3000:
+                severity = "high"
+            elif value > 2000:
+                severity = "medium"
 
             return {
-                "results": results,
+                "severity": severity,
+                "code": "total_lines",
+                "message": f"File has {int(value)} total lines.",
+                "hint": "Large files are harder to navigate; consider splitting the module.",
+            }
+
+        # 2) logical_lines – blocos lógicos muito extensos
+        if metric_name == "logical_lines":
+            if value <= 100:
+                return None
+
+            severity = "low"
+            if value > 300:
+                severity = "high"
+            elif value > 200:
+                severity = "medium"
+
+            return {
+                "severity": severity,
+                "code": "logical_lines",
+                "message": f"File has {int(value)} logical lines.",
+                "hint": "Long logical blocks can often be split into smaller functions.",
+            }
+
+        # 3) comment_lines – poucas linhas de comentário
+        if metric_name == "comment_lines" and total_lines > 0:
+            percent = (value / total_lines) * 100
+            if percent >= 10:
+                return None
+
+            severity = "low"
+            if percent < 2:
+                severity = "high"
+            elif percent < 5:
+                severity = "medium"
+
+            return {
+                "severity": severity,
+                "code": "comment_lines",
+                "message": f"Only {percent:.1f}% of lines are comments.",
+                "hint": "Consider adding more explanatory comments and docstrings.",
+            }
+
+        # blank_lines e docstring_lines não geram issues explícitos aqui.
+        return None
+
+    # ------------------------------------------------------------------
+    # Entry-point principal exigido pelo engine
+    # ------------------------------------------------------------------
+
+    def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
+        """
+        Analisa um ficheiro fonte e devolve:
+            - lista de issues em "results"
+            - métricas numéricas em "summary['metrics']"
+        """
+        try:
+            metrics = self._compute_basic_metrics(source_code)
+            total = int(metrics.get("total_lines", 0))
+
+            issues: list[IssueResult] = []
+            for name, val in metrics.items():
+                issue_obj = self._maybe_build_issue(name, val, total)
+                if issue_obj is not None:
+                    issues.append(issue_obj)
+
+            return {
+                "results": issues,
                 "summary": {
-                    "issues_found": len(results),
+                    "issues_found": len(issues),
                     "status": "completed",
                     "metrics": metrics,
                 },
             }
-
-        except Exception as e:
-            # Caso algo corra muito mal, devolvemos um relatório marcado como failed
+        except Exception as exc:
+            # Defesa: o plugin nunca deve mandar o engine abaixo.
             return {
                 "results": [],
                 "summary": {
                     "issues_found": 0,
                     "status": "failed",
-                    "error": f"Internal error in BasicMetrics: {str(e)}",
-                    "metrics": {},
+                    "error": f"Internal error in BasicMetrics: {exc}",
                 },
             }

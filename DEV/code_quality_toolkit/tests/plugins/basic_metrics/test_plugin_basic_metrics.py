@@ -1,10 +1,10 @@
 import pytest
+from textwrap import dedent
 
 # Se o "radon" não estiver instalado (caso do job test_coverage),
 # estes testes são marcados como "skipped" em vez de falharem na importação.
 pytest.importorskip("radon")
 
-from textwrap import dedent
 
 from toolkit.plugins.basic_metrics.plugin import Plugin
 from toolkit.utils.config import ToolkitConfig

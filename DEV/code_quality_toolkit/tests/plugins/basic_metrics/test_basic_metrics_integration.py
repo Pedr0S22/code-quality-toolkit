@@ -6,6 +6,8 @@ Este módulo testa a integração completa entre:
 2. Coleta de métricas (aggregator)
 3. Geração de relatórios (report generation)
 4. Validação de dados (contracts)
+
+Testes de integração para o plugin BasicMetrics.
 """
 
 import json
@@ -15,7 +17,7 @@ import pytest
 
 from toolkit.core.aggregator import aggregate
 from toolkit.core.engine import run_analysis
-from toolkit.plugins.basic_metrics.plugin import Plugin as basicMetricsPlugin 
+from toolkit.plugins.basic_metrics.plugin import Plugin as basicMetricsPlugin
 from toolkit.utils.config import ToolkitConfig
 
 
@@ -676,7 +678,13 @@ class TestMetricsValidation:
     ) -> None:
         """Test that metrics are deterministic (same input = same output)."""
         file = tmp_path / "test.py"
-        code = "def foo(x, y):\n    if x > 0 and y > 0:\n        return x + y\n    return 0\n"
+        code = (
+            "def foo(x, y):\n"
+            "    if x > 0 and y > 0:\n"
+            "        return x + y\n"
+            "    return 0\n"
+        )
+
         file.write_text(code, encoding="utf-8")
 
         plugins = {
@@ -729,7 +737,9 @@ class TestMetricsValidation:
         # Count issues from individual file reports
         file_count = len(files)
         files_with_issues = sum(
-            1 for f in files if sum(p["summary"]["issues_found"] for p in f["plugins"]) > 0
+            1
+            for f in files 
+            if sum(p["summary"]["issues_found"] for p in f["plugins"]) > 0
         )
 
         # Verify totals match
