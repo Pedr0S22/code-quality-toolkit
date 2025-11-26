@@ -204,4 +204,3 @@ class AnalysisController(QObject):
 
     def _on_worker_error(self, message: str) -> None:
         self.analysis_error.emit(message)
-
