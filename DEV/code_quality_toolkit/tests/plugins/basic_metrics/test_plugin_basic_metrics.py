@@ -49,8 +49,6 @@ def _run_metrics(source: str) -> dict:
 
     return metrics
 
-
-
 def test_number_of_lines() -> None:
     """
     Test number of lines (total de linhas do ficheiro).
@@ -60,7 +58,6 @@ def test_number_of_lines() -> None:
     # Ajusta "total_lines" se no teu plugin tiver outro nome (ex.: "loc")
     assert metrics["total_lines"] == 9
 
-
 def test_blank_lines() -> None:
     """
     Test blank lines (linhas em branco).
@@ -69,7 +66,6 @@ def test_blank_lines() -> None:
 
     # Ajusta "blank_lines" se o teu plugin usar outro nome.
     assert metrics["blank_lines"] == 3
-
 
 def test_comment_lines() -> None:
     """
@@ -81,7 +77,6 @@ def test_comment_lines() -> None:
     # Ajusta "comment_lines" se necessário.
     assert metrics["comment_lines"] == 2
 
-
 def test_docstring_lines() -> None:
     """
     Test docstring lines (linhas pertencentes a docstrings).
@@ -90,7 +85,6 @@ def test_docstring_lines() -> None:
 
     # Ajusta "docstring_lines" se usares outro nome ou lógica.
     assert metrics["docstring_lines"] == 2
-
 
 def test_lines_of_code() -> None:
     """
@@ -101,7 +95,6 @@ def test_lines_of_code() -> None:
 
     # Ajusta "code_lines" se no teu plugin tiver outro nome (ex.: "sloc").
     assert metrics["logical_lines"] == 5
-
 
 def test_metrics_on_empty_source() -> None:
     """
