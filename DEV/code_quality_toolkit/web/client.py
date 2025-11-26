@@ -18,7 +18,6 @@ class MainWindow(QMainWindow):
         self.TOP_BAR_HEIGHT = 60 
         
         # CÁLCULO DO "TRUE" DASHBOARD SIZE
-        # Altura Total - Barra Baixo - Barra Cima
         self.DASH_WIDTH = WINDOW_WIDTH - SIDEBAR_WIDTH
         self.DASH_HEIGHT = WINDOW_HEIGHT - BOTTOM_HEIGHT - self.TOP_BAR_HEIGHT
 
@@ -166,7 +165,6 @@ class MainWindow(QMainWindow):
         self.stack.setStyleSheet("background-color: transparent;")
         
         # Página 1: Dashboard
-        # REMOVIDA ESTILIZAÇÃO (Bordas, Radius)
         self.page_dashboard = QLabel(
             f"DASHBOARD AREA\n\nWidth: {self.DASH_WIDTH} px\nHeight: {self.DASH_HEIGHT} px", 
             alignment=Qt.AlignmentFlag.AlignCenter
@@ -180,7 +178,6 @@ class MainWindow(QMainWindow):
         """)
         
         # Página 2: Report
-        # REMOVIDA ESTILIZAÇÃO
         self.page_report = QLabel("REPORT AREA", alignment=Qt.AlignmentFlag.AlignCenter)
         self.page_report.setStyleSheet("""
             background-color: #252526; 
@@ -291,8 +288,11 @@ class MainWindow(QMainWindow):
         self.btn_run.clicked.connect(self.executar_plugin_run)
         self.btn_export.clicked.connect(self.executar_plugin_export)
 
-        bar_layout.addWidget(self.btn_run)
+        # --- AQUI ESTÁ A TROCA ---
+        # 1. Adiciona Export primeiro
         bar_layout.addWidget(self.btn_export)
+        # 2. Adiciona Run depois
+        bar_layout.addWidget(self.btn_run)
 
         self.right_layout.addWidget(self.action_bar)
 
