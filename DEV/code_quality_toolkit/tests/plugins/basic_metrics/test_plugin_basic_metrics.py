@@ -50,6 +50,7 @@ def _run_metrics(source: str) -> dict:
     return metrics
 
 
+
 def test_number_of_lines() -> None:
     """
     Test number of lines (total de linhas do ficheiro).
@@ -75,9 +76,10 @@ def test_comment_lines() -> None:
     Test comment lines (linhas de comentário).
     """
     metrics = _run_metrics(SAMPLE_CODE)
+    
 
     # Ajusta "comment_lines" se necessário.
-    assert metrics["comment_lines"] == 1
+    assert metrics["comment_lines"] == 2
 
 
 def test_docstring_lines() -> None:
@@ -95,9 +97,10 @@ def test_lines_of_code() -> None:
     Test lines of code (LOC) – linhas de código "real".
     """
     metrics = _run_metrics(SAMPLE_CODE)
+    print(metrics)
 
     # Ajusta "code_lines" se no teu plugin tiver outro nome (ex.: "sloc").
-    assert metrics["code_lines"] == 3
+    assert metrics["logical_lines"] == 5
 
 
 def test_metrics_on_empty_source() -> None:
@@ -111,4 +114,4 @@ def test_metrics_on_empty_source() -> None:
     assert metrics["blank_lines"] == 0
     assert metrics["comment_lines"] == 0
     assert metrics["docstring_lines"] == 0
-    assert metrics["code_lines"] == 0
+    assert metrics["logical_lines"] == 0

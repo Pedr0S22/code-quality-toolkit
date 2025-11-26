@@ -314,8 +314,7 @@ class TestMetricsComparison:
         """Test detection of regression (increase) in metrics."""
         # Create initial version
         file1 = tmp_path / "initial.py"
-        # Teste para gerar issues
-        # Teste para eliminar issues
+        # Modificado: ficheiro com quase nenhum comentário (vai disparar issue)
         file1.write_text("# coment\n" * 80 + "x=1\n" * 20, encoding="utf-8")
 
 
