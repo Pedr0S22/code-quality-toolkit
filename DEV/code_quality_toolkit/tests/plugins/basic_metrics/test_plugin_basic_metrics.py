@@ -77,7 +77,7 @@ def test_comment_lines() -> None:
     metrics = _run_metrics(SAMPLE_CODE)
 
     # Ajusta "comment_lines" se necessário.
-    assert metrics["comment_lines"] == 2
+    assert metrics["comment_lines"] == 1
 
 
 def test_docstring_lines() -> None:

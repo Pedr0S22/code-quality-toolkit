@@ -314,7 +314,9 @@ class TestMetricsComparison:
         """Test detection of regression (increase) in metrics."""
         # Create initial version
         file1 = tmp_path / "initial.py"
-        file1.write_text("x = '" + "a" * 200 + "'\n" * 10, encoding="utf-8")
+        # Teste para gerar issues
+        # Teste para eliminar issues
+        file1.write_text("# coment\n" * 80 + "x=1\n" * 20, encoding="utf-8")
 
 
         plugins = {"BasicMetrics": basicMetricsPlugin()}
@@ -351,11 +353,8 @@ class TestMetricsComparison:
         """Test detection of improvement (decrease) in metrics."""
         # Create initial messy version
         file1 = tmp_path / "messy.py"
-        file1.write_text(
-            "x=1\ny=2\nz=3\na=4\nb=5\n"
-            "# " + "x" * 200 + "\n",
-            encoding="utf-8",
-        )
+        # Teste para gerar issues
+        file1.write_text("x=1\n" * 100, encoding="utf-8")
 
         plugins = {"BasicMetrics": basicMetricsPlugin()}
         
