@@ -79,7 +79,9 @@ def test_cli_partial_report_on_plugin_runtime_failure(tmp_path: Path):
     1. CLI must NOT crash (python traceback) when a plugin fails
         during execution.
     2. report.json must be generated.
-    3. The status in report.json must be 'partial'.
+    3. The status in report.json must be 'failed' because the only
+       plugin crashed during execution and no plugin completed
+       successfully.
     """
     # Setup dummy project
     project_dir = tmp_path / "project"
@@ -109,7 +111,7 @@ def test_cli_partial_report_on_plugin_runtime_failure(tmp_path: Path):
         data = json.load(f)
 
     # Check global status
-    assert data["analysis_metadata"]["status"] == "partial"
+    assert data["analysis_metadata"]["status"] == "failed"
 
     # Check that the plugin error was recorded in the details
     # The engine should have caught the RuntimeError and logged it as

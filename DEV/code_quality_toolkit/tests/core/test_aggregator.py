@@ -12,7 +12,6 @@ def test_derive_status_partial_if_any_failed_and_some_completed() -> None:
         "security": "failed",
         "naming": "completed",
     }
-    # Mezcla de plugins exitosos y fallidos → estado global "partial"
     assert _derive_status(plugin_status) == "partial"
 
 
