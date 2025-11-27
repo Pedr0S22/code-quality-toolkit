@@ -6,13 +6,14 @@ def test_derive_status_failed_when_empty() -> None:
     assert _derive_status(plugin_status) == "failed"
 
 
-def test_derive_status_failed_if_any_failed() -> None:
+def test_derive_status_partial_if_any_failed_and_some_completed() -> None:
     plugin_status = {
         "style": "completed",
         "security": "failed",
         "naming": "completed",
     }
-    assert _derive_status(plugin_status) == "failed"
+    # Mezcla de plugins exitosos y fallidos → estado global "partial"
+    assert _derive_status(plugin_status) == "partial"
 
 
 def test_derive_status_partial_if_any_partial_and_none_failed() -> None:
