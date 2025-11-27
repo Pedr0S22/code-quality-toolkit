@@ -1,13 +1,13 @@
 import sys
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                             QHBoxLayout, QPushButton, QLabel, QStackedWidget, 
-                             QFileDialog, QFrame)
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
+                            QHBoxLayout, QPushButton, QLabel, QStackedWidget,
+                            QFileDialog, QFrame)
 from PyQt6.QtCore import Qt
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Web User Interface")
+        self.setWindowTitle("Code Quality Toolkit App")
         
         # --- CONFIGURAÇÕES DE TAMANHO ---
         WINDOW_WIDTH = 1366
@@ -40,8 +40,8 @@ class MainWindow(QMainWindow):
         """)
 
         self.caminho_selecionado = None
-        self.tipo_selecao = None 
-        self.is_dashboard_active = True 
+        self.tipo_selecao = None
+        self.is_dashboard_active = True
 
         # --- 2. ESTRUTURA PRINCIPAL ---
         self.central_widget = QWidget()
@@ -58,7 +58,7 @@ class MainWindow(QMainWindow):
         self.right_column = QWidget()
         self.right_column.setFixedSize(self.DASH_WIDTH, WINDOW_HEIGHT)
         # Fundo da área principal (Dark)
-        self.right_column.setStyleSheet("background-color: #1e1e1e;") 
+        self.right_column.setStyleSheet("background-color: #1e1e1e;")
         
         self.right_layout = QVBoxLayout(self.right_column)
         self.right_layout.setContentsMargins(0, 0, 0, 0)
@@ -68,10 +68,10 @@ class MainWindow(QMainWindow):
         self.setup_top_bar()
 
         # B2. CONTEÚDO (O Dashboard "Verdadeiro")
-        self.setup_content_area() 
+        self.setup_content_area()
         
         # B3. BARRA DE AÇÃO (Baixo)
-        self.setup_action_bar(BOTTOM_HEIGHT)   
+        self.setup_action_bar(BOTTOM_HEIGHT)
 
         self.main_layout.addWidget(self.right_column)
 
@@ -81,10 +81,10 @@ class MainWindow(QMainWindow):
         # Sidebar com um tom ligeiramente diferente do fundo principal
         self.sidebar.setStyleSheet("""
             QFrame {
-                background-color: #252526; 
+                background-color: #252526;
                 border-right: 1px solid #333333;
             }
-        """) 
+        """)
         
         sidebar_layout = QVBoxLayout(self.sidebar)
         
@@ -117,15 +117,15 @@ class MainWindow(QMainWindow):
         # Botão Toggle ALINHADO À ESQUERDA (sem addStretch antes)
         self.btn_toggle = QPushButton("DASHBOARD")
         self.btn_toggle.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_toggle.setCheckable(True) 
-        self.btn_toggle.setChecked(True)   
+        self.btn_toggle.setCheckable(True)
+        self.btn_toggle.setChecked(True)
         
         # Estilo Dark Mode Blue Accent
         btn_style = """
             QPushButton {
-                padding: 6px 40px; 
-                font-weight: bold; 
-                border-radius: 4px; 
+                padding: 6px 40px;
+                font-weight: bold;
+                border-radius: 4px;
                 font-size: 13px;
                 border: 1px solid #3e3e42;
                 background-color: #3e3e42;
@@ -136,7 +136,7 @@ class MainWindow(QMainWindow):
             }
             /* Estado ATIVO (Dashboard ou Report) - Azul */
             QPushButton:checked {
-                background-color: #007ACC; 
+                background-color: #007ACC;
                 color: white;
                 border: 1px solid #007ACC;
             }
@@ -153,11 +153,11 @@ class MainWindow(QMainWindow):
         self.content_area = QWidget()
         # Tamanho EXATO calculado
         self.content_area.setFixedSize(self.DASH_WIDTH, self.DASH_HEIGHT)
-        self.content_area.setStyleSheet("background-color: #1e1e1e;") 
+        self.content_area.setStyleSheet("background-color: #1e1e1e;")
         
         content_layout = QVBoxLayout(self.content_area)
         # REMOVIDAS AS MARGENS: O conteúdo toca nas bordas (0,0,0,0)
-        content_layout.setContentsMargins(0, 0, 0, 0) 
+        content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(0)
 
         # --- STACKED WIDGET (Ocupa todo o espaço restante) ---
@@ -166,13 +166,13 @@ class MainWindow(QMainWindow):
         
         # Página 1: Dashboard
         self.page_dashboard = QLabel(
-            f"DASHBOARD AREA\n\nWidth: {self.DASH_WIDTH} px\nHeight: {self.DASH_HEIGHT} px", 
+            f"DASHBOARD AREA\n\nWidth: {self.DASH_WIDTH} px\nHeight: {self.DASH_HEIGHT} px",
             alignment=Qt.AlignmentFlag.AlignCenter
         )
         self.page_dashboard.setStyleSheet("""
-            background-color: #252526; 
-            color: #007ACC; 
-            font-size: 24px; 
+            background-color: #252526;
+            color: #007ACC;
+            font-size: 24px;
             font-weight: bold;
             border: none;
         """)
@@ -180,9 +180,9 @@ class MainWindow(QMainWindow):
         # Página 2: Report
         self.page_report = QLabel("REPORT AREA", alignment=Qt.AlignmentFlag.AlignCenter)
         self.page_report.setStyleSheet("""
-            background-color: #252526; 
-            color: #ce9178; 
-            font-size: 24px; 
+            background-color: #252526;
+            color: #ce9178;
+            font-size: 24px;
             font-weight: bold;
             border: none;
         """)
@@ -208,10 +208,10 @@ class MainWindow(QMainWindow):
         # Barra de baixo escura
         self.action_bar.setStyleSheet("""
             QFrame {
-                background-color: #252526; 
+                background-color: #252526;
                 border-top: 1px solid #333333;
             }
-        """) 
+        """)
         
         bar_layout = QHBoxLayout(self.action_bar)
         bar_layout.setContentsMargins(30, 10, 30, 10)
@@ -262,9 +262,9 @@ class MainWindow(QMainWindow):
         # RUN - Azul (Cor de ação principal)
         self.btn_run.setStyleSheet("""
             QPushButton {
-                background-color: #007ACC; 
-                color: white; 
-                font-weight: bold; 
+                background-color: #007ACC;
+                color: white;
+                font-weight: bold;
                 padding: 10px 25px;
                 border-radius: 4px;
                 border: none;
@@ -275,9 +275,9 @@ class MainWindow(QMainWindow):
         # EXPORT - Cinza mais claro ou outra cor secundária
         self.btn_export.setStyleSheet("""
             QPushButton {
-                background-color: #3e3e42; 
-                color: white; 
-                font-weight: bold; 
+                background-color: #3e3e42;
+                color: white;
+                font-weight: bold;
                 padding: 10px 25px;
                 border-radius: 4px;
                 border: 1px solid #555;
@@ -401,9 +401,9 @@ class PluginSelectionController(QObject):
     """Keeps track of plugin selection and 'Select All' behaviour.
 
     The UI layer can:
-      - call set_select_all(True/False) when the master checkbox changes
-      - call set_plugin_checked(name, bool) when an individual checkbox changes
-      - listen to selection_changed & select_all_changed signals
+        - call set_select_all(True/False) when the master checkbox changes
+        - call set_plugin_checked(name, bool) when an individual checkbox changes
+        - listen to selection_changed & select_all_changed signals
     """
 
     selection_changed = pyqtSignal(list)  # list[str] of selected plugin names
@@ -499,8 +499,8 @@ class AnalysisController(QObject):
     """High-level helper to run AnalysisWorker in a QThread.
 
     The UI layer only needs to:
-      - connect to analysis_started / analysis_finished / analysis_error
-      - call run_analysis(path, selected_plugins)
+        - connect to analysis_started / analysis_finished / analysis_error
+        - call run_analysis(path, selected_plugins)
     """
 
     analysis_started = pyqtSignal()
