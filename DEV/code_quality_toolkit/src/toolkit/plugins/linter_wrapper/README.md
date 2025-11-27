@@ -1,6 +1,6 @@
-# StyleChecker Plugin – Technical Documentation
+# Linter Wrapper Plugin – Technical Documentation
 ## Plugin Name
-lint_wrapper
+linter_wrapper
 
 ## Version
 0.1.0
@@ -119,13 +119,13 @@ The plugin performs several checks:
 
 ## 4. Output Format
 Example successful result:
-{
+```{
   "results": [...],
   "summary": {
     "issues_found": 12,
     "status": "completed"
   }
-}
+}```
 
 ## 5. Example Issue Codes
 From pylint:
