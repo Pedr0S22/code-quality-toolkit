@@ -58,37 +58,36 @@ def _compute_top_offenders(files: list[FileReport]) -> list[dict[str, int | str]
 
 def _derive_status(plugin_status: dict[str, str]) -> str:
     """
-    This function determines the overall success status of the entire analysis
-    run based on the execution results of all individual plugins.
-    It prioritizes failure states to give the most conservative assessment.
+    Derive the overall analysis status from the per-plugin statuses.
 
-    The function takes the plugin_status dictionary (where keys are plugin names
-    and values are their status, e.g., "completed", "partial", or "failed") and
-    returns a single string representing the overall analysis status.
+    Rules:
+    - "completed": if all plugins executed successfully.
+    - "partial":   if at least one plugin succeeded but one or more failed.
+    - "failed":    if every attempted plugin failed (no successful plugins),
+                   or if no plugins were run.
     """
 
-    # First check if the plugin_status dictionary is empty, which means that
-    # no plugins were loaded or run. This is considered an internal
-    # failure of the analysis engine, so the function returns "failed".
+    # If no plugins were run at all, consider it a failed analysis.
     if not plugin_status:
         return "failed"
 
-    # the plugin_status values are collected into a set (removes duplicates)
-    statuses = set(plugin_status.values())
+    values = list(plugin_status.values())
 
-    # If the set contains "failed" (meaning at least one plugin crashed or
-    # explicitly signaled failure), the overall status is immediately set to "failed".
-    if "failed" in statuses:
-        return "failed"
+    # For the global status, we treat only "completed" as éxito;
+    # anything else ("partial" or "failed") cuenta como fallo.
+    successes = sum(1 for status in values if status == "completed")
+    failures = len(values) - successes
 
-    # otherwise, if the set contains "partial" (meaning at least one plugin encountered
-    # errors on some files but kept running, the overall status is "partial".
-    # This signals to the user that the results may be incomplete.
-    if "partial" in statuses:
+    if successes == len(values):
+        # All plugins completed without errors
+        return "completed"
+
+    if successes > 0 and failures > 0:
+        # Some plugins completed, some did not
         return "partial"
 
-    # otherwise, all plugins have returned "completed"
-    return "completed"
+    # No successful plugins at all → global failure
+    return "failed"
 
 
 def aggregate(
