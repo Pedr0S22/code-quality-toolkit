@@ -1,6 +1,7 @@
 """Command line interface for the Code Quality Toolkit (entry point)."""
 
 from __future__ import annotations
+from .exporters import generate_html  
 
 # Each of the following import statements brings functionality from the Python’s
 # standard library:
@@ -318,6 +319,21 @@ def _run_analyze(args: argparse.Namespace) -> int:
     output_path.write_text(
         json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8"
     )
+
+    # Create the HTML path, changing the extension (report.json -> report.html)
+    html_path = output_path.with_suffix(".html")
+    
+    try:
+        # Create the html report
+        html_content = generate_html(report)
+        
+        # write the report on disc
+        html_path.write_text(html_content, encoding="utf-8")
+        
+
+    except Exception as e:
+        print(f"⚠️ Aviso: Não foi possível gerar o HTML: {e}")
+
     # records that the report was successfully written, including the path and
     # the total number of issues found.
     logging.log(
