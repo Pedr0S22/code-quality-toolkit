@@ -11,8 +11,8 @@ from typing import Any
 
 # Import opcional do radon: se não estiver instalado, o plugin continua a funcionar.
 try:
-    from radon.raw import analyze as raw_analyze
     from radon.metrics import h_visit
+    from radon.raw import analyze as raw_analyze
 
     RADON_AVAILABLE = True
 except Exception:  # pragma: no cover - ambiente sem radon
@@ -60,7 +60,11 @@ class Plugin:
         return {
             "name": "BasicMetrics",
             "version": "1.0.0",
-            "description": "Reports basic code metrics like LOC, comments, blanks and Halstead metrics.",
+            "description": (
+                "Reports basic code metrics like LOC, comments, blanks "
+                "and Halstead metrics."
+            ),
+
         }
 
     def configure(self, config: ToolkitConfig) -> None:
@@ -242,7 +246,10 @@ class Plugin:
                 "severity": severity,
                 "code": "total_lines",
                 "message": f"File has {int(value)} total lines.",
-                "hint": "Large files are harder to navigate; consider splitting the module.",
+                "hint": (
+                    "Large files are harder to navigate; consider splitting the "
+                    "module."
+                ),
             }
 
         # 2) logical_lines – blocos lógicos muito extensos
@@ -260,7 +267,9 @@ class Plugin:
                 "severity": severity,
                 "code": "logical_lines",
                 "message": f"File has {int(value)} logical lines.",
-                "hint": "Long logical blocks can often be split into smaller functions.",
+                "hint": (
+                    "Long logical blocks can often be split into smaller functions."
+                ),
             }
 
         # 3) comment_lines – poucas linhas de comentário
