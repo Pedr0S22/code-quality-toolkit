@@ -167,13 +167,9 @@ def test_linterwrapper_timeout(tmp_path):
 
     # crear un pylint que se cuelga
     fake_pylint = tmp_path / "pylint"
-    fake_pylint.write_text(
-        "#!/bin/sh\n"
-        "sleep 5\n"
-    )
+    fake_pylint.write_text("#!/bin/sh\nsleep 5\n")
     fake_pylint.chmod(0o755)
 
-    # usar ese pylint: modificar PATH global antes de ejecutar el CLI
     os.environ["PATH"] = f"{tmp_path}:{os.environ['PATH']}"
 
     subprocess.run(
@@ -195,13 +191,11 @@ def test_linterwrapper_timeout(tmp_path):
     assert len(issues) > 0
     plugin_obj = issues[0]
 
-    if not plugin_obj["results"]:
-        # Timeout manejado como fallo → aceptable
-        assert plugin_obj["summary"]["status"] == "failed"
-        return
-
+    # El plugin debe devolver LINTER_TIMEOUT
+    assert len(plugin_obj["results"]) > 0, "Expected timeout issue"
     first = plugin_obj["results"][0]
     assert first["code"] == "LINTER_TIMEOUT"
+
 
 
 # ─────────────────────────────────────────────
