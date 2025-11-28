@@ -1,1 +1,1 @@
-"""Security Checker plugin package.""" ""
+"""Security Checker plugin package."""""
