@@ -83,7 +83,11 @@ def test_engine_runs_linterwrapper_successfully(tmp_path):
     first = lint_issues[0]["results"][0]
 
     # ahora sí existen estos campos
-    assert "file" in first
+    assert "line" in first
+    assert "col" in first
+    assert "message" in first
+    assert "code" in first
+
     assert "severity" in first
     assert "message" in first
 
