@@ -173,12 +173,13 @@ def test_linterwrapper_timeout(tmp_path):
     )
     fake_pylint.chmod(0o755)
 
-    # usar ese pylint
-    env = os.environ.copy()
-    env["PATH"] = f"{tmp_path}:{env['PATH']}"
+    # usar ese pylint: modificar PATH global antes de ejecutar el CLI
+    os.environ["PATH"] = f"{tmp_path}:{os.environ['PATH']}"
 
-    subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, env=env)
+    result = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
 
+    print("STDOUT:", result.stdout)
+    print("STDERR:", result.stderr)
 
     report = json.loads(report_path.read_text())
 
@@ -189,9 +190,17 @@ def test_linterwrapper_timeout(tmp_path):
                 issues.append(plug)
 
 
+    # Necesitamos encontrar el primer issue del plugin, aunque la lista esté vacía
     assert len(issues) > 0
-    first = issues[0]["results"][0]
+    plugin_obj = issues[0]
+
+    # Si no hubo results, falló el timeout → resultado esperado
+    if not plugin_obj["results"]:
+        assert False, "Expected LINTER_TIMEOUT but plugin returned no results"
+
+    first = plugin_obj["results"][0]
     assert first["code"] == "LINTER_TIMEOUT"
+
 
 
 # ─────────────────────────────────────────────
