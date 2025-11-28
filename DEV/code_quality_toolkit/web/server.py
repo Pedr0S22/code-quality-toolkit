@@ -9,6 +9,8 @@ import json
 import zipfile
 import tempfile
 import importlib
+import os
+import re
 from pathlib import Path
 from typing import List, Dict, Any
 
@@ -21,7 +23,7 @@ from toolkit.core.aggregator import aggregate
 from toolkit.core.loader import load_plugins, discover_plugins
 from toolkit.utils.config import load_config, ToolkitConfig
 
-app = FastAPI(title="Code Quality Toolkit API", version="0.3.1")
+app = FastAPI(title="Code Quality Toolkit API", version="0.3.0")
 
 # --- Helper Functions ---
 
@@ -38,11 +40,14 @@ def _to_pascal_case(snake_str: str) -> str:
     """Converts snake_case to PascalCase (e.g. 'dead_code' -> 'DeadCode')."""
     return "".join(word.title() for word in snake_str.split("_"))
 
+def _to_snake_case(name: str) -> str:
+    """Converts PascalCase to snake_case (e.g. 'DeadCodeDetector' -> 'dead_code')."""
+    # Simple regex for Camel/Pascal to snake
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
 def get_discovered_plugins() -> Dict[str, Any]:
-    """
-    Helper to discover and instantiate all available plugins.
-    Returns a dictionary: {'PluginName': plugin_instance}
-    """
+    """Helper to discover and instantiate all available plugins."""
     plugins_map = {}
     try:
         discovered = discover_plugins()
@@ -66,9 +71,9 @@ def get_discovered_plugins() -> Dict[str, Any]:
                         meta = instance.get_metadata()
                         name = meta.get("name", name)
                     except Exception:
-                        pass
+                        pass 
 
-                # Strategy B: Look for PascalCase class if Strategy A failed or yielded generic name
+                # Strategy B: Look for PascalCase class
                 if not instance:
                     pascal_name = _to_pascal_case(folder_name)
                     if hasattr(module, pascal_name):
@@ -80,14 +85,8 @@ def get_discovered_plugins() -> Dict[str, Any]:
                         except Exception:
                             pass
                 
-                # If we successfully created an instance, add it
                 if instance:
                     plugins_map[name] = instance
-                else:
-                    # Fallback: We know the name but couldn't instantiate it
-                    # We can't really configure it without an instance, so we skip adding it to map
-                    # or we could add a placeholder if strictness varies.
-                    print(f"Warning: Could not instantiate plugin from '{folder_name}'")
 
             except Exception as e:
                 print(f"Warning: Could not inspect plugin '{folder_name}': {e}")
@@ -98,28 +97,12 @@ def get_discovered_plugins() -> Dict[str, Any]:
     return plugins_map
 
 def get_all_plugin_names() -> List[str]:
-    """Wrapper to get just names for the simple list endpoint."""
     return sorted(list(get_discovered_plugins().keys()))
-
-def resolve_plugins(requested: str, config: ToolkitConfig) -> List[str]:
-    if requested.lower() == "all":
-        try:
-            all_names = get_all_plugin_names()
-            if all_names:
-                return all_names
-            return config.enabled_plugins
-        except Exception as e:
-            print(f"Discovery failed, falling back to config: {e}")
-            return config.enabled_plugins
-    
-    plugins = [p.strip() for p in requested.split(",") if p.strip()]
-    return plugins if plugins else config.enabled_plugins
 
 # --- Endpoints ---
 
 @app.get("/api/v1/plugins", summary="List all available plugins")
 def list_available_plugins():
-    """Returns a list of all plugins detected in the system."""
     try:
         names = get_all_plugin_names()
         return {"plugins": names}
@@ -128,43 +111,25 @@ def list_available_plugins():
 
 @app.get("/api/v1/plugins/configs", summary="List all plugin configurations")
 def list_plugin_configs():
-    """
-    Returns the configuration structure for each plugin dynamically.
-    It instantiates each plugin, calls its `configure(defaults)` method,
-    and extracts the resulting attributes.
-    """
     try:
-        # 1. Load system defaults (or toolkit.toml if present in CWD)
-        # Note: In a server context, this usually loads the repo's default values
-        default_config = load_config(None)
-        
+        default_config = ToolkitConfig()
         plugins_map = get_discovered_plugins()
         configs_response = {}
 
         for name, plugin in plugins_map.items():
             plugin_config = {}
-            
-            # 2. Inject configuration if the plugin supports it
             if hasattr(plugin, "configure"):
                 try:
-                    # Pass the global config object to the plugin
                     plugin.configure(default_config)
-                    
-                    # 3. Extract attributes set on the plugin instance
-                    # We filter out private attributes (starting with _) and methods
-                    # This captures "self.ignore_patterns", "self.severity", etc.
                     for key, value in vars(plugin).items():
-                        if not key.startswith("_") and not callable(value) and not key == "config":
+                        if not key.startswith("_") and not callable(value) and not key=="config":
                             plugin_config[key] = value
-                            
                 except Exception as e:
                     print(f"Error configuring plugin {name}: {e}")
                     plugin_config["error"] = "Configuration extraction failed"
-            
             configs_response[name] = plugin_config
 
         return configs_response
-        
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load configs: {e}")
 
@@ -172,18 +137,9 @@ def list_plugin_configs():
 async def analyze_project(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(..., description="Project source code zipped"),
-    plugins: str = Form("all", description="Comma-separated list of plugins to run"),
-    configs: str = Form("{}", description="JSON string of configuration overrides")
+    configs: str = Form("{}", description="JSON object mapping PluginName -> ConfigOverrides")
 ):
-    """
-    1. Receives ZIP, plugins list, and config overrides.
-    2. Extracts ZIP to sandbox.
-    3. Runs analysis with applied configs.
-    4. Zips results (report.json, report.html, dashboard.html) into a response file.
-    """
-    
-    print(f"DEBUG: Plugins: {plugins}")
-    print(f"DEBUG: Configs: {configs}")
+    print(f"DEBUG: Configs Payload: {configs}")
 
     # 1. Sandbox Setup
     session_id = str(uuid.uuid4())
@@ -194,9 +150,9 @@ async def analyze_project(
     source_dir.mkdir()
     
     upload_zip_path = temp_dir / "upload.zip"
-    results_zip_path = temp_dir / "results.zip"
-    
+    results_zip_path = temp_dir / "analysis_results.zip"
     report_json_path = temp_dir / "report.json"
+    report_html_path = temp_dir / "report.html"
 
     try:
         # 2. Save and Extract Upload
@@ -217,57 +173,159 @@ async def analyze_project(
         else:
             analysis_target = source_dir
 
-        # 4. Load & Update Configuration
+        # 4. Load Base Configuration
         project_toml = analysis_target / "toolkit.toml"
         if project_toml.exists():
-            config = load_config(str(project_toml))
+            base_config = load_config(str(project_toml))
         else:
-            config = load_config(None)
+            base_config = load_config(None)
             
-        # Apply User Overrides from Form Data
-        try:
-            user_configs = json.loads(configs)
-            # This is a basic mapping. In a real scenario, you'd map specific 
-            # plugin config keys (like "DeadCodeDetector.ignore_patterns") 
-            # back to the ToolkitConfig object structure.
-            
-            # Example mapping for Global Rules
-            if "max_line_length" in user_configs:
-                config.rules.max_line_length = int(user_configs["max_line_length"])
-            # ... add robust mapping logic here based on your frontend structure ...
-            
-        except json.JSONDecodeError:
-            print("Warning: Invalid JSON in configs form data. Using defaults.")
-
-        # 5. Resolve Plugins
-        plugin_names = resolve_plugins(plugins, config)
-        loaded_plugins = load_plugins(plugin_names)
+        # 5. Parse User Configs & Apply Overrides
+        # Strategy: Export config to dict -> Update dict -> Re-instantiate ToolkitConfig
         
-        if not loaded_plugins:
-            raise HTTPException(status_code=400, detail="No valid plugins could be loaded.")
+        # Determine how to export based on config object type (Pydantic vs Dataclass vs Class)
+        if hasattr(base_config, "model_dump"):
+            config_dict = base_config.model_dump() # Pydantic v2
+        elif hasattr(base_config, "dict"):
+            config_dict = base_config.dict() # Pydantic v1
+        else:
+            # Simple object -> dict fallback
+            # We assume a structure similar to what load_config produces
+            # Warning: vars() might not capture everything if using __slots__
+            try:
+                config_dict = vars(base_config)
+            except TypeError:
+                # If base_config doesn't have __dict__, it might be a frozen dataclass or specialized object
+                # Try explicit copying if it's a known structure or fallback to empty dict if we can't inspect
+                print("Warning: Could not convert config to dict via vars(). Using fallback inspection.")
+                config_dict = {} # Should be populated manually or via other inspection methods if vars fails
+
+        requested_plugins = []
+        try:
+            user_overrides = json.loads(configs)
+            
+            if isinstance(user_overrides, dict) and user_overrides:
+                requested_plugins = list(user_overrides.keys())
+                
+                for plugin_name, plugin_settings in user_overrides.items():
+                    if not isinstance(plugin_settings, dict): continue
+                    
+                    # A. Map to Global Rules (e.g., [rules] section)
+                    # We check if 'rules' key exists in the exported dictionary
+                    if "rules" in config_dict:
+                        # Depending on structure, config_dict['rules'] might be a dict or object
+                        # We need it to be a dict for updating
+                        if hasattr(config_dict["rules"], "__dict__"):
+                             rules_dict = vars(config_dict["rules"])
+                        elif isinstance(config_dict["rules"], dict):
+                             rules_dict = config_dict["rules"]
+                        else:
+                             # If it's an object but vars() fails, skip or try direct attr access
+                             rules_dict = {} 
+
+                        for key, value in plugin_settings.items():
+                            if key in rules_dict:
+                                rules_dict[key] = value
+                        
+                        # If we modified a detached dict (from vars), we might need to put it back
+                        # But since we are re-instantiating, we need the structure to be right for the constructor
+                        # If ToolkitConfig(rules=RulesConfig(...)), we need to pass a dict or object?
+                        # Usually Pydantic accepts nested dicts.
+                        config_dict["rules"] = rules_dict
+
+                    # B. Map to Specific Plugin Section (e.g., [plugins.dead_code])
+                    if "plugins" in config_dict:
+                        plugins_section = config_dict["plugins"]
+                        # Normalize plugins_section to dict if needed
+                        if hasattr(plugins_section, "__dict__"):
+                            plugins_dict = vars(plugins_section)
+                        elif isinstance(plugins_section, dict):
+                            plugins_dict = plugins_section
+                        else:
+                            plugins_dict = {}
+
+                        # Try exact match or snake_case conversion
+                        potential_keys = [plugin_name, _to_snake_case(plugin_name)]
+                        # Also handle "DeadCodeDetector" -> "dead_code" (common pattern removing 'Detector'/'Checker')
+                        short_name = _to_snake_case(plugin_name).replace("_detector", "").replace("_checker", "")
+                        potential_keys.append(short_name)
+
+                        target_key = None
+                        for pk in potential_keys:
+                            if pk in plugins_dict:
+                                target_key = pk
+                                break
+                        
+                        if target_key:
+                            target_plugin_config = plugins_dict[target_key]
+                            # Convert target config to dict to update it
+                            if hasattr(target_plugin_config, "__dict__"):
+                                target_conf_dict = vars(target_plugin_config)
+                            elif isinstance(target_plugin_config, dict):
+                                target_conf_dict = target_plugin_config
+                            else:
+                                target_conf_dict = {}
+                            
+                            target_conf_dict.update(plugin_settings)
+                            plugins_dict[target_key] = target_conf_dict
+                        
+                        config_dict["plugins"] = plugins_dict
+
+            else:
+                requested_plugins = get_all_plugin_names()
+
+            # RE-CREATE THE CONFIG OBJECT
+            # This bypasses the "read-only" error by creating a fresh instance with new values
+            try:
+                # We assume ToolkitConfig can be instantiated with kwargs matching its structure
+                # If it's a Pydantic model, it handles nested dicts automatically.
+                config = ToolkitConfig(**config_dict)
+            except Exception as e:
+                print(f"Warning: Failed to re-instantiate config from dict: {e}")
+                # Fallback: use base config if patch fails
+                config = base_config 
+
+        except json.JSONDecodeError:
+            print("Warning: Invalid JSON in configs. Using defaults.")
+            try:
+                requested_plugins = get_all_plugin_names()
+            except:
+                requested_plugins = base_config.enabled_plugins
+            config = base_config
 
         # 6. Run Analysis
+        if not requested_plugins:
+             requested_plugins = config.enabled_plugins
+
+        print(f"DEBUG: Running plugins: {requested_plugins}")
+        loaded_plugins = load_plugins(requested_plugins)
+        
+        if not loaded_plugins:
+             raise HTTPException(status_code=400, detail="No valid plugins could be loaded.")
+
         analyzed_files, plugin_status = run_analysis(str(analysis_target), loaded_plugins, config)
         report_data = aggregate(analyzed_files, plugin_status)
 
-        # 7. Generate Reports
+        # 7. Generate Files
         with open(report_json_path, "w", encoding="utf-8") as f:
             json.dump(report_data, f, indent=2, ensure_ascii=False)
             
-        generated_htmls = list(analysis_target.glob("*.html"))
-        
-        # 8. Create Response Zip
+        with open(report_html_path, "w", encoding="utf-8") as f:
+            f.write("<html><body><h1>Analysis Report</h1><p>Generated by Code Quality Toolkit</p></body></html>")
+
+        # 8. Zip Response
         with zipfile.ZipFile(results_zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
             zf.write(report_json_path, arcname="report.json")
-            for html_file in generated_htmls:
-                zf.write(html_file, arcname=html_file.name)
+            zf.write(report_html_path, arcname="report.html")
+            for html_file in analysis_target.glob("*_dashboard.html"):
+                plugin_name = html_file.name.replace("_dashboard.html", "")
+                zf.write(html_file, arcname=f"{plugin_name}/dashboard.html")
 
-        # 9. Return Response
+        # 9. Return
         background_tasks.add_task(cleanup_sandbox, temp_dir)
-        
         return FileResponse(
-            path=results_zip_path,
-            filename="analysis_results.zip",
+            path=results_zip_path, 
+            filename="analysis_results.zip", 
             media_type="application/zip"
         )
 
