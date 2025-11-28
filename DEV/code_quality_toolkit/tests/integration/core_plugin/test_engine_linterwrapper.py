@@ -25,11 +25,12 @@ def test_engine_runs_linterwrapper_successfully(tmp_path):
     write_file(sample_file, "a=1\n")
 
     # ---------- crear pylint falso ----------
-    fake_pylint = tmp_path / "pylint"
     fake_pylint.write_text(
         "#!/bin/sh\n"
-        "echo '[{\"type\": \"warning\", \"path\": \"example.py\", \"line\": 1, "
-        "\"column\": 1, \"symbol\": \"bad\", \"message\": \"test message\"}]'\n"
+        "echo '[{\"type\": \"warning\", \"path\": \"example.py\", "
+        "\"file\": \"example.py\", \"line\": 1, \"column\": 1, "
+        "\"symbol\": \"bad\", \"message\": \"test message\", "
+        "\"severity\": \"low\"}]'\n"
     )
     fake_pylint.chmod(0o755)
 
@@ -159,7 +160,20 @@ def test_linterwrapper_timeout(tmp_path):
         "--plugins", "LinterWrapper",
     ]
 
-    subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
+    # crear un pylint que se cuelga
+    fake_pylint = tmp_path / "pylint"
+    fake_pylint.write_text(
+        "#!/bin/sh\n"
+        "sleep 5\n"
+    )
+    fake_pylint.chmod(0o755)
+
+    # usar ese pylint
+    env = os.environ.copy()
+    env["PATH"] = f"{tmp_path}:{env['PATH']}"
+
+    subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, env=env)
+
 
     report = json.loads(report_path.read_text())
 
