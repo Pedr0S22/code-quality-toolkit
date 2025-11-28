@@ -196,7 +196,7 @@ def test_linterwrapper_timeout(tmp_path):
 
     # Si no hubo results, falló el timeout → resultado esperado
     if not plugin_obj["results"]:
-        assert False, "Expected LINTER_TIMEOUT but plugin returned no results"
+        raise AssertionError("Expected LINTER_TIMEOUT but plugin returned no results")
 
     first = plugin_obj["results"][0]
     assert first["code"] == "LINTER_TIMEOUT"
