@@ -176,7 +176,7 @@ def test_linterwrapper_timeout(tmp_path):
     # usar ese pylint: modificar PATH global antes de ejecutar el CLI
     os.environ["PATH"] = f"{tmp_path}:{os.environ['PATH']}"
 
-    result = subprocess.run(
+    subprocess.run(
         cmd,
         cwd=ROOT,
         capture_output=True,
