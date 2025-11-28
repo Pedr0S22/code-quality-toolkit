@@ -75,34 +75,106 @@ class MainWindow(QMainWindow):
 
         self.main_layout.addWidget(self.right_column)
 
-    def setup_sidebar(self, width, height):
-        self.sidebar = QFrame()
-        self.sidebar.setFixedSize(width, height)
-        # Sidebar com um tom ligeiramente diferente do fundo principal
-        self.sidebar.setStyleSheet("""
-            QFrame {
-                background-color: #252526;
-                border-right: 1px solid #333333;
-            }
-        """)
-        
-        sidebar_layout = QVBoxLayout(self.sidebar)
-        
-        # Título PLUGINS
-        lbl_titulo = QLabel("PLUGINS")
-        lbl_titulo.setStyleSheet("color: #eff0f1; font-size: 22px; font-weight: bold; margin-top: 20px; letter-spacing: 1px;")
-        lbl_titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        sidebar_layout.addWidget(lbl_titulo)
-        
-        # Exemplo de lista de plugins (decorativo)
-        lbl_info = QLabel("Plugin A: Ready\nPlugin B: Ready")
-        lbl_info.setStyleSheet("color: #6a6a6a; margin-top: 10px; font-size: 12px;")
-        lbl_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        sidebar_layout.addWidget(lbl_info)
+        def add_plugin_widget(self, plugin_name: str):
+    """Cria um cartão de plugin com Hide/Remove."""
+    frame = QFrame()
+    frame.setStyleSheet("""
+        QFrame {
+            background-color: #2d2d30;
+            border: 1px solid #3e3e42;
+            border-radius: 6px;
+        }
+    """)
 
-        sidebar_layout.addStretch()
-        
-        self.main_layout.addWidget(self.sidebar)
+    frame_layout = QHBoxLayout(frame)
+    frame_layout.setContentsMargins(10, 5, 10, 5)
+
+    # Nome
+    lbl = QLabel(plugin_name)
+    lbl.setStyleSheet("color: #cccccc; font-size: 14px; font-weight: bold;")
+    frame_layout.addWidget(lbl)
+
+    frame_layout.addStretch()
+
+    # --- BOTÃO HIDE ---
+    btn_hide = QPushButton("Hide")
+    btn_hide.setCursor(Qt.CursorShape.PointingHandCursor)
+    btn_hide.setStyleSheet("""
+        QPushButton {
+            background-color: #3e3e42;
+            color: #cccccc;
+            padding: 4px 10px;
+            border-radius: 4px;
+        }
+        QPushButton:hover { background-color: #4e4e52; }
+    """)
+
+    # ---- AÇÃO DO HIDE ----
+    def hide_plugin():
+        frame.setVisible(False)
+
+    btn_hide.clicked.connect(hide_plugin)
+    frame_layout.addWidget(btn_hide)
+
+    # --- BOTÃO REMOVE ---
+    btn_remove = QPushButton("Remove")
+    btn_remove.setCursor(Qt.CursorShape.PointingHandCursor)
+    btn_remove.setStyleSheet("""
+        QPushButton {
+            background-color: #a83232;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+        }
+        QPushButton:hover { background-color: #8a2a2a; }
+    """)
+
+    # ---- AÇÃO REMOVE ----
+    def remove_plugin():
+        frame.setParent(None)  # remove do layout
+        frame.deleteLater()
+
+    btn_remove.clicked.connect(remove_plugin)
+    frame_layout.addWidget(btn_remove)
+
+    self.plugin_container.addWidget(frame)
+
+
+   def setup_sidebar(self, width, height):
+    self.sidebar = QFrame()
+    self.sidebar.setFixedSize(width, height)
+    self.sidebar.setStyleSheet("""
+        QFrame {
+            background-color: #252526;
+            border-right: 1px solid #333333;
+        }
+    """)
+
+    self.sidebar_layout = QVBoxLayout(self.sidebar)
+    self.sidebar_layout.setContentsMargins(10, 10, 10, 10)
+    self.sidebar_layout.setSpacing(8)
+
+    # Título PLUGINS
+    lbl_titulo = QLabel("PLUGINS")
+    lbl_titulo.setStyleSheet("color: #eff0f1; font-size: 22px; font-weight: bold;")
+    lbl_titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    self.sidebar_layout.addWidget(lbl_titulo)
+
+    # Lista dinâmica de plugins (widgets adicionados aqui)
+    self.plugin_container = QVBoxLayout()
+    self.sidebar_layout.addLayout(self.plugin_container)
+
+    self.sidebar_layout.addStretch()
+
+    # ------------------------------
+    # Plugins iniciais (DEMO)
+    # ------------------------------
+    demo_plugins = ["Cyclomatic", "Dead Code", "Security Scan", "Duplications"]
+    for p in demo_plugins:
+        self.add_plugin_widget(p)
+
+    self.main_layout.addWidget(self.sidebar)
+
 
     def setup_top_bar(self):
         """Nova barra no topo apenas para alternar modos, fora do dashboard"""
