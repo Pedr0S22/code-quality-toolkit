@@ -9,7 +9,6 @@ import json
 import zipfile
 import tempfile
 import importlib
-import os
 import re
 from pathlib import Path
 from typing import List, Dict, Any
@@ -25,81 +24,6 @@ from toolkit.utils.config import load_config, ToolkitConfig
 
 app = FastAPI(title="Code Quality Toolkit API", version="0.3.0")
 
-# --- Helper Functions ---
-
-def cleanup_sandbox(path: Path):
-    """Background task to remove the temporary sandbox folder."""
-    try:
-        if path.exists():
-            shutil.rmtree(path)
-            print(f"Cleaned up sandbox: {path}")
-    except Exception as e:
-        print(f"Error cleaning up {path}: {e}")
-
-def _to_pascal_case(snake_str: str) -> str:
-    """Converts snake_case to PascalCase (e.g. 'dead_code' -> 'DeadCode')."""
-    return "".join(word.title() for word in snake_str.split("_"))
-
-def _to_snake_case(name: str) -> str:
-    """Converts PascalCase to snake_case (e.g. 'DeadCodeDetector' -> 'dead_code')."""
-    # Simple regex for Camel/Pascal to snake
-    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
-    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
-
-def get_discovered_plugins() -> Dict[str, Any]:
-    """Helper to discover and instantiate all available plugins."""
-    plugins_map = {}
-    try:
-        discovered = discover_plugins()
-        if isinstance(discovered, dict):
-            plugin_folders = list(discovered.keys())
-        else:
-            plugin_folders = discovered
-
-        for folder_name in plugin_folders:
-            try:
-                module_path = f"toolkit.plugins.{folder_name}.plugin"
-                module = importlib.import_module(module_path)
-                instance = None
-                name = _to_pascal_case(folder_name)
-
-                # Strategy A: Look for 'class Plugin'
-                if hasattr(module, "Plugin"):
-                    plugin_cls = getattr(module, "Plugin")
-                    try:
-                        instance = plugin_cls()
-                        meta = instance.get_metadata()
-                        name = meta.get("name", name)
-                    except Exception:
-                        pass 
-
-                # Strategy B: Look for PascalCase class
-                if not instance:
-                    pascal_name = _to_pascal_case(folder_name)
-                    if hasattr(module, pascal_name):
-                        plugin_cls = getattr(module, pascal_name)
-                        try:
-                            instance = plugin_cls()
-                            meta = instance.get_metadata()
-                            name = meta.get("name", pascal_name)
-                        except Exception:
-                            pass
-                
-                if instance:
-                    plugins_map[name] = instance
-
-            except Exception as e:
-                print(f"Warning: Could not inspect plugin '{folder_name}': {e}")
-                
-    except Exception as e:
-        print(f"Error exploring plugins: {e}")
-        
-    return plugins_map
-
-def get_all_plugin_names() -> List[str]:
-    return sorted(list(get_discovered_plugins().keys()))
-
-# --- Endpoints ---
 
 @app.get("/api/v1/plugins", summary="List all available plugins")
 def list_available_plugins():
@@ -112,6 +36,7 @@ def list_available_plugins():
 @app.get("/api/v1/plugins/configs", summary="List all plugin configurations")
 def list_plugin_configs():
     try:
+        # Get fresh defaults from our new Config structure
         default_config = ToolkitConfig()
         plugins_map = get_discovered_plugins()
         configs_response = {}
@@ -121,9 +46,18 @@ def list_plugin_configs():
             if hasattr(plugin, "configure"):
                 try:
                     plugin.configure(default_config)
-                    for key, value in vars(plugin).items():
-                        if not key.startswith("_") and not callable(value) and not key=="config":
+                    
+                    # Extract public attributes
+                    if hasattr(plugin, "__dict__"):
+                        source = vars(plugin)
+                    else:
+                        # Fallback for plugins without __dict__
+                        source = {k: getattr(plugin, k) for k in dir(plugin) if not k.startswith("_")}
+
+                    for key, value in source.items():
+                        if not key.startswith("_") and not callable(value) and key != "config":
                             plugin_config[key] = value
+                            
                 except Exception as e:
                     print(f"Error configuring plugin {name}: {e}")
                     plugin_config["error"] = "Configuration extraction failed"
@@ -155,165 +89,132 @@ async def analyze_project(
     report_html_path = temp_dir / "report.html"
 
     try:
-        # 2. Save and Extract Upload
+        # 2. Save and Extract
         content = await file.read()
         with open(upload_zip_path, "wb") as f:
             f.write(content)
-            
         try:
             with zipfile.ZipFile(upload_zip_path, 'r') as zip_ref:
                 zip_ref.extractall(source_dir)
         except zipfile.BadZipFile:
             raise HTTPException(status_code=400, detail="Invalid zip file provided.")
 
-        # 3. Determine Analysis Target
+        # 3. Determine Target
         items = list(source_dir.iterdir())
         if len(items) == 1 and items[0].is_dir():
             analysis_target = items[0]
         else:
             analysis_target = source_dir
 
-        # 4. Load Base Configuration
+        # 4. Load Config (with our fixes, this object is now fully mutable where needed)
         project_toml = analysis_target / "toolkit.toml"
         if project_toml.exists():
-            base_config = load_config(str(project_toml))
+            config = load_config(str(project_toml))
         else:
-            base_config = load_config(None)
-            
-        # 5. Parse User Configs & Apply Overrides
-        # Strategy: Export config to dict -> Update dict -> Re-instantiate ToolkitConfig
-        
-        # Determine how to export based on config object type (Pydantic vs Dataclass vs Class)
-        if hasattr(base_config, "model_dump"):
-            config_dict = base_config.model_dump() # Pydantic v2
-        elif hasattr(base_config, "dict"):
-            config_dict = base_config.dict() # Pydantic v1
-        else:
-            # Simple object -> dict fallback
-            # We assume a structure similar to what load_config produces
-            # Warning: vars() might not capture everything if using __slots__
-            try:
-                config_dict = vars(base_config)
-            except TypeError:
-                # If base_config doesn't have __dict__, it might be a frozen dataclass or specialized object
-                # Try explicit copying if it's a known structure or fallback to empty dict if we can't inspect
-                print("Warning: Could not convert config to dict via vars(). Using fallback inspection.")
-                config_dict = {} # Should be populated manually or via other inspection methods if vars fails
+            config = load_config(None)
 
+        # 5. Apply JSON Overrides
         requested_plugins = []
         try:
             user_overrides = json.loads(configs)
-            
             if isinstance(user_overrides, dict) and user_overrides:
                 requested_plugins = list(user_overrides.keys())
                 
                 for plugin_name, plugin_settings in user_overrides.items():
                     if not isinstance(plugin_settings, dict): continue
                     
-                    # A. Map to Global Rules (e.g., [rules] section)
-                    # We check if 'rules' key exists in the exported dictionary
-                    if "rules" in config_dict:
-                        # Depending on structure, config_dict['rules'] might be a dict or object
-                        # We need it to be a dict for updating
-                        if hasattr(config_dict["rules"], "__dict__"):
-                             rules_dict = vars(config_dict["rules"])
-                        elif isinstance(config_dict["rules"], dict):
-                             rules_dict = config_dict["rules"]
-                        else:
-                             # If it's an object but vars() fails, skip or try direct attr access
-                             rules_dict = {} 
-
+                    # Update Global Rules (config.rules is now a mutable dataclass)
+                    for key, value in plugin_settings.items():
+                        if hasattr(config.rules, key):
+                            # Simple type conversion if needed, or trust input
+                            try:
+                                setattr(config.rules, key, value)
+                            except Exception:
+                                pass
+                    
+                    # Update Plugin Specifics (config.plugins.dead_code is now a SimpleNamespace)
+                    # Map "DeadCodeDetector" -> "dead_code"
+                    if plugin_name == "DeadCodeDetector":
+                        target = config.plugins.dead_code
                         for key, value in plugin_settings.items():
-                            if key in rules_dict:
-                                rules_dict[key] = value
-                        
-                        # If we modified a detached dict (from vars), we might need to put it back
-                        # But since we are re-instantiating, we need the structure to be right for the constructor
-                        # If ToolkitConfig(rules=RulesConfig(...)), we need to pass a dict or object?
-                        # Usually Pydantic accepts nested dicts.
-                        config_dict["rules"] = rules_dict
+                            setattr(target, key, value)
+                    
+                    # Add other plugin mappings here as needed
 
-                    # B. Map to Specific Plugin Section (e.g., [plugins.dead_code])
-                    if "plugins" in config_dict:
-                        plugins_section = config_dict["plugins"]
-                        # Normalize plugins_section to dict if needed
-                        if hasattr(plugins_section, "__dict__"):
-                            plugins_dict = vars(plugins_section)
-                        elif isinstance(plugins_section, dict):
-                            plugins_dict = plugins_section
-                        else:
-                            plugins_dict = {}
+                    # Generic Logic to replace hardcoded "if plugin_name == ..."
+                    # Updated Generic Logic to handle suffixes like 'Detector'
+                    #potential_attrs = [
+                    #    _to_snake_case(plugin_name),                                                 # dead_code_detector
+                    #    _to_snake_case(plugin_name).replace("_detector", "").replace("_checker", "") # dead_code
+                    #]
 
-                        # Try exact match or snake_case conversion
-                        potential_keys = [plugin_name, _to_snake_case(plugin_name)]
-                        # Also handle "DeadCodeDetector" -> "dead_code" (common pattern removing 'Detector'/'Checker')
-                        short_name = _to_snake_case(plugin_name).replace("_detector", "").replace("_checker", "")
-                        potential_keys.append(short_name)
+                    #target_found = False
+                    #for attr in potential_attrs:
+                    #    if hasattr(config.plugins, attr):
+                    #        target = getattr(config.plugins, attr)
+                    #        for key, value in plugin_settings.items():
+                    #            setattr(target, key, value)
+                    #        target_found = True
+                    #        break
 
-                        target_key = None
-                        for pk in potential_keys:
-                            if pk in plugins_dict:
-                                target_key = pk
-                                break
-                        
-                        if target_key:
-                            target_plugin_config = plugins_dict[target_key]
-                            # Convert target config to dict to update it
-                            if hasattr(target_plugin_config, "__dict__"):
-                                target_conf_dict = vars(target_plugin_config)
-                            elif isinstance(target_plugin_config, dict):
-                                target_conf_dict = target_plugin_config
-                            else:
-                                target_conf_dict = {}
-                            
-                            target_conf_dict.update(plugin_settings)
-                            plugins_dict[target_key] = target_conf_dict
-                        
-                        config_dict["plugins"] = plugins_dict
+                    # OR
+
+                    # B. Update Specific Plugin Configs (Generic)
+                    #if "plugins" in final_config_dict:
+                    #    # Ensure plugins section is a dict
+                    #    if not isinstance(final_config_dict["plugins"], dict):
+                    #         final_config_dict["plugins"] = _safe_export_config(final_config_dict["plugins"])
+                    #    
+                    #    plugins_section = final_config_dict["plugins"]
+                    #    
+                    #    # Generate potential keys (e.g., 'dead_code_detector', 'dead_code')
+                    #    snake_name = _to_snake_case(plugin_name)
+                    #    potential_keys = [
+                    #        snake_name, 
+                    #        snake_name.replace("_detector", "").replace("_checker", "")
+                    #    ]
+                    #    
+                    #    for pk in potential_keys:
+                    #        if pk in plugins_section:
+                    #            # We found the target config section!
+                    #            target_conf = plugins_section[pk]
+                    #            
+                    #            # Ensure target is a dict before updating
+                    #            if not isinstance(target_conf, dict):
+                    #                target_conf = _safe_export_config(target_conf)
+                    #                plugins_section[pk] = target_conf
+                    #            
+                    #            # Apply the user settings
+                    #            target_conf.update(plugin_settings)
+                    #            break # Stop looking after finding the match
 
             else:
                 requested_plugins = get_all_plugin_names()
 
-            # RE-CREATE THE CONFIG OBJECT
-            # This bypasses the "read-only" error by creating a fresh instance with new values
-            try:
-                # We assume ToolkitConfig can be instantiated with kwargs matching its structure
-                # If it's a Pydantic model, it handles nested dicts automatically.
-                config = ToolkitConfig(**config_dict)
-            except Exception as e:
-                print(f"Warning: Failed to re-instantiate config from dict: {e}")
-                # Fallback: use base config if patch fails
-                config = base_config 
-
         except json.JSONDecodeError:
             print("Warning: Invalid JSON in configs. Using defaults.")
-            try:
-                requested_plugins = get_all_plugin_names()
-            except:
-                requested_plugins = base_config.enabled_plugins
-            config = base_config
+            requested_plugins = config.enabled_plugins
 
-        # 6. Run Analysis
         if not requested_plugins:
-             requested_plugins = config.enabled_plugins
+            requested_plugins = config.enabled_plugins
 
         print(f"DEBUG: Running plugins: {requested_plugins}")
         loaded_plugins = load_plugins(requested_plugins)
         
         if not loaded_plugins:
-             raise HTTPException(status_code=400, detail="No valid plugins could be loaded.")
+            raise HTTPException(status_code=400, detail="No valid plugins could be loaded.")
 
+        # 6. Run Analysis
         analyzed_files, plugin_status = run_analysis(str(analysis_target), loaded_plugins, config)
         report_data = aggregate(analyzed_files, plugin_status)
 
-        # 7. Generate Files
+        # 7. Generate Output
         with open(report_json_path, "w", encoding="utf-8") as f:
             json.dump(report_data, f, indent=2, ensure_ascii=False)
             
         with open(report_html_path, "w", encoding="utf-8") as f:
-            f.write("<html><body><h1>Analysis Report</h1><p>Generated by Code Quality Toolkit</p></body></html>")
+            f.write("<html><body><h1>Analysis Report</h1><p>Data in report.json</p></body></html>")
 
-        # 8. Zip Response
         with zipfile.ZipFile(results_zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
             zf.write(report_json_path, arcname="report.json")
             zf.write(report_html_path, arcname="report.html")
@@ -321,21 +222,88 @@ async def analyze_project(
                 plugin_name = html_file.name.replace("_dashboard.html", "")
                 zf.write(html_file, arcname=f"{plugin_name}/dashboard.html")
 
-        # 9. Return
         background_tasks.add_task(cleanup_sandbox, temp_dir)
-        return FileResponse(
-            path=results_zip_path, 
-            filename="analysis_results.zip", 
-            media_type="application/zip"
-        )
+        return FileResponse(path=results_zip_path, filename="analysis_results.zip", media_type="application/zip")
 
     except HTTPException:
         cleanup_sandbox(temp_dir)
         raise
     except Exception as e:
         cleanup_sandbox(temp_dir)
-        print(f"Internal Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    
+# --- Helper Functions ---
+
+def cleanup_sandbox(path: Path):
+    """Background task to remove the temporary sandbox folder."""
+    try:
+        if path.exists():
+            shutil.rmtree(path)
+            print(f"Cleaned up sandbox: {path}")
+    except Exception as e:
+        print(f"Error cleaning up {path}: {e}")
+
+def _to_pascal_case(snake_str: str) -> str:
+    """Converts snake_case to PascalCase (e.g. 'dead_code' -> 'DeadCode')."""
+    return "".join(word.title() for word in snake_str.split("_"))
+
+def _to_snake_case(name: str) -> str:
+    """Converts PascalCase to snake_case (e.g. 'DeadCodeDetector' -> 'dead_code')."""
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+def get_discovered_plugins() -> Dict[str, Any]:
+    """Helper to discover and instantiate all available plugins."""
+    plugins_map = {}
+    try:
+        discovered = discover_plugins()
+        # Normalize return type (list or dict)
+        plugin_folders = list(discovered.keys()) if isinstance(discovered, dict) else discovered
+
+        for folder_name in plugin_folders:
+            try:
+                module_path = f"toolkit.plugins.{folder_name}.plugin"
+                module = importlib.import_module(module_path)
+                instance = None
+                name = _to_pascal_case(folder_name)
+
+                # Strategy A: Look for 'class Plugin'
+                if hasattr(module, "Plugin"):
+                    plugin_cls = getattr(module, "Plugin")
+                    try:
+                        instance = plugin_cls()
+                        meta = instance.get_metadata()
+                        name = meta.get("name", name)
+                    except Exception:
+                        pass
+
+                # Strategy B: Look for PascalCase class
+                if not instance:
+                    pascal_name = _to_pascal_case(folder_name)
+                    if hasattr(module, pascal_name):
+                        plugin_cls = getattr(module, pascal_name)
+                        try:
+                            instance = plugin_cls()
+                            meta = instance.get_metadata()
+                            name = meta.get("name", pascal_name)
+                        except Exception:
+                            pass
+                
+                if instance:
+                    plugins_map[name] = instance
+
+            except Exception as e:
+                print(f"Warning: Could not inspect plugin '{folder_name}': {e}")
+                
+    except Exception as e:
+        print(f"Error exploring plugins: {e}")
+        
+    return plugins_map
+
+def get_all_plugin_names() -> List[str]:
+    return sorted(list(get_discovered_plugins().keys()))
 
 if __name__ == "__main__":
     print("Starting Code Quality Server on http://127.0.0.1:8000")
