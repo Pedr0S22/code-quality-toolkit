@@ -6,18 +6,19 @@ Este módulo testa a integração completa entre:
 2. Coleta de métricas (aggregator)
 3. Geração de relatórios (report generation)
 4. Validação de dados (contracts)
-
-Testes de integração para o plugin BasicMetrics.
 """
 
 import json
+import sys
 from pathlib import Path
 
 import pytest
 
 from toolkit.core.aggregator import aggregate
 from toolkit.core.engine import run_analysis
-from toolkit.plugins.basic_metrics.plugin import Plugin as basicMetricsPlugin
+from toolkit.core.contracts import UnifiedReport, validate_unified_report
+from toolkit.plugins.style_checker.plugin import Plugin as StyleCheckerPlugin
+from toolkit.plugins.duplicate_code_checker.plugin import Plugin as DuplicateCodeCheckerPlugin
 from toolkit.utils.config import ToolkitConfig
 
 
@@ -76,7 +77,7 @@ class TestMetricsIntegration:
         self, temp_project: Path, toolkit_config: ToolkitConfig
     ) -> None:
         """Test metrics collection using a single plugin."""
-        plugins = {"BasicMetrics": basicMetricsPlugin()}
+        plugins = {"StyleChecker": StyleCheckerPlugin()}
         
         files, plugin_status = run_analysis(
             root=temp_project,
@@ -103,7 +104,8 @@ class TestMetricsIntegration:
     ) -> None:
         """Test metrics aggregation into a unified report."""
         plugins = {
-            "BasicMetrics": basicMetricsPlugin(),
+            "StyleChecker": StyleCheckerPlugin(),
+            "DuplicateCodeChecker": DuplicateCodeCheckerPlugin(),
         }
         
         files, plugin_status = run_analysis(
@@ -138,7 +140,7 @@ class TestMetricsIntegration:
         self, temp_project: Path, toolkit_config: ToolkitConfig
     ) -> None:
         """Test that metrics correctly categorize issues by severity."""
-        plugins = {"BasicMetrics": basicMetricsPlugin()}
+        plugins = {"StyleChecker": StyleCheckerPlugin()}
         
         files, plugin_status = run_analysis(
             root=temp_project,
@@ -164,7 +166,7 @@ class TestMetricsIntegration:
         self, temp_project: Path, toolkit_config: ToolkitConfig
     ) -> None:
         """Test identification and ranking of top offender files."""
-        plugins = {"BasicMetrics": basicMetricsPlugin()}
+        plugins = {"StyleChecker": StyleCheckerPlugin()}
         
         files, plugin_status = run_analysis(
             root=temp_project,
@@ -196,7 +198,8 @@ class TestMetricsIntegration:
     ) -> None:
         """Test metrics breakdown by plugin."""
         plugins = {
-            "BasicMetrics": basicMetricsPlugin(),
+            "StyleChecker": StyleCheckerPlugin(),
+            "DuplicateCodeChecker": DuplicateCodeCheckerPlugin(),
         }
         
         files, plugin_status = run_analysis(
@@ -210,10 +213,11 @@ class TestMetricsIntegration:
         issues_by_plugin = report["summary"]["issues_by_plugin"]
 
         # Verify plugins are present
-        assert "BasicMetrics" in issues_by_plugin
+        assert "StyleChecker" in issues_by_plugin
+        assert "DuplicateCodeChecker" in issues_by_plugin
 
         # Verify counts
-        for _plugin_name, count in issues_by_plugin.items():
+        for plugin_name, count in issues_by_plugin.items():
             assert isinstance(count, int)
             assert count >= 0
 
@@ -221,7 +225,7 @@ class TestMetricsIntegration:
         self, temp_project: Path, toolkit_config: ToolkitConfig
     ) -> None:
         """Test that metrics report can be serialized to JSON."""
-        plugins = {"BasicMetrics": basicMetricsPlugin()}
+        plugins = {"StyleChecker": StyleCheckerPlugin()}
         
         files, plugin_status = run_analysis(
             root=temp_project,
@@ -254,7 +258,7 @@ class TestMetricsIntegration:
             encoding="utf-8",
         )
 
-        plugins = {"BasicMetrics": basicMetricsPlugin()}
+        plugins = {"StyleChecker": StyleCheckerPlugin()}
         
         files, plugin_status = run_analysis(
             root=tmp_path,
@@ -273,7 +277,7 @@ class TestMetricsIntegration:
         self, temp_project: Path, toolkit_config: ToolkitConfig
     ) -> None:
         """Test that metrics are consistent across multiple runs."""
-        plugins = {"BasicMetrics": basicMetricsPlugin()}
+        plugins = {"StyleChecker": StyleCheckerPlugin()}
 
         # Run 1
         files1, plugin_status1 = run_analysis(
@@ -314,11 +318,9 @@ class TestMetricsComparison:
         """Test detection of regression (increase) in metrics."""
         # Create initial version
         file1 = tmp_path / "initial.py"
-        # Modificado: ficheiro com quase nenhum comentário (vai disparar issue)
-        file1.write_text("# coment\n" * 80 + "x=1\n" * 20, encoding="utf-8")
+        file1.write_text("x=1\ny=2\n", encoding="utf-8")
 
-
-        plugins = {"BasicMetrics": basicMetricsPlugin()}
+        plugins = {"StyleChecker": StyleCheckerPlugin()}
         
         files1, plugin_status1 = run_analysis(
             root=tmp_path,
@@ -352,10 +354,13 @@ class TestMetricsComparison:
         """Test detection of improvement (decrease) in metrics."""
         # Create initial messy version
         file1 = tmp_path / "messy.py"
-        # Teste para gerar issues
-        file1.write_text("x=1\n" * 100, encoding="utf-8")
+        file1.write_text(
+            "x=1\ny=2\nz=3\na=4\nb=5\n"
+            "# " + "x" * 200 + "\n",
+            encoding="utf-8",
+        )
 
-        plugins = {"BasicMetrics": basicMetricsPlugin()}
+        plugins = {"StyleChecker": StyleCheckerPlugin()}
         
         files1, plugin_status1 = run_analysis(
             root=tmp_path,
@@ -401,7 +406,7 @@ class TestMetricsReporting:
         file1 = tmp_path / "test.py"
         file1.write_text("x=1\n", encoding="utf-8")
 
-        plugins = {"BasicMetrics": basicMetricsPlugin()}
+        plugins = {"StyleChecker": StyleCheckerPlugin()}
         
         files, plugin_status = run_analysis(
             root=tmp_path,
@@ -601,7 +606,7 @@ class TestMetricsValidation:
         file = tmp_path / "test.py"
         file.write_text("x=1;y=2\n", encoding="utf-8")
 
-        plugins = {"BasicMetrics": basicMetricsPlugin()}
+        plugins = {"StyleChecker": StyleCheckerPlugin()}
 
         files, plugin_status = run_analysis(
             root=tmp_path,
@@ -627,7 +632,7 @@ class TestMetricsValidation:
         file = tmp_path / "test.py"
         file.write_text("x=1;y=2\n", encoding="utf-8")
 
-        plugins = {"BasicMetrics": basicMetricsPlugin()}
+        plugins = {"StyleChecker": StyleCheckerPlugin()}
 
         files, plugin_status = run_analysis(
             root=tmp_path,
@@ -653,7 +658,7 @@ class TestMetricsValidation:
         (tmp_path / "file2.py").write_text("a=1;b=2\n", encoding="utf-8")
         (tmp_path / "file3.py").write_text("p=1\n", encoding="utf-8")
 
-        plugins = {"BasicMetrics": basicMetricsPlugin()}
+        plugins = {"StyleChecker": StyleCheckerPlugin()}
 
         files, plugin_status = run_analysis(
             root=tmp_path,
@@ -678,17 +683,12 @@ class TestMetricsValidation:
     ) -> None:
         """Test that metrics are deterministic (same input = same output)."""
         file = tmp_path / "test.py"
-        code = (
-            "def foo(x, y):\n"
-            "    if x > 0 and y > 0:\n"
-            "        return x + y\n"
-            "    return 0\n"
-        )
-
+        code = "def foo(x, y):\n    if x > 0 and y > 0:\n        return x + y\n    return 0\n"
         file.write_text(code, encoding="utf-8")
 
         plugins = {
-            "BasicMetrics": basicMetricsPlugin(),
+            "StyleChecker": StyleCheckerPlugin(),
+            "DuplicateCodeChecker": DuplicateCodeCheckerPlugin(),
         }
 
         # Run multiple times
@@ -725,7 +725,7 @@ class TestMetricsValidation:
         """Validate that aggregated metrics match individual file reports."""
         (tmp_path / "test.py").write_text("x=1;y=2\n", encoding="utf-8")
 
-        plugins = {"BasicMetrics": basicMetricsPlugin()}
+        plugins = {"StyleChecker": StyleCheckerPlugin()}
 
         files, plugin_status = run_analysis(
             root=tmp_path,
@@ -736,12 +736,9 @@ class TestMetricsValidation:
 
         # Count issues from individual file reports
         file_count = len(files)
-        _ = sum(
-            1
-            for f in files
-            if sum(p["summary"]["issues_found"] for p in f["plugins"]) > 0
+        files_with_issues = sum(
+            1 for f in files if sum(p["summary"]["issues_found"] for p in f["plugins"]) > 0
         )
-
 
         # Verify totals match
         assert (
@@ -755,7 +752,7 @@ class TestMetricsValidation:
         file = tmp_path / "test.py"
         file.write_text("x=1\n", encoding="utf-8")
 
-        plugins = {"BasicMetrics": basicMetricsPlugin()}
+        plugins = {"StyleChecker": StyleCheckerPlugin()}
 
         files, plugin_status = run_analysis(
             root=tmp_path,
