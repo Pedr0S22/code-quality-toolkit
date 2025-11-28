@@ -1,6 +1,7 @@
 # Membros:
 
 - Vasco Alves   2022228207  @vasco\_alves
+- Augusto Hunguana  2023250703  @AugustoHunguana
 
 # Como usar e configurar o plugin:
 

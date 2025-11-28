@@ -1,0 +1,844 @@
+{
+  "analysis_metadata": {
+    "timestamp": "2025-11-28T23:27:19+00:00Z",
+    "tool_version": "0.1.0",
+    "plugins_executed": [
+      "BasicMetrics",
+      "CyclomaticComplexity"
+    ],
+    "status": "completed"
+  },
+  "summary": {
+    "total_files": 16,
+    "total_issues": 42,
+    "issues_by_severity": {
+      "info": 0,
+      "low": 8,
+      "medium": 10,
+      "high": 24
+    },
+    "issues_by_plugin": {
+      "BasicMetrics": 29,
+      "CyclomaticComplexity": 13
+    },
+    "top_offenders": [
+      {
+        "file": "src\\toolkit\\plugins\\comment_density\\plugin.py",
+        "issues": 6
+      },
+      {
+        "file": "src\\toolkit\\plugins\\style_checker\\plugin.py",
+        "issues": 6
+      },
+      {
+        "file": "src\\toolkit\\plugins\\cyclomatic_complexity\\plugin.py",
+        "issues": 4
+      },
+      {
+        "file": "src\\toolkit\\plugins\\dead_code_detector\\plugin.py",
+        "issues": 4
+      },
+      {
+        "file": "src\\toolkit\\plugins\\basic_metrics\\plugin.py",
+        "issues": 3
+      }
+    ]
+  },
+  "details": [
+    {
+      "file": "src\\toolkit\\plugins\\__init__.py",
+      "plugins": [
+        {
+          "plugin": "BasicMetrics",
+          "results": [
+            {
+              "severity": "high",
+              "code": "comment_lines",
+              "message": "Comment Lines: 0",
+              "hint": "Very few comments. Add documentation to improve readability."
+            },
+            {
+              "severity": "high",
+              "code": "blank_lines",
+              "message": "Blank Lines: 0",
+              "hint": "No blank lines. Seriously?"
+            }
+          ],
+          "summary": {
+            "issues_found": 2,
+            "status": "completed",
+            "metrics": {
+              "total_lines": 1,
+              "logical_lines": 1,
+              "comment_lines": 0,
+              "blank_lines": 0,
+              "docstring_lines": 1,
+              "halstead_volume": 0.0,
+              "halstead_difficulty": 0.0,
+              "halstead_effort": 0.0
+            }
+          }
+        },
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "src\\toolkit\\plugins\\base.py",
+      "plugins": [
+        {
+          "plugin": "BasicMetrics",
+          "results": [
+            {
+              "severity": "low",
+              "code": "comment_lines",
+              "message": "Comment Lines: 1",
+              "hint": "Consider adding documentation."
+            }
+          ],
+          "summary": {
+            "issues_found": 1,
+            "status": "completed",
+            "metrics": {
+              "total_lines": 20,
+              "logical_lines": 10,
+              "comment_lines": 1,
+              "blank_lines": 9,
+              "docstring_lines": 4,
+              "halstead_volume": 0.0,
+              "halstead_difficulty": 0.0,
+              "halstead_effort": 0.0
+            }
+          }
+        },
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "src\\toolkit\\plugins\\basic_metrics\\__init__.py",
+      "plugins": [
+        {
+          "plugin": "BasicMetrics",
+          "results": [
+            {
+              "severity": "high",
+              "code": "comment_lines",
+              "message": "Comment Lines: 0",
+              "hint": "Very few comments. Add documentation to improve readability."
+            },
+            {
+              "severity": "high",
+              "code": "blank_lines",
+              "message": "Blank Lines: 0",
+              "hint": "No blank lines. Seriously?"
+            }
+          ],
+          "summary": {
+            "issues_found": 2,
+            "status": "completed",
+            "metrics": {
+              "total_lines": 1,
+              "logical_lines": 1,
+              "comment_lines": 0,
+              "blank_lines": 0,
+              "docstring_lines": 1,
+              "halstead_volume": 0.0,
+              "halstead_difficulty": 0.0,
+              "halstead_effort": 0.0
+            }
+          }
+        },
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "src\\toolkit\\plugins\\basic_metrics\\plugin.py",
+      "plugins": [
+        {
+          "plugin": "BasicMetrics",
+          "results": [
+            {
+              "severity": "low",
+              "code": "logical_lines",
+              "message": "Logical Lines: 160",
+              "hint": "Logical size is manageable but consider splitting into smaller functions."
+            }
+          ],
+          "summary": {
+            "issues_found": 1,
+            "status": "completed",
+            "metrics": {
+              "total_lines": 334,
+              "logical_lines": 160,
+              "comment_lines": 35,
+              "blank_lines": 49,
+              "docstring_lines": 30,
+              "halstead_volume": 485.88941405871947,
+              "halstead_difficulty": 8.676470588235293,
+              "halstead_effort": 4215.80521021536
+            }
+          }
+        },
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [
+            {
+              "severity": "high",
+              "code": "HIGH_COMPLEXITY",
+              "message": "Função 'analyze' com complexidade 26",
+              "line": 178,
+              "col": 0,
+              "hint": "Reduza para <= 10"
+            },
+            {
+              "severity": "medium",
+              "code": "LONG_FUNCTION",
+              "message": "Function 'analyze' with (157 lines)",
+              "line": 178,
+              "col": 0,
+              "hint": "Consider dividing to smaller functions (<= 50 lines)."
+            }
+          ],
+          "summary": {
+            "issues_found": 2,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "src\\toolkit\\plugins\\comment_density\\__init__.py",
+      "plugins": [
+        {
+          "plugin": "BasicMetrics",
+          "results": [
+            {
+              "severity": "high",
+              "code": "comment_lines",
+              "message": "Comment Lines: 0",
+              "hint": "Very few comments. Add documentation to improve readability."
+            },
+            {
+              "severity": "high",
+              "code": "blank_lines",
+              "message": "Blank Lines: 0",
+              "hint": "No blank lines. Seriously?"
+            }
+          ],
+          "summary": {
+            "issues_found": 2,
+            "status": "completed",
+            "metrics": {
+              "total_lines": 1,
+              "logical_lines": 1,
+              "comment_lines": 0,
+              "blank_lines": 0,
+              "docstring_lines": 1,
+              "halstead_volume": 0.0,
+              "halstead_difficulty": 0.0,
+              "halstead_effort": 0.0
+            }
+          }
+        },
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "src\\toolkit\\plugins\\comment_density\\plugin.py",
+      "plugins": [
+        {
+          "plugin": "BasicMetrics",
+          "results": [
+            {
+              "severity": "high",
+              "code": "comment_lines",
+              "message": "Comment Lines: 2",
+              "hint": "Very few comments. Add documentation to improve readability."
+            },
+            {
+              "severity": "low",
+              "code": "blank_lines",
+              "message": "Blank Lines: 15",
+              "hint": "Consider adding spacing to improve readability."
+            },
+            {
+              "severity": "medium",
+              "code": "docstring_lines",
+              "message": "Docstring Lines: 5",
+              "hint": "Low docstring count, consider adding documentation."
+            }
+          ],
+          "summary": {
+            "issues_found": 3,
+            "status": "completed",
+            "metrics": {
+              "total_lines": 163,
+              "logical_lines": 81,
+              "comment_lines": 2,
+              "blank_lines": 15,
+              "docstring_lines": 5,
+              "halstead_volume": 420.3762346350719,
+              "halstead_difficulty": 7.5,
+              "halstead_effort": 3152.821759763039
+            }
+          }
+        },
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [
+            {
+              "severity": "high",
+              "code": "HIGH_COMPLEXITY",
+              "message": "Função '_count_lines' com complexidade 19",
+              "line": 29,
+              "col": 0,
+              "hint": "Reduza para <= 10"
+            },
+            {
+              "severity": "low",
+              "code": "LONG_FUNCTION",
+              "message": "Function '_count_lines' with (52 lines)",
+              "line": 29,
+              "col": 0,
+              "hint": "Consider dividing to smaller functions (<= 50 lines)."
+            },
+            {
+              "severity": "medium",
+              "code": "LONG_FUNCTION",
+              "message": "Function 'analyze' with (82 lines)",
+              "line": 82,
+              "col": 0,
+              "hint": "Consider dividing to smaller functions (<= 50 lines)."
+            }
+          ],
+          "summary": {
+            "issues_found": 3,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "src\\toolkit\\plugins\\cyclomatic_complexity\\__init__.py",
+      "plugins": [
+        {
+          "plugin": "BasicMetrics",
+          "results": [
+            {
+              "severity": "high",
+              "code": "comment_lines",
+              "message": "Comment Lines: 0",
+              "hint": "Very few comments. Add documentation to improve readability."
+            },
+            {
+              "severity": "high",
+              "code": "blank_lines",
+              "message": "Blank Lines: 0",
+              "hint": "No blank lines. Seriously?"
+            }
+          ],
+          "summary": {
+            "issues_found": 2,
+            "status": "completed",
+            "metrics": {
+              "total_lines": 1,
+              "logical_lines": 1,
+              "comment_lines": 0,
+              "blank_lines": 0,
+              "docstring_lines": 1,
+              "halstead_volume": 0.0,
+              "halstead_difficulty": 0.0,
+              "halstead_effort": 0.0
+            }
+          }
+        },
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "src\\toolkit\\plugins\\cyclomatic_complexity\\plugin.py",
+      "plugins": [
+        {
+          "plugin": "BasicMetrics",
+          "results": [
+            {
+              "severity": "medium",
+              "code": "comment_lines",
+              "message": "Comment Lines: 4",
+              "hint": "Low comment count, consider adding documentation."
+            },
+            {
+              "severity": "medium",
+              "code": "docstring_lines",
+              "message": "Docstring Lines: 7",
+              "hint": "Low docstring count, consider adding documentation."
+            }
+          ],
+          "summary": {
+            "issues_found": 2,
+            "status": "completed",
+            "metrics": {
+              "total_lines": 181,
+              "logical_lines": 76,
+              "comment_lines": 4,
+              "blank_lines": 20,
+              "docstring_lines": 7,
+              "halstead_volume": 470.8113033836342,
+              "halstead_difficulty": 5.116279069767442,
+              "halstead_effort": 2408.802017311617
+            }
+          }
+        },
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [
+            {
+              "severity": "high",
+              "code": "HIGH_COMPLEXITY",
+              "message": "Função 'analyze' com complexidade 16",
+              "line": 75,
+              "col": 0,
+              "hint": "Reduza para <= 10"
+            },
+            {
+              "severity": "medium",
+              "code": "LONG_FUNCTION",
+              "message": "Function 'analyze' with (107 lines)",
+              "line": 75,
+              "col": 0,
+              "hint": "Consider dividing to smaller functions (<= 50 lines)."
+            }
+          ],
+          "summary": {
+            "issues_found": 2,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "src\\toolkit\\plugins\\dead_code_detector\\__init__.py",
+      "plugins": [
+        {
+          "plugin": "BasicMetrics",
+          "results": [
+            {
+              "severity": "high",
+              "code": "comment_lines",
+              "message": "Comment Lines: 0",
+              "hint": "Very few comments. Add documentation to improve readability."
+            }
+          ],
+          "summary": {
+            "issues_found": 1,
+            "status": "completed",
+            "metrics": {
+              "total_lines": 5,
+              "logical_lines": 3,
+              "comment_lines": 0,
+              "blank_lines": 2,
+              "docstring_lines": 1,
+              "halstead_volume": 0.0,
+              "halstead_difficulty": 0.0,
+              "halstead_effort": 0.0
+            }
+          }
+        },
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "src\\toolkit\\plugins\\dead_code_detector\\plugin.py",
+      "plugins": [
+        {
+          "plugin": "BasicMetrics",
+          "results": [
+            {
+              "severity": "low",
+              "code": "logical_lines",
+              "message": "Logical Lines: 102",
+              "hint": "Logical size is manageable but consider splitting into smaller functions."
+            },
+            {
+              "severity": "low",
+              "code": "docstring_lines",
+              "message": "Docstring Lines: 8",
+              "hint": "Consider adding docstrings for functions and classes."
+            }
+          ],
+          "summary": {
+            "issues_found": 2,
+            "status": "completed",
+            "metrics": {
+              "total_lines": 180,
+              "logical_lines": 102,
+              "comment_lines": 18,
+              "blank_lines": 26,
+              "docstring_lines": 8,
+              "halstead_volume": 260.4726682814475,
+              "halstead_difficulty": 3.193548387096774,
+              "halstead_effort": 831.8320696730098
+            }
+          }
+        },
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [
+            {
+              "severity": "high",
+              "code": "HIGH_COMPLEXITY",
+              "message": "Função 'analyze' com complexidade 15",
+              "line": 103,
+              "col": 0,
+              "hint": "Reduza para <= 10"
+            },
+            {
+              "severity": "medium",
+              "code": "LONG_FUNCTION",
+              "message": "Function 'analyze' with (78 lines)",
+              "line": 103,
+              "col": 0,
+              "hint": "Consider dividing to smaller functions (<= 50 lines)."
+            }
+          ],
+          "summary": {
+            "issues_found": 2,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "src\\toolkit\\plugins\\duplicate_code_checker\\__init__.py",
+      "plugins": [
+        {
+          "plugin": "BasicMetrics",
+          "results": [
+            {
+              "severity": "high",
+              "code": "comment_lines",
+              "message": "Comment Lines: 0",
+              "hint": "Very few comments. Add documentation to improve readability."
+            },
+            {
+              "severity": "high",
+              "code": "blank_lines",
+              "message": "Blank Lines: 0",
+              "hint": "No blank lines. Seriously?"
+            }
+          ],
+          "summary": {
+            "issues_found": 2,
+            "status": "completed",
+            "metrics": {
+              "total_lines": 1,
+              "logical_lines": 1,
+              "comment_lines": 0,
+              "blank_lines": 0,
+              "docstring_lines": 1,
+              "halstead_volume": 0.0,
+              "halstead_difficulty": 0.0,
+              "halstead_effort": 0.0
+            }
+          }
+        },
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "src\\toolkit\\plugins\\duplicate_code_checker\\plugin.py",
+      "plugins": [
+        {
+          "plugin": "BasicMetrics",
+          "results": [
+            {
+              "severity": "high",
+              "code": "comment_lines",
+              "message": "Comment Lines: 0",
+              "hint": "Very few comments. Add documentation to improve readability."
+            },
+            {
+              "severity": "medium",
+              "code": "docstring_lines",
+              "message": "Docstring Lines: 2",
+              "hint": "Low docstring count, consider adding documentation."
+            }
+          ],
+          "summary": {
+            "issues_found": 2,
+            "status": "completed",
+            "metrics": {
+              "total_lines": 72,
+              "logical_lines": 45,
+              "comment_lines": 0,
+              "blank_lines": 15,
+              "docstring_lines": 2,
+              "halstead_volume": 76.14709844115208,
+              "halstead_difficulty": 3.611111111111111,
+              "halstead_effort": 274.97563325971583
+            }
+          }
+        },
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "src\\toolkit\\plugins\\security_checker\\__init__.py",
+      "plugins": [
+        {
+          "plugin": "BasicMetrics",
+          "results": [
+            {
+              "severity": "high",
+              "code": "comment_lines",
+              "message": "Comment Lines: 0",
+              "hint": "Very few comments. Add documentation to improve readability."
+            },
+            {
+              "severity": "high",
+              "code": "blank_lines",
+              "message": "Blank Lines: 0",
+              "hint": "No blank lines. Seriously?"
+            }
+          ],
+          "summary": {
+            "issues_found": 2,
+            "status": "completed",
+            "metrics": {
+              "total_lines": 1,
+              "logical_lines": 1,
+              "comment_lines": 0,
+              "blank_lines": 0,
+              "docstring_lines": 1,
+              "halstead_volume": 0.0,
+              "halstead_difficulty": 0.0,
+              "halstead_effort": 0.0
+            }
+          }
+        },
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "src\\toolkit\\plugins\\security_checker\\plugin.py",
+      "plugins": [
+        {
+          "plugin": "BasicMetrics",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed",
+            "metrics": {
+              "total_lines": 163,
+              "logical_lines": 59,
+              "comment_lines": 33,
+              "blank_lines": 26,
+              "docstring_lines": 14,
+              "halstead_volume": 15.509775004326936,
+              "halstead_difficulty": 1.0,
+              "halstead_effort": 15.509775004326936
+            }
+          }
+        },
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [
+            {
+              "severity": "medium",
+              "code": "LONG_FUNCTION",
+              "message": "Function 'analyze' with (95 lines)",
+              "line": 69,
+              "col": 0,
+              "hint": "Consider dividing to smaller functions (<= 50 lines)."
+            }
+          ],
+          "summary": {
+            "issues_found": 1,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "src\\toolkit\\plugins\\style_checker\\__init__.py",
+      "plugins": [
+        {
+          "plugin": "BasicMetrics",
+          "results": [
+            {
+              "severity": "high",
+              "code": "comment_lines",
+              "message": "Comment Lines: 0",
+              "hint": "Very few comments. Add documentation to improve readability."
+            },
+            {
+              "severity": "high",
+              "code": "blank_lines",
+              "message": "Blank Lines: 0",
+              "hint": "No blank lines. Seriously?"
+            }
+          ],
+          "summary": {
+            "issues_found": 2,
+            "status": "completed",
+            "metrics": {
+              "total_lines": 1,
+              "logical_lines": 1,
+              "comment_lines": 0,
+              "blank_lines": 0,
+              "docstring_lines": 1,
+              "halstead_volume": 0.0,
+              "halstead_difficulty": 0.0,
+              "halstead_effort": 0.0
+            }
+          }
+        },
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [],
+          "summary": {
+            "issues_found": 0,
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "file": "src\\toolkit\\plugins\\style_checker\\plugin.py",
+      "plugins": [
+        {
+          "plugin": "BasicMetrics",
+          "results": [
+            {
+              "severity": "low",
+              "code": "logical_lines",
+              "message": "Logical Lines: 111",
+              "hint": "Logical size is manageable but consider splitting into smaller functions."
+            },
+            {
+              "severity": "high",
+              "code": "comment_lines",
+              "message": "Comment Lines: 1",
+              "hint": "Very few comments. Add documentation to improve readability."
+            },
+            {
+              "severity": "high",
+              "code": "docstring_lines",
+              "message": "Docstring Lines: 3",
+              "hint": "Very few docstrings. Add documentation for functions and classes."
+            }
+          ],
+          "summary": {
+            "issues_found": 3,
+            "status": "completed",
+            "metrics": {
+              "total_lines": 239,
+              "logical_lines": 111,
+              "comment_lines": 1,
+              "blank_lines": 32,
+              "docstring_lines": 3,
+              "halstead_volume": 361.28526732617695,
+              "halstead_difficulty": 5.863636363636363,
+              "halstead_effort": 2118.445431139856
+            }
+          }
+        },
+        {
+          "plugin": "CyclomaticComplexity",
+          "results": [
+            {
+              "severity": "high",
+              "code": "HIGH_COMPLEXITY",
+              "message": "Função '_check_indentation' com complexidade 17",
+              "line": 67,
+              "col": 0,
+              "hint": "Reduza para <= 10"
+            },
+            {
+              "severity": "medium",
+              "code": "LONG_FUNCTION",
+              "message": "Function '_check_indentation' with (75 lines)",
+              "line": 67,
+              "col": 0,
+              "hint": "Consider dividing to smaller functions (<= 50 lines)."
+            },
+            {
+              "severity": "low",
+              "code": "LONG_FUNCTION",
+              "message": "Function 'analyze' with (55 lines)",
+              "line": 185,
+              "col": 0,
+              "hint": "Consider dividing to smaller functions (<= 50 lines)."
+            }
+          ],
+          "summary": {
+            "issues_found": 3,
+            "status": "completed"
+          }
+        }
+      ]
+    }
+  ]
+}
