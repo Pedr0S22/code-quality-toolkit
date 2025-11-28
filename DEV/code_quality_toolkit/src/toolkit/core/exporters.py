@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import html
+
 from .contracts import UnifiedReport
+
 
 def generate_html(report: UnifiedReport) -> str:
     """
@@ -33,7 +35,8 @@ def generate_html(report: UnifiedReport) -> str:
     output += f"<li><strong>Timestamp:</strong> {metadata['timestamp']}</li>"
     output += f"<li><strong>Tool Version:</strong> {metadata['tool_version']}</li>"
     output += f"<li><strong>Status:</strong> {metadata['status']}</li>"
-    output += f"<li><strong>Plugins Executed:</strong> {', '.join(metadata['plugins_executed'])}</li>"
+    plugins_list = ", ".join(metadata["plugins_executed"])
+    output += f"<li><strong>Plugins Executed:</strong> {plugins_list}</li>"
     output += "</ul>"
     output += "<hr>"
 
@@ -65,7 +68,10 @@ def generate_html(report: UnifiedReport) -> str:
     else:
         output += "<ul>"
         for offender in summary['top_offenders']:
-            output += f"<li><strong>{offender['file']}</strong>: {offender['issues']} issues</li>"
+            output += (
+                f"<li><strong>{offender['file']}</strong>: "
+                f"{offender['issues']} issues</li>"
+            )
         output += "</ul>"
     
     output += "<hr>"
@@ -96,7 +102,10 @@ def generate_html(report: UnifiedReport) -> str:
             
             # Métricas (se existirem)
             if 'metrics' in p_summary and p_summary['metrics']:
-                metrics_str = ", ".join([f"{k}={v}" for k, v in p_summary['metrics'].items()])
+                metrics_list = [
+                f"{k}={v}" for k, v in p_summary["metrics"].items()
+                ]
+                metrics_str = ", ".join(metrics_list)
                 output += f"<li>Metrics: {metrics_str}</li>"
             
             # Erros de execução

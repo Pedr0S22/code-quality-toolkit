@@ -1,7 +1,6 @@
 """Command line interface for the Code Quality Toolkit (entry point)."""
 
 from __future__ import annotations
-from .exporters import generate_html  
 
 # Each of the following import statements brings functionality from the Python’s
 # standard library:
@@ -22,6 +21,7 @@ from . import logging
 from .aggregator import aggregate
 from .engine import run_analysis
 from .errors import AnalysisExecutionError, ConfigurationError, PluginLoadError
+from .exporters import generate_html
 from .loader import load_plugins
 
 # Our classification of severity, the final verdict after the analysis performed

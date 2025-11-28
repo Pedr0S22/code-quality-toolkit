@@ -1,5 +1,5 @@
-import pytest
 from toolkit.core.aggregator import aggregate
+
 
 # --- Dados de Teste Completos (Para satisfazer a validação) ---
 def create_mock_result(severity="low", code="TEST001", count=1):
