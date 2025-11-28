@@ -7,7 +7,7 @@ def format_message(name: str) -> str:
 
 # Testing stylecheck plugin making the plugin detect comment lines with extension greater than #<lines>
 
-def complex_branching(value: int) -> int:
+def complex_branching(value: int) -> int: 
     if value < 0:
         return -1
     elif value == 0:
