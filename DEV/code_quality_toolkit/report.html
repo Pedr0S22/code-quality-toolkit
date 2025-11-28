@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Code Quality Report</title>
+</head>
+<body>
+    <h1>Code Quality Toolkit Report</h1>
+
+    <h2>Analysis Metadata</h2>
+    <ul>
+    <li><strong>Timestamp:</strong> 2025-11-28T18:11:40+00:00Z</li><li><strong>Tool Version:</strong> 0.1.0</li><li><strong>Status:</strong> completed</li><li><strong>Plugins Executed:</strong> CommentDensity, CyclomaticComplexity, DeadCodeDetector, DuplicationChecker, SecurityChecker, StyleChecker</li></ul><hr>
+    <h2>Summary</h2>
+    
+    <h3>Totals</h3>
+    <ul>
+    <li><strong>Total Files:</strong> 3</li><li><strong>Total Issues:</strong> 13</li></ul><h3>Issues by Severity</h3><ul><li>info: 0</li><li>low: 9</li><li>medium: 3</li><li>high: 1</li></ul><h3>Issues by Plugin</h3><ul><li>CommentDensity: 1</li><li>CyclomaticComplexity: 2</li><li>DeadCodeDetector: 6</li><li>DuplicationChecker: 0</li><li>SecurityChecker: 2</li><li>StyleChecker: 2</li></ul><h3>Top Offenders</h3><ul><li><strong>examples\sample_project\utils.py</strong>: 8 issues</li><li><strong>examples\sample_project\vulnerable.py</strong>: 4 issues</li><li><strong>examples\sample_project\main.py</strong>: 1 issues</li></ul><hr>
+    <h2>Details</h2>
+    <h3>File: examples\sample_project\main.py</h3><h4>Plugin: CommentDensity</h4><ul><li>Status: completed</li><li>Issues Found: 0</li><li>Metrics: code_lines=11, comment_lines=2, total_lines=13, comment_density=0.15384615384615385</li></ul><p><em>No issues found.</em></p><h4>Plugin: CyclomaticComplexity</h4><ul><li>Status: completed</li><li>Issues Found: 0</li></ul><p><em>No issues found.</em></p><h4>Plugin: DeadCodeDetector</h4><ul><li>Status: completed</li><li>Issues Found: 0</li></ul><p><em>No issues found.</em></p><h4>Plugin: DuplicationChecker</h4><ul><li>Status: completed</li><li>Issues Found: 0</li></ul><p><em>No issues found.</em></p><h4>Plugin: SecurityChecker</h4><ul><li>Status: completed</li><li>Issues Found: 0</li></ul><p><em>No issues found.</em></p><h4>Plugin: StyleChecker</h4><ul><li>Status: completed</li><li>Issues Found: 1</li></ul><ul>
+                    <li>
+                        <strong>[LOW]</strong> [TRAILING_WHITESPACE] Espaços ou tabulações no final da linha. 
+                        (Line 5, Col 1) 
+                        <br><em>Hint: Remova os espaços/tabulações no final.</em>
+                    </li>
+                    </ul><hr><h3>File: examples\sample_project\utils.py</h3><h4>Plugin: CommentDensity</h4><ul><li>Status: completed</li><li>Issues Found: 1</li><li>Metrics: code_lines=41, comment_lines=2, total_lines=43, comment_density=0.046511627906976744</li></ul><ul>
+                    <li>
+                        <strong>[HIGH]</strong> [LOW_COMMENT_DENSITY] Low comment density: 4.7% (minimum: 10.0%) 
+                        (Line 1, Col ?) 
+                        <br><em>Hint: Consider adding more comments to improve documentation</em>
+                    </li>
+                    </ul><h4>Plugin: CyclomaticComplexity</h4><ul><li>Status: completed</li><li>Issues Found: 2</li></ul><ul>
+                    <li>
+                        <strong>[MEDIUM]</strong> [HIGH_COMPLEXITY] Função &#x27;number_to_name&#x27; com complexidade 12 
+                        (Line 20, Col 0) 
+                        <br><em>Hint: Reduza para &lt;= 10</em>
+                    </li>
+                    
+                    <li>
+                        <strong>[LOW]</strong> [TOO_MANY_ARGUMENTS] Function &#x27;utils_args&#x27; with (7 arguments) 
+                        (Line 50, Col 0) 
+                        <br><em>Hint: Consider reducing number of arguments (&lt;= 5).</em>
+                    </li>
+                    </ul><h4>Plugin: DeadCodeDetector</h4><ul><li>Status: completed</li><li>Issues Found: 4</li></ul><ul>
+                    <li>
+                        <strong>[LOW]</strong> [DEAD_CODE] &#x27;format_message&#x27; definido e nunca usado. 
+                        (Line 4, Col 1) 
+                        <br><em>Hint: Remover, utilizar, ou suprimir via [plugins.dead_code].ignore_patterns.</em>
+                    </li>
+                    
+                    <li>
+                        <strong>[LOW]</strong> [DEAD_CODE] &#x27;complex_branching&#x27; definido e nunca usado. 
+                        (Line 10, Col 1) 
+                        <br><em>Hint: Remover, utilizar, ou suprimir via [plugins.dead_code].ignore_patterns.</em>
+                    </li>
+                    
+                    <li>
+                        <strong>[LOW]</strong> [DEAD_CODE] &#x27;number_to_name&#x27; definido e nunca usado. 
+                        (Line 20, Col 1) 
+                        <br><em>Hint: Remover, utilizar, ou suprimir via [plugins.dead_code].ignore_patterns.</em>
+                    </li>
+                    
+                    <li>
+                        <strong>[LOW]</strong> [DEAD_CODE] &#x27;utils_args&#x27; definido e nunca usado. 
+                        (Line 50, Col 1) 
+                        <br><em>Hint: Remover, utilizar, ou suprimir via [plugins.dead_code].ignore_patterns.</em>
+                    </li>
+                    </ul><h4>Plugin: DuplicationChecker</h4><ul><li>Status: completed</li><li>Issues Found: 0</li></ul><p><em>No issues found.</em></p><h4>Plugin: SecurityChecker</h4><ul><li>Status: completed</li><li>Issues Found: 0</li></ul><p><em>No issues found.</em></p><h4>Plugin: StyleChecker</h4><ul><li>Status: completed</li><li>Issues Found: 1</li></ul><ul>
+                    <li>
+                        <strong>[LOW]</strong> [LINE_LENGTH] Linha com 103 caracteres 
+                        (Line 8, Col 1) 
+                        <br><em>Hint: Máximo configurado: 88</em>
+                    </li>
+                    </ul><hr><h3>File: examples\sample_project\vulnerable.py</h3><h4>Plugin: CommentDensity</h4><ul><li>Status: completed</li><li>Issues Found: 0</li><li>Metrics: code_lines=6, comment_lines=5, total_lines=11, comment_density=0.45454545454545453</li></ul><p><em>No issues found.</em></p><h4>Plugin: CyclomaticComplexity</h4><ul><li>Status: completed</li><li>Issues Found: 0</li></ul><p><em>No issues found.</em></p><h4>Plugin: DeadCodeDetector</h4><ul><li>Status: completed</li><li>Issues Found: 2</li></ul><ul>
+                    <li>
+                        <strong>[LOW]</strong> [DEAD_CODE] &#x27;calculate_price&#x27; definido e nunca usado. 
+                        (Line 3, Col 1) 
+                        <br><em>Hint: Remover, utilizar, ou suprimir via [plugins.dead_code].ignore_patterns.</em>
+                    </li>
+                    
+                    <li>
+                        <strong>[LOW]</strong> [DEAD_CODE] &#x27;get_user_data&#x27; definido e nunca usado. 
+                        (Line 9, Col 1) 
+                        <br><em>Hint: Remover, utilizar, ou suprimir via [plugins.dead_code].ignore_patterns.</em>
+                    </li>
+                    </ul><h4>Plugin: DuplicationChecker</h4><ul><li>Status: completed</li><li>Issues Found: 0</li></ul><p><em>No issues found.</em></p><h4>Plugin: SecurityChecker</h4><ul><li>Status: completed</li><li>Issues Found: 2</li></ul><ul>
+                    <li>
+                        <strong>[MEDIUM]</strong> [B307] Use of possibly insecure function - consider using safer ast.literal_eval. 
+                        (Line 6, Col 14) 
+                        <br><em>Hint: Bandit Test ID: B307</em>
+                    </li>
+                    
+                    <li>
+                        <strong>[MEDIUM]</strong> [B608] Possible SQL injection vector through string-based query construction. 
+                        (Line 12, Col 13) 
+                        <br><em>Hint: Bandit Test ID: B608</em>
+                    </li>
+                    </ul><h4>Plugin: StyleChecker</h4><ul><li>Status: completed</li><li>Issues Found: 0</li></ul><p><em>No issues found.</em></p><hr>
+</body>
+</html>
