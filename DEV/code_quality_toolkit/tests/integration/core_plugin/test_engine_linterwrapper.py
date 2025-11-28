@@ -25,6 +25,7 @@ def test_engine_runs_linterwrapper_successfully(tmp_path):
     write_file(sample_file, "a=1\n")
 
     # ---------- crear pylint falso ----------
+    fake_pylint = tmp_path / "pylint"
     fake_pylint.write_text(
         "#!/bin/sh\n"
         "echo '[{\"type\": \"warning\", \"path\": \"example.py\", "
