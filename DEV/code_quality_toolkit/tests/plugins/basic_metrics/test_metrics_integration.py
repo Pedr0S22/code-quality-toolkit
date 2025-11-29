@@ -683,7 +683,12 @@ class TestMetricsValidation:
     ) -> None:
         """Test that metrics are deterministic (same input = same output)."""
         file = tmp_path / "test.py"
-        code = "def foo(x, y):\n    if x > 0 and y > 0:\n        return x + y\n    return 0\n"
+        code = (
+            "def foo(x, y):\n"
+            "    if x > 0 and y > 0:\n"
+            "        return x + y\n"
+            "    return 0\n"
+        )
         file.write_text(code, encoding="utf-8")
 
         plugins = {
@@ -736,12 +741,18 @@ class TestMetricsValidation:
 
         # Count issues from individual file reports
         file_count = len(files)
-    
+        files_with_issues = sum(
+            1 for f in files if sum(p["summary"]["issues_found"] for p in f["plugins"]) > 0
+        )
 
         # Verify totals match
         assert (
             report["summary"]["total_files"] == file_count
         ), f"File count mismatch: {file_count} vs {report['summary']['total_files']}"
+
+        # If there are files with issues, total issues should be positive
+        if files_with_issues > 0:
+            assert report["summary"]["total_issues"] > 0
 
     def test_severity_levels_are_valid(
         self, tmp_path: Path, toolkit_config: ToolkitConfig
