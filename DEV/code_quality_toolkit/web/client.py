@@ -51,6 +51,108 @@ class MainWindow(QMainWindow):
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.main_layout.setSpacing(0)
 
+#new from andre
+    def setup_sidebar(self, width, height):
+        # Container da barra lateral
+        self.sidebar = QFrame()
+        self.sidebar.setFixedSize(width, height)
+        self.sidebar.setStyleSheet("background-color: #2d2d30;")  # Dark gray
+        sidebar_layout = QVBoxLayout(self.sidebar)
+        sidebar_layout.setContentsMargins(10, 10, 10, 10)
+        sidebar_layout.setSpacing(8)
+
+        # Lista de plugins de exemplo
+        self.plugin_list = ["Plugin 1", "Plugin 2", "Plugin 3"]
+        self.plugin_controller = PluginSelectionController(self.plugin_list)
+
+        # Title
+        lbl_plugins = QLabel("Plugins")
+        lbl_plugins.setStyleSheet("font-size: 16px; font-weight: bold; color: #cccccc;")
+        sidebar_layout.addWidget(lbl_plugins)
+
+        # Hide/Show button
+        self.btn_toggle_plugins = QPushButton("Hide Plugins")
+        self.btn_toggle_plugins.setStyleSheet("""
+            QPushButton {
+                background-color: #3c3c3c;
+                color: #cccccc;
+                padding: 4px;
+                border-radius: 4px;
+            }
+            QPushButton:hover { background-color: #505050; }
+        """)
+        sidebar_layout.addWidget(self.btn_toggle_plugins)
+
+        # Select All checkbox
+        self.chk_select_all = QCheckBox("Select All")
+        self.chk_select_all.setChecked(True)
+        self.chk_select_all.setStyleSheet("color: #cccccc; font-size: 14px;")
+        sidebar_layout.addWidget(self.chk_select_all)
+
+        # Scroll area para os plugins
+        plugin_scroll = QScrollArea()
+        plugin_scroll.setWidgetResizable(True)
+        plugin_scroll.setStyleSheet("background-color: #252526; border: none;")
+
+        plugin_container = QWidget()
+        plugin_layout = QVBoxLayout(plugin_container)
+        plugin_layout.setContentsMargins(0,0,0,0)
+        plugin_layout.setSpacing(6)
+
+        self.plugin_checkboxes = {}
+
+        # Dynamic plugin loading
+        for plugin_name in self.plugin_list:
+            chk = QCheckBox(plugin_name)
+            chk.setChecked(True)
+            chk.setStyleSheet("color: #cccccc; font-size: 14px;")
+            plugin_layout.addWidget(chk)
+            self.plugin_checkboxes[plugin_name] = chk
+
+            chk.stateChanged.connect(
+                lambda _, name=plugin_name, box=chk:
+                self.plugin_controller.set_plugin_checked(name, box.isChecked())
+            )
+
+        plugin_scroll.setWidget(plugin_container)
+        sidebar_layout.addWidget(plugin_scroll, stretch=1)
+
+        # Toggle funcionalidade
+        def toggle_plugins():
+            is_visible = plugin_scroll.isVisible()
+            plugin_scroll.setVisible(not is_visible)
+            self.chk_select_all.setVisible(not is_visible)
+            self.btn_toggle_plugins.setText("Show Plugins" if is_visible else "Hide Plugins")
+
+        self.btn_toggle_plugins.clicked.connect(toggle_plugins)
+
+        # Select All connection
+        self.chk_select_all.stateChanged.connect(
+            lambda state: self.plugin_controller.set_select_all(
+                state == Qt.CheckState.Checked
+            )
+        )
+
+        # Atualiza UI quando controller muda
+        self.plugin_controller.select_all_changed.connect(
+            lambda checked: [box.setChecked(checked) for box in self.plugin_checkboxes.values()]
+        )
+
+        # Adiciona sidebar ao layout principal
+        self.main_layout.addWidget(self.sidebar)
+
+
+
+
+
+
+
+
+
+
+
+
+
         # A. BARRA LATERAL ESQUERDA (PLUGINS)
         self.setup_sidebar(SIDEBAR_WIDTH, WINDOW_HEIGHT)
 
