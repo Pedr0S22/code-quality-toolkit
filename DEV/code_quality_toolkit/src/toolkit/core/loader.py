@@ -298,19 +298,18 @@ def load_plugins(requested: Iterable[str] | None = None) -> dict[str, PluginProt
     # == end of Iterating ==
 
     # == Missing Plugins Check ==
-    if requested_set is not None:
-        missing = sorted(
-            requested_set - set(plugin_instances)
-        )  # set containing all names that were requested but not successfully
-        # added to plugin_instances.
-        if missing:
-            # a PluginLoadError is raised, detailing exactly which requested
-            # plugins could not be loaded.
-            raise PluginLoadError(f"Requested plugins not found: {', '.join(missing)}")
-        # otherwise...
+        if requested_set is not None:
+            loaded_names = set(plugin_instances.keys())
+            missing = requested_set - loaded_names
+            if missing:
+                for name in sorted(missing):
+                    logging.log(
+                        "plugin.missing",
+                        plugin=name,
+                        error="Requested plugin not found on disk",
+                    )
 
-    # ...the dictionary of validated and loaded plugin instances is returned.
-    return plugin_instances
+        return plugin_instances
 
 
 def discover_plugins() -> list[str]:
