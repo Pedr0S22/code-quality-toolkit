@@ -736,9 +736,7 @@ class TestMetricsValidation:
 
         # Count issues from individual file reports
         file_count = len(files)
-        files_with_issues = sum(
-            1 for f in files if sum(p["summary"]["issues_found"] for p in f["plugins"]) > 0
-        )
+    
 
         # Verify totals match
         assert (
