@@ -9,16 +9,16 @@ Este módulo testa a integração completa entre:
 """
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
 
 from toolkit.core.aggregator import aggregate
 from toolkit.core.engine import run_analysis
-from toolkit.core.contracts import UnifiedReport, validate_unified_report
+from toolkit.plugins.duplicate_code_checker.plugin import (
+    Plugin as DuplicateCodeCheckerPlugin,
+)
 from toolkit.plugins.style_checker.plugin import Plugin as StyleCheckerPlugin
-from toolkit.plugins.duplicate_code_checker.plugin import Plugin as DuplicateCodeCheckerPlugin
 from toolkit.utils.config import ToolkitConfig
 
 
@@ -217,7 +217,7 @@ class TestMetricsIntegration:
         assert "DuplicateCodeChecker" in issues_by_plugin
 
         # Verify counts
-        for plugin_name, count in issues_by_plugin.items():
+        for _plugin_name, count in issues_by_plugin.items():
             assert isinstance(count, int)
             assert count >= 0
 
