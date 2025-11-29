@@ -34,12 +34,14 @@ class Plugin:
     def __init__(self) -> None:
         """Inicializa o plugin."""
         # Verifica se o import do Bandit funcionou
+
         # Só avisar se efectivamente não temos o Bandit disponível
         if BanditManager is None:
             print(
                 "AVISO: Dependência 'bandit' não instalada. "
                 "O SecurityChecker não vai funcionar. Usando verificação fallback."
             )
+
         # TAREFA 7: Configuração (TOML)
         # O Bandit usa o seu próprio ficheiro, mas podemos definir o nível
         # de severidade que queremos reportar.
@@ -177,76 +179,6 @@ class Plugin:
                     "results": results,
                     "summary": {"issues_found": len(results), "status": "completed"},
                 }
-            
-            # Como o bandit analisa ficheiros e não linha a linha
-            # Criamos um ficheiro temporário para ele analisar
-            # Usamos 'delete=False' para o ficheiro não ser apagado
-            # imediatamente, para que o Bandit o possa ler.
-            with tempfile.NamedTemporaryFile(
-                suffix=".py",
-                delete=False,
-                mode="w",
-                encoding="utf-8",
-            ) as temp_file:
-                temp_file.write(source_code)
-                temp_file_path = temp_file.name # Guardamos o caminho do ficheiro
-
-            try:
-                # 2. Criar uma config e um gestor do Bandit
-                config = BanditConfig()
-                manager = BanditManager(config=config, agg_type='vuln')
-
-                # 3. Mandar o Bandit "descobrir" o nosso ficheiro temporário
-                manager.discover_files([temp_file_path])
-
-                # 4. Executar o Bandit (nos ficheiros que ele descobriu)
-                # (Isto cumpre as TAREFAS 2, 3, 4, 5, 6 de uma só vez)
-                manager.run_tests()
-
-                # 5. Mapear o nosso nível de severidade para o do Bandit
-                severity_map = {
-                    'LOW': LOW,
-                    'MEDIUM': MEDIUM,
-                    'HIGH': HIGH
-                }
-                report_level = severity_map.get(self.report_severity_level, LOW)
-
-                # 6. Obter os resultados do Bandit
-                bandit_issues = manager.get_issue_list(
-                    sev_level=report_level,
-                    conf_level=LOW
-                )
-
-                # 7. TRADUZIR os resultados do Bandit para o nosso formato JSON
-                for issue in bandit_issues:
-                    severity_translation = {
-                        'LOW': 'low',
-                        'MEDIUM': 'medium',
-                        'HIGH': 'high'
-                    }
-                    results.append({
-                        "severity": severity_translation.get(issue.severity, "low"),
-                        "code": issue.test_id, # ex: B301 (pickle) ou B307 (eval)
-                        "message": issue.text,
-                        "line": issue.lineno,
-                        "col": issue.col_offset + 1,
-                        "hint": f"Bandit Test ID: {issue.test_id}",
-                    })
-
-            finally:
-                # 8. Limpar (apagar o ficheiro temporário), funcionando ou não
-                if os.path.exists(temp_file_path):
-                    os.remove(temp_file_path)
-
-
-            # Devolve uma Resposta de Sucesso
-            return {
-                "results": results,
-                "summary": {
-                    "issues_found": len(results),
-                    "status": "completed",
-                },
-            }
 
         except Exception as e:
             # TAREFA 13: Error Handling 
