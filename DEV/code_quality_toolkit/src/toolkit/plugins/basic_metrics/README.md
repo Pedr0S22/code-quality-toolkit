@@ -1,5 +1,6 @@
 # Membros:
 
+- Tomás Neto 2023229944 @Tomass24
 - Vasco Alves   2022228207  @vasco\_alves
 - Augusto Hunguana  2023250703  @AugustoHunguana
 
