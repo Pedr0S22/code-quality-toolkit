@@ -19,8 +19,11 @@ from fastapi.responses import FileResponse
 
 from toolkit.core.engine import run_analysis
 from toolkit.core.aggregator import aggregate
+from toolkit.core.exporters import generate_html
 from toolkit.core.loader import load_plugins, discover_plugins
 from toolkit.utils.config import load_config, ToolkitConfig
+
+TOOLKIT_ROOT = Path("/es2025-pl8/DEV/code_quality_toolkit")
 
 app = FastAPI(title="Code Quality Toolkit API", version="0.3.0")
 
@@ -206,25 +209,53 @@ async def analyze_project(
 
         # 6. Run Analysis
         analyzed_files, plugin_status = run_analysis(str(analysis_target), loaded_plugins, config)
-        report_data = aggregate(analyzed_files, plugin_status)
+        report_data_json = aggregate(analyzed_files, plugin_status)
+        report_data_html = generate_html(report_data_json)
 
         # 7. Generate Output
+        
+        # A. Save JSON Report
         with open(report_json_path, "w", encoding="utf-8") as f:
-            json.dump(report_data, f, indent=2, ensure_ascii=False)
-            
-        with open(report_html_path, "w", encoding="utf-8") as f:
-            f.write("<html><body><h1>Analysis Report</h1><p>Data in report.json</p></body></html>")
+            json.dump(report_data_json, f, indent=2, ensure_ascii=False)
 
+        with open(report_html_path, "w", encoding="utf-8") as f:
+            f.write(report_data_html)
+            
+        # B. Create the ZIP Response
         with zipfile.ZipFile(results_zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            # 1. Add report.json
             zf.write(report_json_path, arcname="report.json")
+            
+            # 2. Add report.html (From Project Root)
             zf.write(report_html_path, arcname="report.html")
-            for html_file in analysis_target.glob("*_dashboard.html"):
-                plugin_name = html_file.name.replace("_dashboard.html", "")
-                zf.write(html_file, arcname=f"{plugin_name}/dashboard.html")
+
+            # 3. Add Plugin Dashboards (From src/toolkit/plugins/<name>/dashboard.html)
+            # We iterate over the plugins that were actually loaded/requested
+            for plugin_name in loaded_plugins.keys():
+                # Convert PascalCase to folder_name (assuming folder is snake_case or similar)
+                # If your folder names match the plugin names exactly, use plugin_name.
+                # If your folders are snake_case (e.g. DeadCodeDetector -> dead_code_finder), 
+                # you might need the helper _to_snake_case(plugin_name).
+                # Assuming folders match the keys from get_discovered_plugins (usually folder names):
+                
+                # NOTE: In your loader, the keys are usually PascalCase names. 
+                # We need to find the file. Let's try constructing the path.
+                
+                # Construct path: src/toolkit/plugins/<PluginName>/dashboard.html
+                # You might need to adjust if folder names differ from Class names.
+                snake_name = _to_snake_case(plugin_name)
+                dashboard_path = TOOLKIT_ROOT / "src/toolkit/plugins" / snake_name / f"{snake_name}_dashboard.html"
+
+                if dashboard_path.exists():
+                    # Archive structure: <PluginName>/dashboard.html
+                    zf.write(dashboard_path, arcname=f"{snake_name}_dashboard.html")
+                
+                else:
+                    print(f"WARNING: Could not find {dashboard_path}")
+                    zf.writestr(f"{snake_name}_dashboard.html", "<html><body><h1>Dashboard Not Found on Server</h1></body></html>")
 
         background_tasks.add_task(cleanup_sandbox, temp_dir)
         return FileResponse(path=results_zip_path, filename="analysis_results.zip", media_type="application/zip")
-
     except HTTPException:
         cleanup_sandbox(temp_dir)
         raise
