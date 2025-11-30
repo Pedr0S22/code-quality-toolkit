@@ -1,10 +1,12 @@
 """Unit tests for the Plugin Loader (Task #177)."""
 
-import pytest
-from unittest.mock import patch, MagicMock
 from pathlib import Path
-from toolkit.core.loader import load_plugins
+from unittest.mock import MagicMock, patch
+
+import pytest
+
 from toolkit.core.errors import PluginLoadError, PluginValidationError
+from toolkit.core.loader import load_plugins
 
 # --- Classes Auxiliares para Teste ---
 
