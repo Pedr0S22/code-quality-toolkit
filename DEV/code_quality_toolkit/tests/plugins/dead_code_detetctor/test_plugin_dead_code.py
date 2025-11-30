@@ -149,6 +149,7 @@ def test_plugin_configuration_no_section() -> None:
 
 # ... existing imports ...
 
+
 def test_analyze_dead_code_basic() -> None:
     """Caso básico: deteta função e variável não utilizadas."""
     src = dedent(
@@ -159,12 +160,12 @@ def test_analyze_dead_code_basic() -> None:
         """
     )
     plugin = Plugin()
-    plugin.configure(ToolkitConfig()) # Uses default min_name_len (usually 2 or 3)
+    plugin.configure(ToolkitConfig())  # Uses default min_name_len (usually 2 or 3)
 
     out = plugin.analyze(src, "sample.py")
 
     assert out["summary"]["status"] == "completed"
-    assert out["summary"]["issues_found"] == 2 # Now captures 'unused' and 'unused_var'
+    assert out["summary"]["issues_found"] == 2  # Now captures 'unused' and 'unused_var'
 
 
 def test_analyze_syntax_error_returns_partial() -> None:
