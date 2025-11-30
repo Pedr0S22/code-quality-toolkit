@@ -1,6 +1,12 @@
 import sys
 import json
 import os
+import re
+import requests
+import zipfile
+import shutil
+import tempfile
+from pathlib import Path
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QHBoxLayout, QPushButton, QLabel, QStackedWidget,
                             QFileDialog, QFrame, QCheckBox, QScrollArea,
@@ -8,8 +14,10 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 
-# --- WEB ENGINE CHECK (Required for D3.js/HTML Rendering) ---W
+# --- CONFIG ---
+API_BASE_URL = "http://127.0.0.1:8000/api/v1"
 
+# --- WEB ENGINE CHECK (Required for D3.js/HTML Rendering) ---W
 HAS_WEBENGINE = True
 
 # --- MOCK API RESPONSE (Simulating GET /api/v1/plugins/configs) ---
@@ -290,9 +298,17 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.sidebar)
 
     def load_plugins(self):
-        """Fetches plugins from (mock) API and populates the sidebar"""
-        data = mock_fetch_plugins()
-        
+        """Fetches plugins from real API and populates the sidebar"""
+        try:
+            response = requests.get(f"{API_BASE_URL}/plugins/configs")
+            response.raise_for_status()
+            data = response.json()
+        except Exception as e:
+            print(f"Error fetching plugins: {e}")
+            self.lbl_path.setText("Error connecting to server!")
+            self.lbl_path.setStyleSheet("color: red;")
+            return
+
         # Remove the stretch item temporarily to add widgets
         self.plugins_layout.takeAt(self.plugins_layout.count() - 1)
 
@@ -301,7 +317,6 @@ class MainWindow(QMainWindow):
             widget = PluginItemWidget(name, config, self)
             
             # Connect the Eye button to the main window handler
-            # using lambda to capture the specific name
             widget.btn_eye.clicked.connect(lambda checked, n=name: self.show_plugin_dashboard(n))
             
             self.plugins_layout.addWidget(widget)
@@ -334,23 +349,28 @@ class MainWindow(QMainWindow):
         top_layout = QHBoxLayout(self.top_bar)
         top_layout.setContentsMargins(20, 0, 20, 0)
         
-        self.btn_toggle = QPushButton("DASHBOARD")
-        self.btn_toggle.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_toggle.setCheckable(True)
-        self.btn_toggle.setChecked(True)
+        # Single "REPORT" button with Blue Style
+        self.btn_report = QPushButton("SHOW REPORT")
+        self.btn_report.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_report.setEnabled(False)
         
-        btn_style = """
+        # Always Blue Style (extracted from previous 'checked' state)
+        self.btn_report.setStyleSheet("""
             QPushButton {
-                padding: 6px 40px; font-weight: bold; border-radius: 4px; font-size: 13px;
-                border: 1px solid #3e3e42; background-color: #3e3e42; color: #cccccc;
+                padding: 6px 40px; 
+                font-weight: bold; 
+                border-radius: 4px; 
+                font-size: 13px;
+                background-color: #007ACC; 
+                color: white; 
+                border: 1px solid #007ACC;
             }
-            QPushButton:hover { background-color: #4e4e52; }
-            QPushButton:checked { background-color: #007ACC; color: white; border: 1px solid #007ACC; }
-        """
-        self.btn_toggle.setStyleSheet(btn_style)
-        self.btn_toggle.clicked.connect(self.alternar_visualizacao)
+            QPushButton:hover { background-color: #0062a3; }
+        """)
+        # Click connects to a new method to show the global report
+        self.btn_report.clicked.connect(self.show_global_report)
         
-        top_layout.addWidget(self.btn_toggle)
+        top_layout.addWidget(self.btn_report)
         top_layout.addStretch()
         self.right_layout.addWidget(self.top_bar)
 
@@ -398,14 +418,23 @@ class MainWindow(QMainWindow):
         content_layout.addWidget(self.stack)
         self.right_layout.addWidget(self.content_area)
 
-    def alternar_visualizacao(self, checked):
-        self.is_dashboard_active = checked
-        if self.is_dashboard_active:
-            self.stack.setCurrentIndex(0)
-            self.btn_toggle.setText("DASHBOARD")
+    def show_global_report(self):
+        """Resets the view to the Global Report HTML"""
+        if not HAS_WEBENGINE:
+            return
+
+        print("--> Loading Global Report")
+        self.stack.setCurrentIndex(0) # Ensure WebEngine is visible
+        
+        # Logic to find report.html
+        if hasattr(self, 'results_dir') and self.results_dir.exists():
+            global_report = self.results_dir / "report.html"
+            if global_report.exists():
+                self.web_view.setUrl(QUrl.fromLocalFile(str(global_report.resolve())))
+            else:
+                self.web_view.setHtml("<h2 style='color:white'>Global Report not found.</h2>")
         else:
-            self.stack.setCurrentIndex(1)
-            self.btn_toggle.setText("REPORT")
+            self.web_view.setHtml("<h2 style='color:white'>No analysis run yet.</h2>")
 
     def setup_action_bar(self, height):
         self.action_bar = QFrame()
@@ -472,32 +501,23 @@ class MainWindow(QMainWindow):
             self.lbl_path.setStyleSheet("color: #cccccc; font-weight: bold; border: none;")
 
     def executar_plugin_run(self):
-        """Logic: Gather Configs -> Send to API (simulated) -> Unlock Dashboards"""
+        """Logic: Gather Configs -> Zip Target -> POST to API -> Unzip Result"""
         if not self.caminho_selecionado:
             self.lbl_path.setText("Please, select a path!")
             self.lbl_path.setStyleSheet("color: #f48771; font-weight: bold; border: none;")
             return
         
         nome_atual = self.caminho_selecionado.split('/')[-1]
-        
-        # Determine icon (Folder or File)
         icon = "📂" if os.path.isdir(self.caminho_selecionado) else "📄"
-        
         self.lbl_path.setText(f"{icon} {nome_atual}")
         self.lbl_path.setStyleSheet("color: #cccccc; font-weight: bold; border: none;")
-        # -------------------------------------------------------------------------
-
-        print("--- RUNNING ANALYSIS ---")
-        print(f"Target: {self.caminho_selecionado}")
 
         # 1. GATHER DATA FROM PLUGINS
         selected_payload = {}
         any_selected = False
-
         for widget in self.plugin_widgets:
             if widget.checkbox.isChecked():
                 any_selected = True
-                # Get the config (updated by user)
                 selected_payload[widget.name] = widget.get_config()
 
         if not any_selected:
@@ -505,89 +525,161 @@ class MainWindow(QMainWindow):
             self.lbl_path.setStyleSheet("color: #f48771; font-weight: bold; border: none;")
             return
 
-        print("--- RUNNING ANALYSIS ---")
-        print(f"Target: {self.caminho_selecionado}")
-        print("Payload (Plugins + Configs):")
-        print(json.dumps(selected_payload, indent=2))
+        print("--- RUNNING ANALYSIS ON SERVER ---")
         
-        # 2. SIMULATE COMPLETION
-        # Logic: Analysis finished -> Toggle Eye Icon and Enable Button
-        for widget in self.plugin_widgets:
-            # If checked, set to Active (Open Eye), else Inactive (Closed Eye)
-            is_active = widget.checkbox.isChecked()
-            widget.set_dashboard_status(is_active)
-        
-        # Switch to dashboard view automatically
-        self.stack.setCurrentIndex(0)
-        self.btn_toggle.setChecked(True)
-        self.btn_toggle.setText("DASHBOARD")
-        
-        if HAS_WEBENGINE:
-            # Show success message in WebEngine
-            self.web_view.setHtml("""
-                <body style='background-color:#1e1e1e; font-family:Segoe UI, sans-serif; display:flex; justify-content:center; align-items:center; height:100%;'>
-                    <h2 style='color:#007ACC;'>Analysis Complete! <br><span style='color:#777; font-size:18px'>Click an eye icon 👁 to view specific results.</span></h2>
-                </body>
-            """)
+        # 2. PREPARE FILE AND DATA
+        try:
+            # Zip the target
+            zip_path, tmp_dir = self.compress_target(self.caminho_selecionado)
+            
+            files = {'file': open(zip_path, 'rb')}
+            data = {'configs': json.dumps(selected_payload)}
+            
+            # 3. CALL API
+            response = requests.post(f"{API_BASE_URL}/analyze", files=files, data=data)
+            
+            # Cleanup upload zip
+            files['file'].close()
+            shutil.rmtree(tmp_dir)
+            
+            if response.status_code != 200:
+                print(f"Server Error: {response.text}")
+                self.lbl_path.setText("Analysis Failed (Server Error)")
+                self.lbl_path.setStyleSheet("color: #f48771; font-weight: bold;")
+                return
+
+            # 4. PROCESS RESPONSE (ZIP)
+            # Save response zip to temp
+            self.results_dir = Path(tempfile.mkdtemp(prefix="toolkit_results_"))
+            results_zip = self.results_dir / "results.zip"
+            
+            with open(results_zip, "wb") as f:
+                f.write(response.content)
+            
+            # Extract
+            with zipfile.ZipFile(results_zip, 'r') as zf:
+                zf.extractall(self.results_dir)
+                
+            print(f"Results extracted to: {self.results_dir}")
+
+            # 5. ENABLE DASHBOARDS
+            for widget in self.plugin_widgets:
+                is_active = widget.checkbox.isChecked()
+                widget.set_dashboard_status(is_active)
+
+            # Enable the Report Button
+            self.btn_report.setEnabled(True)
+            
+            # Show the global report immediately after run
+            self.show_global_report()
+
+        except Exception as e:
+            
+            if HAS_WEBENGINE:
+                # Try to load global report.html if it exists
+                global_report = self.results_dir / "report.html"
+                if global_report.exists():
+                    self.web_view.setUrl(QUrl.fromLocalFile(str(global_report.resolve())))
+                else:
+                    self.web_view.setHtml("<h2 style='color:white'>Analysis Complete. Select a plugin to view details.</h2>")
+
+        except Exception as e:
+            print(f"Client Error: {e}")
+            self.lbl_path.setText(f"Error: {str(e)}")
+            self.lbl_path.setStyleSheet("color: #f48771;")
 
     def show_plugin_dashboard(self, plugin_name):
         """
         Called when the Eye icon is clicked.
-        Checks for a dashboard file (simulated) and loads it.
+        Checks for a dashboard file in the downloaded results.
         """
         if not HAS_WEBENGINE:
             return
 
         print(f"--> Loading Dashboard: {plugin_name}")
         
-        # Switch to dashboard page
         self.stack.setCurrentIndex(0)
-        self.btn_toggle.setChecked(True)
-        self.btn_toggle.setText("DASHBOARD")
 
-        # SIMULATE D3.js/HTML CONTENT
-        # In a real app, you would do: self.web_view.setUrl(QUrl.fromLocalFile("/path/to/dashboard.html"))
+        # CHECK IF DASHBOARD EXISTS IN RESULTS
+        # Structure from server is: {results_dir}/{plugin_name}_dashboard.html
+        dashboard_file = None
+        plugin_name = _to_snake_case(plugin_name)
         
-        # Here we inject HTML/CSS/SVG directly to demonstrate it works
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ background-color: #1e1e1e; color: #ccc; font-family: 'Segoe UI', sans-serif; padding: 20px; }}
-                h1 {{ color: #007ACC; border-bottom: 1px solid #333; padding-bottom: 10px; }}
-                .card {{ background: #252526; padding: 20px; border-radius: 8px; margin-top: 20px; border: 1px solid #333; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }}
-                .metric {{ font-size: 24px; font-weight: bold; color: #fff; }}
-                .label {{ color: #888; font-size: 14px; margin-bottom: 5px; }}
-            </style>
-        </head>
-        <body>
-            <h1>{plugin_name} Dashboard</h1>
-            
-            <div class="card">
-                <div class="label">Total Issues Found</div>
-                <div class="metric">42</div>
-            </div>
+        # Ensure results_dir exists (it might not if they haven't run analysis yet)
+        if hasattr(self, 'results_dir') and self.results_dir.exists():
+            candidate = self.results_dir / f"{plugin_name}_dashboard.html"
+            if candidate.exists():
+                dashboard_file = candidate
+        
+        if dashboard_file:
+            # LOAD REAL FILE
+            print(f"Loading file: {dashboard_file}")
+            self.web_view.setUrl(QUrl.fromLocalFile(str(dashboard_file.resolve())))
+        else:
+            # FALLBACK MOCK
+            print(f"Dashboard file {dashboard_file} not found. Loading mock.")
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {{ background-color: #1e1e1e; color: #ccc; font-family: 'Segoe UI', sans-serif; padding: 20px; }}
+                    h1 {{ color: #007ACC; border-bottom: 1px solid #333; padding-bottom: 10px; }}
+                    .card {{ background: #252526; padding: 20px; border-radius: 8px; margin-top: 20px; border: 1px solid #333; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }}
+                    .metric {{ font-size: 24px; font-weight: bold; color: #fff; }}
+                    .label {{ color: #888; font-size: 14px; margin-bottom: 5px; }}
+                </style>
+            </head>
+            <body>
+                <h1>{plugin_name} Dashboard (Mock)</h1>
+                <p style="color:orange">Real dashboard not found in results.</p>
+                
+                <div class="card">
+                    <div class="label">Total Issues Found</div>
+                    <div class="metric">42</div>
+                </div>
 
-            <div class="card">
-                <div class="label">Visualization (D3.js Simulation)</div>
-                <svg width="100%" height="150" style="margin-top:15px">
-                    <rect x="0" y="20" width="80%" height="30" fill="#333" rx="5" />
-                    <rect x="0" y="20" width="45%" height="30" fill="#007ACC" rx="5" />
-                    <text x="5" y="40" fill="white" font-size="12">Coverage: 45%</text>
-                    
-                    <circle cx="50" cy="100" r="20" fill="#ce9178" />
-                    <circle cx="100" cy="100" r="15" fill="#4ec9b0" />
-                    <circle cx="140" cy="100" r="10" fill="#dcdcaa" />
-                </svg>
-            </div>
-        </body>
-        </html>
-        """
-        self.web_view.setHtml(html_content)
+                <div class="card">
+                    <div class="label">Visualization (D3.js Simulation)</div>
+                    <svg width="100%" height="150" style="margin-top:15px">
+                        <rect x="0" y="20" width="80%" height="30" fill="#333" rx="5" />
+                        <rect x="0" y="20" width="45%" height="30" fill="#007ACC" rx="5" />
+                        <text x="5" y="40" fill="white" font-size="12">Coverage: 45%</text>
+                        
+                        <circle cx="50" cy="100" r="20" fill="#ce9178" />
+                        <circle cx="100" cy="100" r="15" fill="#4ec9b0" />
+                        <circle cx="140" cy="100" r="10" fill="#dcdcaa" />
+                    </svg>
+                </div>
+            </body>
+            </html>
+            """
+            self.web_view.setHtml(html_content)
 
     def executar_plugin_export(self):
         print("--> EXPORT clicked")
+
+    def compress_target(self, path_str):
+        """Helper to zip a folder or file before sending"""
+        path = Path(path_str)
+        tmp_dir = Path(tempfile.mkdtemp())
+        zip_path = tmp_dir / "upload.zip"
+        
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+            if path.is_dir():
+                for root, dirs, files in os.walk(path):
+                    for file in files:
+                        file_path = Path(root) / file
+                        arcname = file_path.relative_to(path)
+                        zf.write(file_path, arcname)
+            else:
+                zf.write(path, arcname=path.name)
+        return zip_path, tmp_dir
+
+def _to_snake_case(name: str) -> str:
+    """Converts PascalCase to snake_case (e.g. 'DeadCodeDetector' -> 'dead_code')."""
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
