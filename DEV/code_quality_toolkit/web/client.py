@@ -6,14 +6,11 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QFileDialog, QFrame, QCheckBox, QScrollArea,
                             QLineEdit, QFormLayout)
 from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtWebEngineWidgets import QWebEngineView
 
-# --- WEB ENGINE CHECK (Required for D3.js/HTML Rendering) ---
-try:
-    from PyQt6.QtWebEngineWidgets import QWebEngineView
-    HAS_WEBENGINE = True
-except ImportError:
-    HAS_WEBENGINE = False
-    print("WARNING: PyQt6-WebEngine not installed. Run 'pip install PyQt6-WebEngine'")
+# --- WEB ENGINE CHECK (Required for D3.js/HTML Rendering) ---W
+
+HAS_WEBENGINE = True
 
 # --- MOCK API RESPONSE (Simulating GET /api/v1/plugins/configs) ---
 def mock_fetch_plugins():
@@ -423,14 +420,14 @@ class MainWindow(QMainWindow):
             QPushButton { background-color: #3e3e42; color: #cccccc; border: 1px solid #3e3e42; border-radius: 4px; padding: 8px 15px; font-weight: 600; }
             QPushButton:hover { background-color: #4e4e52; color: white; }
         """
-        self.btn_file = QPushButton("Escolher Ficheiro")
-        self.btn_folder = QPushButton("Escolher Pasta")
+        self.btn_file = QPushButton("Choose File")
+        self.btn_folder = QPushButton("Choose Folder")
         self.btn_file.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_folder.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_file.setStyleSheet(secondary_btn_style)
         self.btn_folder.setStyleSheet(secondary_btn_style)
 
-        self.lbl_path = QLabel("Nenhum caminho selecionado")
+        self.lbl_path = QLabel("No path selected")
         self.lbl_path.setStyleSheet("color: #858585; font-style: italic; margin-left: 5px; border: none;")
 
         self.btn_file.clicked.connect(self.selecionar_ficheiro)
@@ -477,9 +474,21 @@ class MainWindow(QMainWindow):
     def executar_plugin_run(self):
         """Logic: Gather Configs -> Send to API (simulated) -> Unlock Dashboards"""
         if not self.caminho_selecionado:
-            self.lbl_path.setText("⚠️ Selecione algo primeiro!")
+            self.lbl_path.setText("Please, select a path!")
             self.lbl_path.setStyleSheet("color: #f48771; font-weight: bold; border: none;")
             return
+        
+        nome_atual = self.caminho_selecionado.split('/')[-1]
+        
+        # Determine icon (Folder or File)
+        icon = "📂" if os.path.isdir(self.caminho_selecionado) else "📄"
+        
+        self.lbl_path.setText(f"{icon} {nome_atual}")
+        self.lbl_path.setStyleSheet("color: #cccccc; font-weight: bold; border: none;")
+        # -------------------------------------------------------------------------
+
+        print("--- RUNNING ANALYSIS ---")
+        print(f"Target: {self.caminho_selecionado}")
 
         # 1. GATHER DATA FROM PLUGINS
         selected_payload = {}
@@ -492,7 +501,8 @@ class MainWindow(QMainWindow):
                 selected_payload[widget.name] = widget.get_config()
 
         if not any_selected:
-            self.lbl_path.setText("⚠️ Selecione pelo menos um plugin!")
+            self.lbl_path.setText("Please, select at least one plugin!")
+            self.lbl_path.setStyleSheet("color: #f48771; font-weight: bold; border: none;")
             return
 
         print("--- RUNNING ANALYSIS ---")
