@@ -28,6 +28,7 @@ dev = [
     "uvicorn>=0.27.0",
     "python-multipart>=0.0.9",
     "PyQt6>=6.6.1",
+    "PyQt6-WebEngine",
     "requests>=2.31.0"
 ]
 

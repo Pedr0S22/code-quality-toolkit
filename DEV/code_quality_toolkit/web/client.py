@@ -1,49 +1,206 @@
 import sys
+import json
+import os
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QHBoxLayout, QPushButton, QLabel, QStackedWidget,
-                            QFileDialog, QFrame)
-from PyQt6.QtCore import Qt
+                            QFileDialog, QFrame, QCheckBox, QScrollArea,
+                            QLineEdit, QFormLayout)
+from PyQt6.QtCore import Qt, QUrl
 
+# --- WEB ENGINE CHECK (Required for D3.js/HTML Rendering) ---
+try:
+    from PyQt6.QtWebEngineWidgets import QWebEngineView
+    HAS_WEBENGINE = True
+except ImportError:
+    HAS_WEBENGINE = False
+    print("WARNING: PyQt6-WebEngine not installed. Run 'pip install PyQt6-WebEngine'")
+
+# --- MOCK API RESPONSE (Simulating GET /api/v1/plugins/configs) ---
+def mock_fetch_plugins():
+    return {
+        "CyclomaticComplexity": {
+            "enabled": True,
+            "threshold": 10,
+            "exclude_tests": True
+        },
+        "DuplicationHunter": {
+            "enabled": True,
+            "min_lines": 5,
+            "ignore_imports": False
+        },
+        "DeadCodeFinder": {
+            "enabled": True,
+            "deep_scan": True
+        },
+        "SecurityScanner": {
+            "enabled": True,
+            "level": "high"
+        },
+        "StyleChecker": {
+            "enabled": True,
+            "standard": "pep8"
+        },
+        "DependencyGraph": {
+            "enabled": True,
+            "depth": 3
+        }
+    }
+
+# --- CUSTOM PLUGIN WIDGET ---
+class PluginItemWidget(QWidget):
+    """
+    Represents a single plugin row in the sidebar.
+    Includes: Checkbox, Name, Eye Icon, Expand Toggle, and Config Form.
+    """
+    def __init__(self, name, config, parent_controller):
+        super().__init__()
+        self.name = name
+        self.default_config = config
+        self.controller = parent_controller # Reference to MainWindow for callbacks
+        self.inputs = {} # Store input fields to retrieve values later
+
+        # Main Layout (Vertical: Header Row + Config Container)
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(0, 5, 0, 5)
+        self.layout.setSpacing(0)
+
+        # --- 1. HEADER ROW ---
+        self.header_frame = QFrame()
+        self.header_layout = QHBoxLayout(self.header_frame)
+        self.header_layout.setContentsMargins(10, 0, 10, 0)
+        
+        # Checkbox
+        self.checkbox = QCheckBox()
+        self.checkbox.setChecked(True) # Default checked
+        self.checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.checkbox.stateChanged.connect(self.on_checkbox_changed)
+
+        # --- FIX: Custom Style to ensure checkbox is visible in Dark Mode ---
+        self.checkbox.setStyleSheet("""
+            QCheckBox::indicator {
+                width: 14px; height: 14px;
+                border: 1px solid #555; border-radius: 3px;
+                background: #1e1e1e;
+            }
+            QCheckBox::indicator:checked {
+                background: #007ACC;
+                border: 1px solid #AAAAAA; /* grey frame when selected */
+            }
+            QCheckBox::indicator:hover { border: 1px solid #007ACC; }
+        """)
+        
+        # Name Label
+        self.lbl_name = QLabel(name)
+        self.lbl_name.setStyleSheet("color: #eff0f1; font-weight: bold; border: none;")
+        
+        # Eye Button - Start with "Closed" icon (⊘)
+        self.btn_eye = QPushButton("⊘")
+        self.btn_eye.setFixedSize(30, 25)
+        self.btn_eye.setEnabled(False)
+        
+        # Expand/Collapse Button (v / ^)
+        self.btn_expand = QPushButton("v")
+        self.btn_expand.setFixedSize(25, 25)
+        self.btn_expand.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_expand.setCheckable(True)
+        self.btn_expand.setStyleSheet("""
+            QPushButton { background: transparent; color: #ccc; border: none; font-weight: bold; font-family: monospace; }
+            QPushButton:hover { background-color: #3e3e42; border-radius: 3px; }
+            QPushButton:checked { color: #007ACC; }
+        """)
+        self.btn_expand.clicked.connect(self.toggle_config_visibility)
+
+        self.header_layout.addWidget(self.checkbox)
+        self.header_layout.addWidget(self.lbl_name)
+        self.header_layout.addStretch() # Spacer
+        self.header_layout.addWidget(self.btn_eye)
+        self.header_layout.addWidget(self.btn_expand)
+
+        # --- 2. CONFIG CONTAINER (Hidden by default) ---
+        self.config_container = QFrame()
+        self.config_container.setVisible(False)
+        # Visual indentation for hierarchy
+        self.config_container.setStyleSheet("""
+            QFrame { background-color: #1e1e1e; border-left: 2px solid #333; margin-left: 20px; margin-right: 10px; }
+            QLabel { border: none; }
+        """)
+        
+        self.form_layout = QFormLayout(self.config_container)
+        self.form_layout.setContentsMargins(10, 10, 10, 10)
+        self.form_layout.setVerticalSpacing(10)
+
+        # Dynamically create inputs based on default config keys
+        for key, value in config.items():
+            if key == "enabled": continue # Skip internal flags if desired
+
+            lbl = QLabel(f"{key}:")
+            lbl.setStyleSheet("color: #aaa; font-size: 12px;")
+            
+            inp = QLineEdit(str(value))
+            inp.setStyleSheet("background-color: #2d2d30; color: #ddd; border: 1px solid #3e3e42; border-radius: 2px; padding: 4px;")
+            
+            self.form_layout.addRow(lbl, inp)
+            self.inputs[key] = inp
+
+        self.layout.addWidget(self.header_frame)
+        self.layout.addWidget(self.config_container)
+
+    def toggle_config_visibility(self, checked):
+        self.config_container.setVisible(checked)
+        self.btn_expand.setText("∧" if checked else "v")
+
+    def on_checkbox_changed(self, state):
+        # Notify the sidebar controller to check if "Select All" needs updating
+        self.controller.check_mutex_state()
+
+    def get_config(self):
+        """Returns the current config values from inputs"""
+        cfg = {}
+        for k, inp in self.inputs.items():
+            cfg[k] = inp.text() # Retrieve user edited text
+        return cfg
+    
+    def set_dashboard_status(self, active: bool):
+        """Helper to switch icon and state simultaneously"""
+        self.btn_eye.setEnabled(active)
+        # 👁 = Open/Active, ⊘ = Closed/Inactive
+        self.btn_eye.setText("👁" if active else "⊘")
+        self.btn_eye.setCursor(Qt.CursorShape.PointingHandCursor)
+
+# --- MAIN WINDOW ---
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Code Quality Toolkit App")
         
-        # --- CONFIGURAÇÕES DE TAMANHO ---
+        # --- SIZE CONFIG ---
         WINDOW_WIDTH = 1366
         WINDOW_HEIGHT = 768
-        
-        SIDEBAR_WIDTH = 300
+        SIDEBAR_WIDTH = 340 # Slightly wider for scrollbar
         BOTTOM_HEIGHT = 80
-        self.TOP_BAR_HEIGHT = 60 
+        self.TOP_BAR_HEIGHT = 60
         
-        # CÁLCULO DO "TRUE" DASHBOARD SIZE
         self.DASH_WIDTH = WINDOW_WIDTH - SIDEBAR_WIDTH
         self.DASH_HEIGHT = WINDOW_HEIGHT - BOTTOM_HEIGHT - self.TOP_BAR_HEIGHT
 
-        # BLOQUEAR O TAMANHO DA JANELA
         self.setFixedSize(WINDOW_WIDTH, WINDOW_HEIGHT)
 
-        # --- ESTILO DARK MODE GLOBAL ---
+        # --- GLOBAL STYLE ---
         self.setStyleSheet("""
-            QMainWindow {
-                background-color: #1e1e1e;
-            }
-            QLabel {
-                font-family: 'Segoe UI', sans-serif;
-                color: #cccccc;
-            }
-            QWidget {
-                font-family: 'Segoe UI', sans-serif;
-                font-size: 14px;
-            }
+            QMainWindow { background-color: #1e1e1e; }
+            QLabel { font-family: 'Segoe UI', sans-serif; color: #cccccc; }
+            QWidget { font-family: 'Segoe UI', sans-serif; font-size: 14px; }
+            /* Scrollbar Styling */
+            QScrollBar:vertical { border: none; background: #252526; width: 10px; margin: 0; }
+            QScrollBar::handle:vertical { background: #424242; min-height: 20px; border-radius: 5px; }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }
         """)
 
         self.caminho_selecionado = None
-        self.tipo_selecao = None
         self.is_dashboard_active = True
+        self.plugin_widgets = [] # Keep track of plugin instances
 
-        # --- 2. ESTRUTURA PRINCIPAL ---
+        # --- MAIN STRUCTURE ---
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         
@@ -51,219 +208,194 @@ class MainWindow(QMainWindow):
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.main_layout.setSpacing(0)
 
-#new from andre
-    def setup_sidebar(self, width, height):
-        # Container da barra lateral
-        self.sidebar = QFrame()
-        self.sidebar.setFixedSize(width, height)
-        self.sidebar.setStyleSheet("background-color: #2d2d30;")  # Dark gray
-        sidebar_layout = QVBoxLayout(self.sidebar)
-        sidebar_layout.setContentsMargins(10, 10, 10, 10)
-        sidebar_layout.setSpacing(8)
-
-        # Lista de plugins de exemplo
-        self.plugin_list = ["Plugin 1", "Plugin 2", "Plugin 3"]
-        self.plugin_controller = PluginSelectionController(self.plugin_list)
-
-        # Title
-        lbl_plugins = QLabel("Plugins")
-        lbl_plugins.setStyleSheet("font-size: 16px; font-weight: bold; color: #cccccc;")
-        sidebar_layout.addWidget(lbl_plugins)
-
-        # Hide/Show button
-        self.btn_toggle_plugins = QPushButton("Hide Plugins")
-        self.btn_toggle_plugins.setStyleSheet("""
-            QPushButton {
-                background-color: #3c3c3c;
-                color: #cccccc;
-                padding: 4px;
-                border-radius: 4px;
-            }
-            QPushButton:hover { background-color: #505050; }
-        """)
-        sidebar_layout.addWidget(self.btn_toggle_plugins)
-
-        # Select All checkbox
-        self.chk_select_all = QCheckBox("Select All")
-        self.chk_select_all.setChecked(True)
-        self.chk_select_all.setStyleSheet("color: #cccccc; font-size: 14px;")
-        sidebar_layout.addWidget(self.chk_select_all)
-
-        # Scroll area para os plugins
-        plugin_scroll = QScrollArea()
-        plugin_scroll.setWidgetResizable(True)
-        plugin_scroll.setStyleSheet("background-color: #252526; border: none;")
-
-        plugin_container = QWidget()
-        plugin_layout = QVBoxLayout(plugin_container)
-        plugin_layout.setContentsMargins(0,0,0,0)
-        plugin_layout.setSpacing(6)
-
-        self.plugin_checkboxes = {}
-
-        # Dynamic plugin loading
-        for plugin_name in self.plugin_list:
-            chk = QCheckBox(plugin_name)
-            chk.setChecked(True)
-            chk.setStyleSheet("color: #cccccc; font-size: 14px;")
-            plugin_layout.addWidget(chk)
-            self.plugin_checkboxes[plugin_name] = chk
-
-            chk.stateChanged.connect(
-                lambda _, name=plugin_name, box=chk:
-                self.plugin_controller.set_plugin_checked(name, box.isChecked())
-            )
-
-        plugin_scroll.setWidget(plugin_container)
-        sidebar_layout.addWidget(plugin_scroll, stretch=1)
-
-        # Toggle funcionalidade
-        def toggle_plugins():
-            is_visible = plugin_scroll.isVisible()
-            plugin_scroll.setVisible(not is_visible)
-            self.chk_select_all.setVisible(not is_visible)
-            self.btn_toggle_plugins.setText("Show Plugins" if is_visible else "Hide Plugins")
-
-        self.btn_toggle_plugins.clicked.connect(toggle_plugins)
-
-        # Select All connection
-        self.chk_select_all.stateChanged.connect(
-            lambda state: self.plugin_controller.set_select_all(
-                state == Qt.CheckState.Checked
-            )
-        )
-
-        # Atualiza UI quando controller muda
-        self.plugin_controller.select_all_changed.connect(
-            lambda checked: [box.setChecked(checked) for box in self.plugin_checkboxes.values()]
-        )
-
-        # Adiciona sidebar ao layout principal
-        self.main_layout.addWidget(self.sidebar)
-
-
-
-
-
-
-
-
-
-
-
-
-
-        # A. BARRA LATERAL ESQUERDA (PLUGINS)
+        # A. SIDEBAR (PLUGINS)
         self.setup_sidebar(SIDEBAR_WIDTH, WINDOW_HEIGHT)
 
-        # B. COLUNA DA DIREITA
+        # B. RIGHT COLUMN
         self.right_column = QWidget()
         self.right_column.setFixedSize(self.DASH_WIDTH, WINDOW_HEIGHT)
-        # Fundo da área principal (Dark)
         self.right_column.setStyleSheet("background-color: #1e1e1e;")
         
         self.right_layout = QVBoxLayout(self.right_column)
         self.right_layout.setContentsMargins(0, 0, 0, 0)
         self.right_layout.setSpacing(0)
         
-        # B1. TOP BAR (Nova barra para o botão de alternar)
+        # B1. Top Bar
         self.setup_top_bar()
-
-        # B2. CONTEÚDO (O Dashboard "Verdadeiro")
+        # B2. Content (Dashboard/Report)
         self.setup_content_area()
-        
-        # B3. BARRA DE AÇÃO (Baixo)
+        # B3. Action Bar
         self.setup_action_bar(BOTTOM_HEIGHT)
 
         self.main_layout.addWidget(self.right_column)
-
         
+        # Load Plugins immediately (Simulating API Call on startup)
+        self.load_plugins()
 
+    def setup_sidebar(self, width, height):
+        self.sidebar = QFrame()
+        self.sidebar.setFixedSize(width, height)
+        self.sidebar.setStyleSheet("background-color: #252526; border-right: 1px solid #333333;")
+        
+        sidebar_layout = QVBoxLayout(self.sidebar)
+        sidebar_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Title
+        lbl_titulo = QLabel("PLUGINS")
+        lbl_titulo.setStyleSheet("color: #eff0f1; font-size: 22px; font-weight: bold; margin-top: 20px; margin-bottom: 10px; letter-spacing: 1px; border: none;")
+        lbl_titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        sidebar_layout.addWidget(lbl_titulo)
+        
+        # "Select All" Container
+        self.chk_all_container = QFrame()
+        self.chk_all_container.setStyleSheet("background-color: #2d2d30; padding: 10px; border-bottom: 1px solid #3e3e42;")
+        chk_layout = QHBoxLayout(self.chk_all_container)
+        chk_layout.setContentsMargins(10, 0, 0, 0)
+        
+        self.chk_all = QCheckBox("Select All")
+        self.chk_all.setChecked(True)
+        self.chk_all.setCursor(Qt.CursorShape.PointingHandCursor)
+        # Apply the same indicator style here so it doesn't disappear
+        self.chk_all.setStyleSheet("""
+            QCheckBox {
+                color: #fff; font-weight: bold; font-size: 14px;
+            }
+            QCheckBox::indicator {
+                width: 14px; height: 14px;
+                border: 1px solid #555; border-radius: 3px;
+                background: #1e1e1e;
+            }
+            QCheckBox::indicator:checked {
+                background: #007ACC;
+                border: 1px solid #AAAAAA; /* grey frame */
+            }
+            QCheckBox::indicator:hover { border: 1px solid #007ACC; }
+        """)
+        self.chk_all.clicked.connect(self.toggle_all_plugins)
+        
+        chk_layout.addWidget(self.chk_all)
+        sidebar_layout.addWidget(self.chk_all_container)
+
+        # Scroll Area for Plugins List
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setStyleSheet("background: transparent; border: none;")
+        
+        self.plugins_container = QWidget()
+        self.plugins_layout = QVBoxLayout(self.plugins_container)
+        self.plugins_layout.setContentsMargins(5, 5, 5, 5)
+        self.plugins_layout.setSpacing(2)
+        self.plugins_layout.addStretch() # Push items up
+        
+        self.scroll_area.setWidget(self.plugins_container)
+        sidebar_layout.addWidget(self.scroll_area)
+        
+        self.main_layout.addWidget(self.sidebar)
+
+    def load_plugins(self):
+        """Fetches plugins from (mock) API and populates the sidebar"""
+        data = mock_fetch_plugins()
+        
+        # Remove the stretch item temporarily to add widgets
+        self.plugins_layout.takeAt(self.plugins_layout.count() - 1)
+
+        for name, config in data.items():
+            # Create Custom Widget
+            widget = PluginItemWidget(name, config, self)
+            
+            # Connect the Eye button to the main window handler
+            # using lambda to capture the specific name
+            widget.btn_eye.clicked.connect(lambda checked, n=name: self.show_plugin_dashboard(n))
+            
+            self.plugins_layout.addWidget(widget)
+            self.plugin_widgets.append(widget)
+
+        self.plugins_layout.addStretch() # Re-add stretch
+
+    # --- MUTEX LOGIC (Select All vs Individual) ---
+    def toggle_all_plugins(self):
+        """If All checked -> Check all items. If Unchecked -> Uncheck all items."""
+        state = self.chk_all.isChecked()
+        for widget in self.plugin_widgets:
+            # blockSignals prevents recursion loop
+            widget.checkbox.blockSignals(True)
+            widget.checkbox.setChecked(state)
+            widget.checkbox.blockSignals(False)
+
+    def check_mutex_state(self):
+        """Called when a child is clicked. Updates 'All' checkbox."""
+        all_checked = all(w.checkbox.isChecked() for w in self.plugin_widgets)
+        self.chk_all.blockSignals(True)
+        self.chk_all.setChecked(all_checked)
+        self.chk_all.blockSignals(False)
 
     def setup_top_bar(self):
-        """Nova barra no topo apenas para alternar modos, fora do dashboard"""
         self.top_bar = QFrame()
         self.top_bar.setFixedSize(self.DASH_WIDTH, self.TOP_BAR_HEIGHT)
         self.top_bar.setStyleSheet("background-color: #1e1e1e; border-bottom: 1px solid #333333;")
         
         top_layout = QHBoxLayout(self.top_bar)
-        # Margem esquerda de 20px para não colar totalmente à borda
         top_layout.setContentsMargins(20, 0, 20, 0)
         
-        # Botão Toggle ALINHADO À ESQUERDA (sem addStretch antes)
         self.btn_toggle = QPushButton("DASHBOARD")
         self.btn_toggle.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_toggle.setCheckable(True)
         self.btn_toggle.setChecked(True)
         
-        # Estilo Dark Mode Blue Accent
         btn_style = """
             QPushButton {
-                padding: 6px 40px;
-                font-weight: bold;
-                border-radius: 4px;
-                font-size: 13px;
-                border: 1px solid #3e3e42;
-                background-color: #3e3e42;
-                color: #cccccc;
+                padding: 6px 40px; font-weight: bold; border-radius: 4px; font-size: 13px;
+                border: 1px solid #3e3e42; background-color: #3e3e42; color: #cccccc;
             }
-            QPushButton:hover {
-                background-color: #4e4e52;
-            }
-            /* Estado ATIVO (Dashboard ou Report) - Azul */
-            QPushButton:checked {
-                background-color: #007ACC;
-                color: white;
-                border: 1px solid #007ACC;
-            }
+            QPushButton:hover { background-color: #4e4e52; }
+            QPushButton:checked { background-color: #007ACC; color: white; border: 1px solid #007ACC; }
         """
         self.btn_toggle.setStyleSheet(btn_style)
         self.btn_toggle.clicked.connect(self.alternar_visualizacao)
         
         top_layout.addWidget(self.btn_toggle)
-        top_layout.addStretch() # Empurra tudo para a esquerda
-
+        top_layout.addStretch()
         self.right_layout.addWidget(self.top_bar)
 
     def setup_content_area(self):
         self.content_area = QWidget()
-        # Tamanho EXATO calculado
         self.content_area.setFixedSize(self.DASH_WIDTH, self.DASH_HEIGHT)
         self.content_area.setStyleSheet("background-color: #1e1e1e;")
         
         content_layout = QVBoxLayout(self.content_area)
-        # REMOVIDAS AS MARGENS: O conteúdo toca nas bordas (0,0,0,0)
         content_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.setSpacing(0)
 
-        # --- STACKED WIDGET (Ocupa todo o espaço restante) ---
         self.stack = QStackedWidget()
         self.stack.setStyleSheet("background-color: transparent;")
         
-        # Página 1: Dashboard
-        self.page_dashboard = QLabel(
-            f"DASHBOARD AREA\n\nWidth: {self.DASH_WIDTH} px\nHeight: {self.DASH_HEIGHT} px",
-            alignment=Qt.AlignmentFlag.AlignCenter
-        )
-        self.page_dashboard.setStyleSheet("""
-            background-color: #252526;
-            color: #007ACC;
-            font-size: 24px;
-            font-weight: bold;
-            border: none;
-        """)
+        # PAGE 0: DASHBOARD (Using WebEngine for HTML/D3.js)
+        if HAS_WEBENGINE:
+            self.web_view = QWebEngineView()
+            self.web_view.setStyleSheet("background-color: #1e1e1e;")
+            
+            # Placeholder HTML
+            default_html = """
+            <html>
+            <body style='background-color:#1e1e1e; color:#555; font-family:sans-serif;
+                        display:flex; justify-content:center; align-items:center; height:100%; overflow:hidden;'>
+                <div style='text-align:center;'>
+                    <h1 style='font-size:40px; margin-bottom:10px;'>Ready to Analyze</h1>
+                    <p>Select plugins on the left and click RUN</p>
+                </div>
+            </body>
+            </html>
+            """
+            self.web_view.setHtml(default_html)
+            self.stack.addWidget(self.web_view)
+        else:
+            # Fallback if library missing
+            self.web_view = QLabel("Error: PyQt6-WebEngine is missing.\nCannot render Dashboards.",
+                                alignment=Qt.AlignmentFlag.AlignCenter)
+            self.stack.addWidget(self.web_view)
         
-        # Página 2: Report
-        self.page_report = QLabel("REPORT AREA", alignment=Qt.AlignmentFlag.AlignCenter)
-        self.page_report.setStyleSheet("""
-            background-color: #252526;
-            color: #ce9178;
-            font-size: 24px;
-            font-weight: bold;
-            border: none;
-        """)
-
-        self.stack.addWidget(self.page_dashboard)
+        # PAGE 1: REPORT
+        self.page_report = QLabel("REPORT AREA (JSON/Text Data)", alignment=Qt.AlignmentFlag.AlignCenter)
+        self.page_report.setStyleSheet("background-color: #1e1e1e; color: #ce9178; font-size: 24px; font-weight: bold;")
         self.stack.addWidget(self.page_report)
         
         content_layout.addWidget(self.stack)
@@ -281,39 +413,20 @@ class MainWindow(QMainWindow):
     def setup_action_bar(self, height):
         self.action_bar = QFrame()
         self.action_bar.setFixedSize(self.DASH_WIDTH, height)
-        # Barra de baixo escura
-        self.action_bar.setStyleSheet("""
-            QFrame {
-                background-color: #252526;
-                border-top: 1px solid #333333;
-            }
-        """)
+        self.action_bar.setStyleSheet("background-color: #252526; border-top: 1px solid #333333;")
         
         bar_layout = QHBoxLayout(self.action_bar)
         bar_layout.setContentsMargins(30, 10, 30, 10)
         bar_layout.setSpacing(15)
 
-        # Estilo botões secundários (Dark Mode)
         secondary_btn_style = """
-            QPushButton {
-                background-color: #3e3e42;
-                color: #cccccc;
-                border: 1px solid #3e3e42;
-                border-radius: 4px;
-                padding: 8px 15px;
-                font-weight: 600;
-            }
-            QPushButton:hover {
-                background-color: #4e4e52;
-                color: white;
-            }
+            QPushButton { background-color: #3e3e42; color: #cccccc; border: 1px solid #3e3e42; border-radius: 4px; padding: 8px 15px; font-weight: 600; }
+            QPushButton:hover { background-color: #4e4e52; color: white; }
         """
-
         self.btn_file = QPushButton("Escolher Ficheiro")
         self.btn_folder = QPushButton("Escolher Pasta")
         self.btn_file.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_folder.setCursor(Qt.CursorShape.PointingHandCursor)
-        
         self.btn_file.setStyleSheet(secondary_btn_style)
         self.btn_folder.setStyleSheet(secondary_btn_style)
 
@@ -326,48 +439,23 @@ class MainWindow(QMainWindow):
         bar_layout.addWidget(self.btn_file)
         bar_layout.addWidget(self.btn_folder)
         bar_layout.addWidget(self.lbl_path)
-
         bar_layout.addStretch()
 
-        # Botões de Ação Principal
-        self.btn_run = QPushButton("RUN")
         self.btn_export = QPushButton("EXPORT")
+        self.btn_run = QPushButton("RUN")
         self.btn_run.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_export.setCursor(Qt.CursorShape.PointingHandCursor)
-
-        # RUN - Azul (Cor de ação principal)
+        
         self.btn_run.setStyleSheet("""
-            QPushButton {
-                background-color: #007ACC;
-                color: white;
-                font-weight: bold;
-                padding: 10px 25px;
-                border-radius: 4px;
-                border: none;
-            }
+            QPushButton { background-color: #007ACC; color: white; font-weight: bold; padding: 10px 25px; border-radius: 4px; border: none; }
             QPushButton:hover { background-color: #0062a3; }
         """)
-
-        # EXPORT - Cinza mais claro ou outra cor secundária
-        self.btn_export.setStyleSheet("""
-            QPushButton {
-                background-color: #3e3e42;
-                color: white;
-                font-weight: bold;
-                padding: 10px 25px;
-                border-radius: 4px;
-                border: 1px solid #555;
-            }
-            QPushButton:hover { background-color: #4e4e52; }
-        """)
+        self.btn_export.setStyleSheet(secondary_btn_style)
 
         self.btn_run.clicked.connect(self.executar_plugin_run)
         self.btn_export.clicked.connect(self.executar_plugin_export)
 
-        # --- AQUI ESTÁ A TROCA ---
-        # 1. Adiciona Export primeiro
         bar_layout.addWidget(self.btn_export)
-        # 2. Adiciona Run depois
         bar_layout.addWidget(self.btn_run)
 
         self.right_layout.addWidget(self.action_bar)
@@ -376,241 +464,123 @@ class MainWindow(QMainWindow):
         ficheiro, _ = QFileDialog.getOpenFileName(self, "Selecionar Ficheiro")
         if ficheiro:
             self.caminho_selecionado = ficheiro
-            self.tipo_selecao = 'ficheiro'
-            nome_ficheiro = ficheiro.split('/')[-1]
-            self.lbl_path.setText(f"📄 {nome_ficheiro}")
+            self.lbl_path.setText(f"📄 {ficheiro.split('/')[-1]}")
             self.lbl_path.setStyleSheet("color: #cccccc; font-weight: bold; border: none;")
 
     def selecionar_pasta(self):
         pasta = QFileDialog.getExistingDirectory(self, "Selecionar Pasta")
         if pasta:
             self.caminho_selecionado = pasta
-            self.tipo_selecao = 'pasta'
-            nome_pasta = pasta.split('/')[-1]
-            self.lbl_path.setText(f"📂 {nome_pasta}")
+            self.lbl_path.setText(f"📂 {pasta.split('/')[-1]}")
             self.lbl_path.setStyleSheet("color: #cccccc; font-weight: bold; border: none;")
 
     def executar_plugin_run(self):
-        modo = "DASHBOARD" if self.is_dashboard_active else "REPORT"
+        """Logic: Gather Configs -> Send to API (simulated) -> Unlock Dashboards"""
         if not self.caminho_selecionado:
             self.lbl_path.setText("⚠️ Selecione algo primeiro!")
             self.lbl_path.setStyleSheet("color: #f48771; font-weight: bold; border: none;")
             return
-        print(f"--> RUN: {modo} | Caminho: {self.caminho_selecionado}")
+
+        # 1. GATHER DATA FROM PLUGINS
+        selected_payload = {}
+        any_selected = False
+
+        for widget in self.plugin_widgets:
+            if widget.checkbox.isChecked():
+                any_selected = True
+                # Get the config (updated by user)
+                selected_payload[widget.name] = widget.get_config()
+
+        if not any_selected:
+            self.lbl_path.setText("⚠️ Selecione pelo menos um plugin!")
+            return
+
+        print("--- RUNNING ANALYSIS ---")
+        print(f"Target: {self.caminho_selecionado}")
+        print("Payload (Plugins + Configs):")
+        print(json.dumps(selected_payload, indent=2))
+        
+        # 2. SIMULATE COMPLETION
+        # Logic: Analysis finished -> Toggle Eye Icon and Enable Button
+        for widget in self.plugin_widgets:
+            # If checked, set to Active (Open Eye), else Inactive (Closed Eye)
+            is_active = widget.checkbox.isChecked()
+            widget.set_dashboard_status(is_active)
+        
+        # Switch to dashboard view automatically
+        self.stack.setCurrentIndex(0)
+        self.btn_toggle.setChecked(True)
+        self.btn_toggle.setText("DASHBOARD")
+        
+        if HAS_WEBENGINE:
+            # Show success message in WebEngine
+            self.web_view.setHtml("""
+                <body style='background-color:#1e1e1e; font-family:Segoe UI, sans-serif; display:flex; justify-content:center; align-items:center; height:100%;'>
+                    <h2 style='color:#007ACC;'>Analysis Complete! <br><span style='color:#777; font-size:18px'>Click an eye icon 👁 to view specific results.</span></h2>
+                </body>
+            """)
+
+    def show_plugin_dashboard(self, plugin_name):
+        """
+        Called when the Eye icon is clicked.
+        Checks for a dashboard file (simulated) and loads it.
+        """
+        if not HAS_WEBENGINE:
+            return
+
+        print(f"--> Loading Dashboard: {plugin_name}")
+        
+        # Switch to dashboard page
+        self.stack.setCurrentIndex(0)
+        self.btn_toggle.setChecked(True)
+        self.btn_toggle.setText("DASHBOARD")
+
+        # SIMULATE D3.js/HTML CONTENT
+        # In a real app, you would do: self.web_view.setUrl(QUrl.fromLocalFile("/path/to/dashboard.html"))
+        
+        # Here we inject HTML/CSS/SVG directly to demonstrate it works
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ background-color: #1e1e1e; color: #ccc; font-family: 'Segoe UI', sans-serif; padding: 20px; }}
+                h1 {{ color: #007ACC; border-bottom: 1px solid #333; padding-bottom: 10px; }}
+                .card {{ background: #252526; padding: 20px; border-radius: 8px; margin-top: 20px; border: 1px solid #333; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }}
+                .metric {{ font-size: 24px; font-weight: bold; color: #fff; }}
+                .label {{ color: #888; font-size: 14px; margin-bottom: 5px; }}
+            </style>
+        </head>
+        <body>
+            <h1>{plugin_name} Dashboard</h1>
+            
+            <div class="card">
+                <div class="label">Total Issues Found</div>
+                <div class="metric">42</div>
+            </div>
+
+            <div class="card">
+                <div class="label">Visualization (D3.js Simulation)</div>
+                <svg width="100%" height="150" style="margin-top:15px">
+                    <rect x="0" y="20" width="80%" height="30" fill="#333" rx="5" />
+                    <rect x="0" y="20" width="45%" height="30" fill="#007ACC" rx="5" />
+                    <text x="5" y="40" fill="white" font-size="12">Coverage: 45%</text>
+                    
+                    <circle cx="50" cy="100" r="20" fill="#ce9178" />
+                    <circle cx="100" cy="100" r="15" fill="#4ec9b0" />
+                    <circle cx="140" cy="100" r="10" fill="#dcdcaa" />
+                </svg>
+            </div>
+        </body>
+        </html>
+        """
+        self.web_view.setHtml(html_content)
 
     def executar_plugin_export(self):
-        modo = "DASHBOARD" if self.is_dashboard_active else "REPORT"
-        print(f"--> EXPORT: {modo}")
+        print("--> EXPORT clicked")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
-    
-import os
-import sys
-import tempfile
-import zipfile
-from pathlib import Path
-
-import json
-from typing import Any, Dict
-
-from typing import Dict, List
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtCore import QThread
-
-
-import json
-import requests
-
-API_BASE_URL = "http://127.0.0.1:8000"
-ANALYZE_URL = f"{API_BASE_URL}/api/v1/analyze"
-
-
-def compress_target(target: str) -> Path:
-    """Create a zip from a file or directory.
-
-    If Path is Directory: zip the folder contents recursively.
-    If Path is File:      create a zip and add the single file at the root.
-
-    Returns:
-        Path to the created zip file inside a temporary directory.
-
-    Raises:
-        ValueError: if the target path does not exist.
-    """
-    target_path = Path(target).expanduser().resolve()
-    if not target_path.exists():
-        raise ValueError(f"Target path does not exist: {target_path}")
-
-    tmp_dir = Path(tempfile.mkdtemp(prefix="toolkit_client_"))
-    zip_path = tmp_dir / "target.zip"
-
-    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        if target_path.is_dir():
-            for root, _, files in os.walk(target_path):
-                root_path = Path(root)
-                for name in files:
-                    file_path = root_path / name
-                    arcname = file_path.relative_to(target_path)
-                    zf.write(file_path, arcname=str(arcname))
-        else:
-            # single file at root
-            zf.write(target_path, arcname=target_path.name)
-
-    return zip_path
-
-
-
-def load_report(path: str = "report.json") -> Dict[str, Any]:
-    """Load the JSON report from disk and return it as a Python dict."""
-    report_path = Path(path)
-    if not report_path.exists():
-        raise FileNotFoundError(f"Report file not found: {report_path}")
-    text = report_path.read_text(encoding="utf-8")
-    return json.loads(text)
-
-
-class PluginSelectionController(QObject):
-    """Keeps track of plugin selection and 'Select All' behaviour.
-
-    The UI layer can:
-        - call set_select_all(True/False) when the master checkbox changes
-        - call set_plugin_checked(name, bool) when an individual checkbox changes
-        - listen to selection_changed & select_all_changed signals
-    """
-
-    selection_changed = pyqtSignal(list)  # list[str] of selected plugin names
-    select_all_changed = pyqtSignal(bool)
-
-    def __init__(self, plugin_names: List[str]) -> None:
-        super().__init__()
-        self._plugins: Dict[str, bool] = {name: True for name in plugin_names}
-        self._select_all = True
-
-    @property
-    def selected_plugins(self) -> List[str]:
-        return [name for name, checked in self._plugins.items() if checked]
-
-    @property
-    def select_all(self) -> bool:
-        return self._select_all
-
-    def set_select_all(self, checked: bool) -> None:
-        """Called when the 'Select All' checkbox is toggled."""
-        self._select_all = checked
-        for name in self._plugins:
-            self._plugins[name] = checked
-        self.select_all_changed.emit(checked)
-        self.selection_changed.emit(self.selected_plugins)
-
-    def set_plugin_checked(self, name: str, checked: bool) -> None:
-        """Called when an individual plugin checkbox is toggled."""
-        if name not in self._plugins:
-            return
-        self._plugins[name] = checked
-
-        # update master state: only true if all are checked
-        all_checked = all(self._plugins.values())
-        if all_checked != self._select_all:
-            self._select_all = all_checked
-            self.select_all_changed.emit(self._select_all)
-
-        self.selection_changed.emit(self.selected_plugins)
-
-
-class AnalysisWorker(QObject):
-    """Runs compress → POST /analyze → save report.json in background."""
-
-    finished = pyqtSignal(str)  # path to report.json
-    error = pyqtSignal(str)     # human-readable error message
-
-    def __init__(self, target_path: str, selected_plugins: List[str]) -> None:
-        super().__init__()
-        self._target_path = target_path
-        self._selected_plugins = selected_plugins
-
-    def run(self) -> None:
-        try:
-            # 1) Compress (this can raise ValueError for bad paths)
-            zip_path = compress_target(self._target_path)
-
-            # 2) Build plugins field
-            plugins_value = ",".join(self._selected_plugins) if self._selected_plugins else "all"
-
-            # 3) POST /api/v1/analyze
-            with open(zip_path, "rb") as f:
-                files = {"file": ("target.zip", f, "application/zip")}
-                data = {"plugins": plugins_value}
-                try:
-                    resp = requests.post(ANALYZE_URL, files=files, data=data, timeout=120)
-                except requests.RequestException as exc:
-                    # Server offline / network error
-                    raise RuntimeError(f"Server unavailable or network error: {exc}") from exc
-
-            if resp.status_code != 200:
-                # e.g. invalid zip, invalid plugins, internal error, etc.
-                try:
-                    detail = resp.json().get("detail", resp.text)
-                except Exception:
-                    detail = resp.text
-                raise RuntimeError(f"Server returned {resp.status_code}: {detail}")
-
-            # 4) Save report.json
-            report_path = Path.cwd() / "report.json"
-            report_path.write_bytes(resp.content)
-
-            # verify JSON
-            json.loads(report_path.read_text(encoding="utf-8"))
-
-            self.finished.emit(str(report_path))
-
-        except Exception as exc:  # propagate any error via signal (no crash)
-            self.error.emit(str(exc))
-
-
-class AnalysisController(QObject):
-    """High-level helper to run AnalysisWorker in a QThread.
-
-    The UI layer only needs to:
-        - connect to analysis_started / analysis_finished / analysis_error
-        - call run_analysis(path, selected_plugins)
-    """
-
-    analysis_started = pyqtSignal()
-    analysis_finished = pyqtSignal(str)  # path to report.json
-    analysis_error = pyqtSignal(str)
-
-    def __init__(self, parent: QObject | None = None) -> None:
-        super().__init__(parent)
-        self._thread: QThread | None = None
-        self._worker: AnalysisWorker | None = None
-
-    def run_analysis(self, target_path: str, selected_plugins: List[str]) -> None:
-        """Start background analysis with basic pre-validation."""
-        p = Path(target_path).expanduser()
-        if not p.exists():
-            self.analysis_error.emit(f"Target path does not exist: {p}")
-            return
-
-        self._thread = QThread(self)
-        self._worker = AnalysisWorker(str(p), selected_plugins)
-        self._worker.moveToThread(self._thread)
-
-        self._thread.started.connect(self._worker.run)
-        self._worker.finished.connect(self._on_worker_finished)
-        self._worker.error.connect(self._on_worker_error)
-        self._worker.finished.connect(self._thread.quit)
-        self._worker.error.connect(self._thread.quit)
-        self._thread.finished.connect(self._worker.deleteLater)
-
-        self.analysis_started.emit()
-        self._thread.start()
-
-    def _on_worker_finished(self, report_path: str) -> None:
-        self.analysis_finished.emit(report_path)
-
-    def _on_worker_error(self, message: str) -> None:
-        self.analysis_error.emit(message)
