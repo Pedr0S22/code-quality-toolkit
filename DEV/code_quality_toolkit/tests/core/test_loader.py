@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from toolkit.core.errors import PluginLoadError, PluginValidationError
+from toolkit.core.errors import PluginValidationError
 from toolkit.core.loader import load_plugins
 
 # --- Classes Auxiliares para Teste ---
@@ -47,22 +47,39 @@ def test_load_plugins_success(mock_import, mock_iter):
     assert isinstance(plugins["TestPlugin"], MockPlugin)
 
 
+@patch("toolkit.core.loader.logging.log")
 @patch("toolkit.core.loader._iter_plugin_modules")
 @patch("toolkit.core.loader._import_module_from_path")
-def test_load_plugins_requested_filter(mock_import, mock_iter):
-    """Testa se o loader filtra apenas os plugins pedidos."""
+def test_load_plugins_requested_filter(mock_import, mock_iter, mock_log):
+    """
+    Testa se o loader ignora plugins inexistentes e regista um aviso (plugin.missing)
+    em vez de levantar uma exceção.
+    """
     
+    # 1. Arrange
+    # Simula que existe um plugin chamado 'TestPlugin' (nome definido no MockPlugin)
     mock_iter.return_value = [("test_pkg", Path("/fake/path"))]
     
     mock_module = MagicMock()
     mock_module.Plugin = MockPlugin
     mock_import.return_value = mock_module
     
-    # Se pedirmos "OutroPlugin" que não existe, deve dar erro
-    with pytest.raises(PluginLoadError) as exc:
-        load_plugins(requested=["OutroPlugin"])
+    # 2. Act
+    # Pedimos um plugin que NÃO existe ("OutroPlugin")
+    # O 'TestPlugin' (que existe) será ignorado porque não foi pedido.
+    plugins = load_plugins(requested=["OutroPlugin"])
     
-    assert "Requested plugins not found" in str(exc.value)
+    # 3. Assert
+    # O dicionário de plugins retornados deve estar vazio
+    # (ou pelo menos não ter o OutroPlugin)
+    assert "OutroPlugin" not in plugins
+    
+    # Verifica se o logger foi chamado com o evento e payload corretos
+    mock_log.assert_called_with(
+        "plugin.missing",
+        plugin="OutroPlugin",
+        error="Requested plugins not found: OutroPlugin"
+    )
 
 
 @patch("toolkit.core.loader._iter_plugin_modules")
