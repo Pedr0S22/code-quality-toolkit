@@ -1,69 +1,180 @@
-# Web UI Specification
+# Developer Documentation — Web UI / Client–Server Architecture
+## Introdução
 
-## Visão Geral
+Este documento descreve a arquitetura técnica do sistema Web UI desenvolvido na Sprint, incluindo:
 
-A interface Web serve apenas para consumir o `report.json` previamente gerado pela CLI. Não executa a análise. O foco é permitir aos estudantes explorar o
-relatório e construir visualizações.
+Arquitetura Client–Server
 
-## Funcionalidades
+Fluxo de transação de ficheiros
 
-1. **Dashboard**
-   - Cartões com totais (`total_files`, `total_issues`).
-   - Gráfico (pode ser tabela simples) com contagem por severidade.
-   - Gráfico por plugin (`issues_by_plugin`).
-   - Lista “Top Offenders” mostrando ficheiros com mais issues.
+Comunicação com FastAPI
 
-2. **Lista de Issues**
-   - Tabela com colunas: Ficheiro, Plugin, Severidade, Código, Mensagem, Linha.
-   - Filtros por severidade e plugin (dropdowns).
-   - Ao clicar numa linha, mostrar detalhes/hint.
+Mecanismos internos da análise
 
-## Wireframes (ASCII)
+Integração com Toolkit Engine
 
-```
-+-----------------------------------------------------------+
-| Dashboard                                                 |
-+-------------------+------------------+--------------------+
-| Total Files: 10   | Total Issues: 24 | Status: completed  |
-+-------------------+------------------+--------------------+
-| Severity Counts: info=5 low=10 medium=6 high=3            |
-| Plugin Issues: StyleChecker=14 Cyclomatic=10              |
-+-----------------------------------------------------------+
-| Top Offenders                                            |
-| 1. src/app.py (6)                                        |
-| 2. src/utils.py (4)                                      |
-+-----------------------------------------------------------+
+Estrutura dos endpoints
 
-+-----------------------------------------------------------+
-| Issues Table                                              |
-+-----------------------------------------------------------+
-| Filters: [Plugin v] [Severity v] [Search ____]            |
-|-----------------------------------------------------------|
-| File           | Plugin     | Sev | Code     | Line | Msg |
-|-----------------------------------------------------------|
-| src/app.py     | StyleCheck | low | LINE_LEN |  45  | ... |
-| src/utils.py   | Cyclomatic | med | HIGH_C   |  22  | ... |
-+-----------------------------------------------------------+
-```
+## Arquitetura Geral
 
-## API Endpoints
+A aplicação é constituída por três camadas:
 
-Implementados em `web/app_stub.py` usando Starlette/FastAPI minimalista:
++-------------------+         +----------------------+        +-----------------------+
+|      CLIENT       | ----->  |      CONTROLLER      | -----> |      TOOLKIT ENGINE   |
+|  (client.py GUI)  |         |   (FastAPI server)   |        |  (Core + Plugins)     |
++-------------------+         +----------------------+        +-----------------------+
 
-- `GET /api/report` — devolve o JSON completo carregado de disco.
-- `GET /api/summary` — devolve apenas `report["summary"]`.
+Funções de cada camada:
+### Client (UI)
 
-Os endpoints lêem o ficheiro `report.json` no diretório de execução. Em caso de
-erro (ficheiro inexistente), retornar HTTP 404 com mensagem amigável.
+Seleção de diretórios
 
-## Fluxo sugerido
+Configuração de plugins
 
-1. CLI gera `report.json`.
-2. Servidor Web lê e mantém cache leve (opcional) para responder aos pedidos.
-3. Frontend (React, Vue ou HTML estático) consome `GET /api/report`.
+Criação automática de ZIP
 
-## Notas Pedagógicas
+Envio de pedidos ao servidor
 
-- Incentivar estudantes a desenhar componentes reutilizáveis para cartões e
-  tabelas.
-- Destacar boas práticas de separação entre backend (servindo JSON) e frontend.
+Receção de ZIP devolvido
+
+Abertura automática de report.html
+
+### Controller (FastAPI)
+
+Recebe ZIP via POST /api/v1/analyze
+
+Extrai para diretório temporário
+
+Invoca a engine do toolkit
+
+Gera dashboards e report.html
+
+Reempacota resultados e devolve ao cliente
+
+### Toolkit Engine
+
+Carrega e configura plugins
+
+Executa análise sobre os ficheiros
+
+Produz:
+
+issues.json
+
+dashboards
+
+report.html
+
+## Endpoints
+ GET /api/v1/plugins
+
+Retorna lista de plugins disponíveis.
+
+ GET /api/v1/plugins/configs
+
+Retorna configurações default de cada plugin.
+
+ POST /api/v1/analyze
+
+###Fluxo completo:
+
+Recebe ZIP do cliente.
+
+Extrai para pasta temporária.
+
+Carrega configs enviadas.
+
+Invoca engine:
+
+run_analysis(path, configs)
+
+Gera ficheiros:
+
+report.html
+
+dashboards D3
+
+meta.json
+
+Cria ZIP de retorno.
+
+Envia ZIP ao cliente.
+
+## File Transaction Flow
+
+Ciclo completo ZIP Upload → Analysis → ZIP Return
+
+CLIENT
+  ↓ cria ZIP
+POST /analyze
+  ↓ envia ZIP
+SERVER
+  ↓ extrai
+TOOLKIT ENGINE
+  ↓ analisa
+  ↓ gera report.html
+SERVER
+  ↓ cria ZIP
+  ↓ devolve ZIP
+CLIENT
+  ↓ extrai
+  ↓ abre report.html
+
+## Comunicação Assíncrona (Signal/Slot Equivalent)
+
+Embora o projeto não use diretamente Qt signals/slots, o mecanismo equivalente é:
+
+### No Cliente:
+
+Ações do utilizador → eventos GUI
+
+Chamadas HTTP → assíncronas via threads
+
+Callbacks → atualizam interface
+
+### No Servidor FastAPI:
+
+Requests → assíncronos
+
+Handlers usam async def
+
+Não bloqueiam event loop
+
+## Estrutura do Projeto
+DEV/
+ └─ code_quality_toolkit/
+     ├─ web/
+     │   ├─ server.py
+     │   ├─ client.py
+     │   └─ README.md (User Docs)
+     └─ src/
+         └─ toolkit/
+             ├─ core/
+             ├─ plugins/
+             │   └─ DASHBOARD.md
+             └─ ...
+
+## Considerações Técnicas do Dashboard
+
+Gerado automaticamente durante análise
+
+Criado por cada plugin no método analyze()
+
+Deve usar D3.js
+
+Dimensões: 1066 × 628 px
+
+## Conclusão
+
+Este SPEC documenta claramente:
+
+A arquitetura client-server
+
+O fluxo técnico completo da análise
+
+O comportamento dos endpoints
+
+A integração com a engine
+
+O ciclo de dados entre cliente, servidor e toolkit
+
