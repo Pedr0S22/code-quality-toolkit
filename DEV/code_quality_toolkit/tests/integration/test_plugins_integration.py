@@ -164,6 +164,72 @@ def test_style_checker_integration(tmp_path: Path):
     assert issue["severity"] in ["info", "low"]
 
 
+def test_dependency_graph_integration(tmp_path: Path):
+    """
+    Verifies that the DependencyGraph plugin correctly identifies imports
+    and module dependencies when run via the CLI.
+    """
+    # 1. Setup: Create a project with 2 files that import each other/standard lib
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    
+    # main.py imports utils and os
+    (project_dir / "main.py").write_text(
+        "import os\n"
+        "from . import utils\n",
+        encoding="utf-8"
+    )
+    
+    # utils.py imports json
+    (project_dir / "utils.py").write_text(
+        "import json\n",
+        encoding="utf-8"
+    )
+    
+    output_file = tmp_path / "report.json"
+
+    # 2. Execution: Run CLI with DependencyGraph
+    exit_code = main(
+        [
+            "analyze",
+            str(project_dir),
+            "--out",
+            str(output_file),
+            "--plugins",
+            "DependencyGraph",
+        ]
+    )
+
+    # 3. Verification
+    assert exit_code == EXIT_SUCCESS
+    assert output_file.exists()
+
+    with open(output_file, encoding="utf-8") as f:
+        data = json.load(f)
+
+    # Check results for main.py
+    main_report = next(f for f in data["details"] if "main.py" in f["file"])
+    main_plugin = next(p for p in main_report["plugins"] if p["plugin"] == "DependencyGraph")
+    
+    # Should find 'os' and 'utils'
+    messages = [r["message"] for r in main_plugin["results"]]
+    assert any("os" in m for m in messages)
+    assert any("utils" in m for m in messages)
+
+    # Check results for utils.py
+    utils_report = next(f for f in data["details"] if "utils.py" in f["file"])
+    utils_plugin = next(p for p in utils_report["plugins"] if p["plugin"] == "DependencyGraph")
+    
+    # Should find 'json'
+    messages = [r["message"] for r in utils_plugin["results"]]
+    assert any("json" in m for m in messages)
+    
+    # Check Summary Graph Data
+    # O plugin deve ter gerado a estrutura do grafo no sumário
+    graph_data = utils_plugin["summary"].get("dependency_graph")
+    assert graph_data is not None
+    assert "json" in graph_data["nodes"]
+
 def test_multiple_specific_plugins_integration(tmp_path: Path):
     """
     Verifies that the CLI runs ONLY the requested plugins and aggregates their
