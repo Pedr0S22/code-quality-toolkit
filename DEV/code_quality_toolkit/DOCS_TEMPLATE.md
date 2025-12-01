@@ -302,7 +302,7 @@ Top Offenders
 
 Issues Table
 
-## Placeholder para screenshot do dashboard de exemplo:
+### Placeholder para screenshot do dashboard de exemplo:
 [INSERT SCREENSHOT: dashboard gerado no projeto]
 
 # AUTHORS (Sprint UI Documentation)
