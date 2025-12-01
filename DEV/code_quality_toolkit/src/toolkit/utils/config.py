@@ -87,6 +87,8 @@ class RulesConfig:
     # This class acts as the reference source for the code quality toolkit's
     # default rules. These values can then be overridden if a configuration file
     # specifies different limits.
+    check_naming: bool = False
+
     max_line_length: int = 88
     max_complexity: int = 10
     check_whitespace: bool = True
@@ -96,8 +98,8 @@ class RulesConfig:
     check_naming = False
     max_function_length: int = 50
     max_arguments: int = 5
-    min_comment_density: float = 0.1
-    max_comment_density: float = 0.5
+    min_density: float = 0.1
+    max_density: float = 0.5
 
 
 # -------------ToolkitConfig -----------------------
