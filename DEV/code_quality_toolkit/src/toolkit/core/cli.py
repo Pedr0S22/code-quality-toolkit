@@ -335,7 +335,13 @@ def _run_analyze(args: argparse.Namespace) -> int:
     if args.fail_on_severity and _should_fail(report, args.fail_on_severity):
         print("Failed on severity")
         return EXIT_SEVERITY_ERROR
-
+    
+    loaded_plugin_names = set(plugins.keys())
+    requested_plugins_names = set(requested_plugins)
+    if  requested_plugins_names != loaded_plugin_names:
+        missing = requested_plugins_names - loaded_plugin_names
+        raise PluginLoadError(f"Requested plugins not found: {', '.join(missing)}")
+    
     return 0  # success exit
 
 

@@ -306,7 +306,7 @@ def load_plugins(requested: Iterable[str] | None = None) -> dict[str, PluginProt
                 logging.log(
                     "plugin.missing",
                     plugin=name,
-                    error="Requested plugin not found on disk",
+                    error=f"Requested plugins not found: {', '.join(missing)}",
                 )
 
     return plugin_instances
