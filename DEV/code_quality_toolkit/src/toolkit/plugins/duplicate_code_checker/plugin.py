@@ -1,7 +1,7 @@
 """Plugin que procura por codigo duplicado."""
 
 from typing import Any
-import subprocess
+import subprocess, sys
 
 from ...core.contracts import IssueResult
 from ...utils.config import ToolkitConfig
@@ -27,7 +27,7 @@ class Plugin:
         # Run pylint for R0801 duplicates
         # Use --output-format=text and parse lines containing "R0801"
         proc = subprocess.run(
-            ["pylint", "--disable=all", "--enable=R0801", file_path],
+            [sys.executable, "-m", "pylint", "--disable=all", "--enable=R0801", file_path],
             capture_output=True,
             text=True,
         )

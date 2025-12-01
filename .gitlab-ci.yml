@@ -30,7 +30,6 @@ unit_tests:
   script:
     - echo "Running unit tests ... "
     - echo $CI_COMMIT_BRANCH
-    - make
     - make test
 
 test_coverage:
