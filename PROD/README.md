@@ -1,5 +1,5 @@
 
-#User Documentation — Code Quality Toolkit Web UI
+# User Documentation — Code Quality Toolkit Web UI
 ## Introdução
 
 A interface Web/Cliente deste projeto permite que qualquer utilizador execute análises de qualidade de código sem recorrer à linha de comandos.
