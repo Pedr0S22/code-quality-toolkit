@@ -1,152 +1,149 @@
-# User Documentation — Code Quality Toolkit UI
+
+#User Documentation — Code Quality Toolkit Web UI
 ## Introdução
 
-Esta interface gráfica permite analisar projetos Python utilizando o Code Quality Toolkit de forma simples, visual e intuitiva.
-O utilizador deixa de executar comandos manuais e passa a interagir apenas com o cliente gráfico.
+A interface Web/Cliente deste projeto permite que qualquer utilizador execute análises de qualidade de código sem recorrer à linha de comandos.
+A aplicação fornece:
+
+Seleção de diretórios
+
+Configuração de plugins
+
+Execução da análise
+
+Visualização automática do relatório final (dashboard HTML)
+
+Comunicação direta com o servidor FastAPI
+
+Este UI existe para tornar o processo mais simples, rápido e acessível.
 
 ## Como iniciar a aplicação
-### Iniciar o servidor (controller)
+### Iniciar o Servidor (Controller)
 
 No diretório raiz do projeto:
 
 uvicorn DEV.code_quality_toolkit.web.server:app --reload
 
 
-O servidor ficará disponível em:
+Servidor ficará disponível em:
 
 http://127.0.0.1:8000
 
-### Iniciar a interface (client)
+### Iniciar o Client (UI)
 python DEV/code_quality_toolkit/web/client.py
 
-## Navegação na aplicação
-### Ecrã inicial (lista de plugins)
+
+O cliente abrirá uma interface gráfica que permite executar todo o fluxo de análise.
+
+## Interface do Utilizador
+### Ecrã inicial (UI Overview)
+
+Aqui é apresentada a lista de plugins disponíveis e o estado inicial da aplicação.
 
 [PRINT 1 – UI inicial com lista de plugins]
+![PRINT 1](img/print1.png)
 
-No painel esquerdo encontras:
+### Selecionar Diretório a Analisar
 
-Lista de plugins disponíveis
+O utilizador escolhe um ficheiro ou pasta que será enviada ao servidor.
 
-Botão “Select All”
+[PRINT 2 – Seleção de diretório]
+![PRINT 2](img/print2.png)
 
-Ícones para expandir configurações de cada plugin
+### Configurar Plugins
 
-### Selecionar um diretório ou ficheiro
-
-[PRINT 2 – Seleção de diretório no UI]
-
-O utilizador escolhe a pasta ou ficheiro que deseja analisar.
-
-### Configurar plugins
+Cada plugin pode ser ativado/desativado e configurado.
 
 [PRINT 3 – Configuração de plugins]
+![PRINT 3](img/print3.png)
 
-Para cada plugin podes:
+### Executar a Análise
 
-Ativar / desativar
+Depois de selecionado o diretório e plugins:
 
-Consultar opções
+O cliente cria automaticamente um ZIP do projeto.
 
-Modificar parâmetros quando aplicável
+Envia-o para o servidor através de POST /api/v1/analyze.
 
-### Executar a análise
+Recebe um ZIP com os resultados.
 
-O UI envia um pedido:
+Extrai os ficheiros.
 
-POST /api/v1/analyze
+Abre o relatório final.
+
+### Interpretar o Relatório Final (Dashboard)
+
+Após a análise, abre automaticamente o ficheiro:
+
+report.html
 
 
-Fluxo automático:
+Este dashboard apresenta:
 
-O UI cria ZIP do diretório selecionado
-
-Envia ZIP + configurações ao servidor
-
-O servidor processa, gera relatório e envia ZIP final
-
-O UI extrai o ZIP
-
-O relatório report.html abre automaticamente no navegador
-
-### Visualizar relatório
-
-[PRINT 4 – report.html no browser]
-
-O relatório inclui:
-
-Dashboard principal
+Métricas globais
 
 Total de ficheiros analisados
 
 Total de issues
 
-Severidades agregadas
+Estado (completed, partial, failed)
+
+Severidades (info, low, medium, high)
 
 Issues por plugin
 
+Mostra quantos problemas cada plugin detetou.
+
 Top Offenders
 
-Tabela detalhada de issues
+Os ficheiros com mais problemas.
 
-## Como interpretar o Dashboard
-### Métricas globais
+Tabela completa de issues
 
-Mostra:
+Com filtro por severidade e plugin.
 
-Número total de ficheiros
-
-Issues totais
-
-Estado da análise
-
-### Severidade agregada
-
-Agrupa issues por:
-
-info
-
-low
-
-medium
-
-high
-
-### Issues por plugin
-
-Permite compreender quais plugins identificaram mais problemas.
-
-### Top Offenders
-
-Lista os ficheiros com mais problemas.
-
-### Tabela detalhada
-
-Inclui:
-
-ficheiro
-
-plugin
-
-tipo de issue
-
-severidade
-
-linha
-
-mensagem
+[PRINT 4 – Dashboard/Report HTML no navegador]
+![PRINT 4](img/print4.png)
 
 ## Porquê esta interface?
 
-Evita comandos complexos
+O objetivo é:
 
-Torna o toolkit acessível a utilizadores não técnicos
+Evitar lidar com CLI complexa
 
-Fornece análises rápidas visualmente
+Facilitar testes rápidos
 
-Facilita a adoção da framework pela equipa
+Permitir visualização clara do relatório
 
-## Suporte
+Melhorar a experiência de análise de código
 
-Para dúvidas contactar os responsáveis da equipa.
+Garantir consistência nas análises dentro do grupo
+
+## Problemas Comuns
+❌ O servidor não inicia
+
+Verificar se executou:
+
+uvicorn DEV.code_quality_toolkit.web.server:app --reload
+
+❌ O UI não encontra o servidor
+
+Garantir que o servidor está a correr na mesma máquina.
+
+❌ report.html não abre
+
+Verificar permissões de browser ou antivírus.
+
+## Autores
+
+Grupo PL8 – Sprint Web App
+Tiago Alves -(User Documentation)
+Rabia Saygin -integração entre o UI e o CLI
+Isaque Capra- testes manuais e de integração
+Sasha/André Silva - design da app
+Pedro Silva - toolkit + coordinator
+
+
+
+
 
