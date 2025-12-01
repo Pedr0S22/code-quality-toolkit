@@ -116,98 +116,8 @@ async def analyze_project(
             config = load_config(None)
 
         # 5. Apply JSON Overrides & Configuration
-        requested_plugins = []
-        try:
-            user_overrides = json.loads(configs)
-            if isinstance(user_overrides, dict) and user_overrides:
-                requested_plugins = list(user_overrides.keys())
-                
-                # Helper to get all valid config attributes available on the server
-                available_configs = []
-                if hasattr(config, "plugins"):
-                    available_configs = [a for a in dir(config.plugins) if not a.startswith("_")]
-                
-                print(f"DEBUG: Available Backend Configs: {available_configs}")
-
-                for plugin_name, plugin_settings in user_overrides.items():
-                    if not isinstance(plugin_settings, dict): continue
-
-                    # A. Generate candidate names
-                    snake_name = _to_snake_case(plugin_name)
-                    potential_names = [
-                        snake_name,                                      # e.g. cyclomatic_complexity
-                        snake_name.replace("_detector", "").replace("_checker", "").replace("_finder", ""), # e.g. dead_code
-                        snake_name.split('_')[0]                         # e.g. cyclomatic
-                    ]
-
-                    # B. Locate the specific config object (if it exists)
-                    target_config = None
-                    for name in potential_names:
-                        if hasattr(config.plugins, name):
-                            target_config = getattr(config.plugins, name)
-                            print(f"DEBUG: Mapped '{plugin_name}' to config section '{name}'")
-                            break
-                    
-                    if not target_config:
-                        print(f"INFO: No specific section for '{plugin_name}', will check Global Rules.")
-
-                    # C. Update Values (Check Plugin Config FIRST, then Global Rules)
-                    for key, value in plugin_settings.items():
-                        final_target = None
-                        
-                        # 1. Try Specific Plugin Config
-                        if target_config and hasattr(target_config, key):
-                            final_target = target_config
-                        
-                        # 2. Try Global Rules (Fallback)
-                        elif hasattr(config, "rules") and hasattr(config.rules, key):
-                            final_target = config.rules
-                            print(f"DEBUG: Mapping {plugin_name}.{key} -> Global Rules")
-                        
-                        if not final_target:
-                            print(f"WARNING: Attribute '{key}' not found in specific config or Global Rules.")
-                            continue
-
-                        # D. Robust Type Casting and Update
-                        try:
-                            original_val = getattr(final_target, key)
-                            target_type = type(original_val)
-                            
-                            if target_type == bool:
-                                real_value = str(value).lower() in ('true', '1', 'yes', 'on')
-                            elif target_type == int:
-                                real_value = int(value)
-                            elif target_type == float:
-                                real_value = float(value)
-                            elif original_val is None:
-                                # Infer type if default is None
-                                if str(value).isdigit(): real_value = int(value)
-                                elif str(value).lower() in ['true', 'false']: real_value = str(value).lower() == 'true'
-                                else: real_value = value
-                            else:
-                                real_value = value 
-                            
-                            setattr(final_target, key, real_value)
-                            print(f"DEBUG: Updated {key} = {real_value}")
-                            
-                        except ValueError:
-                            print(f"WARNING: Cast failed for {key}={value}")
-
-            else:
-                requested_plugins = config.enabled_plugins
-
-        except json.JSONDecodeError:
-            print("Warning: Invalid JSON in configs. Using defaults.")
-            requested_plugins = config.enabled_plugins
-
-        if not requested_plugins:
-            requested_plugins = config.enabled_plugins
-
-        print(f"DEBUG: Running plugins: {requested_plugins}")
-        loaded_plugins = load_plugins(requested_plugins)
         
-        if not loaded_plugins:
-            raise HTTPException(status_code=400, detail="No valid plugins could be loaded.")
+        loaded_plugins = _config_overrides(config, configs)
 
         # 6. Run Analysis
         analyzed_files, plugin_status = run_analysis(str(analysis_target), loaded_plugins, config)
@@ -231,20 +141,13 @@ async def analyze_project(
             # 2. Add report.html (From Project Root)
             zf.write(report_html_path, arcname="report.html")
 
-            # 3. Add Plugin Dashboards (From src/toolkit/plugins/<name>/dashboard.html)
+            # 3. Add Plugin Dashboards
             # We iterate over the plugins that were actually loaded/requested
             for plugin_name in loaded_plugins.keys():
                 # Convert PascalCase to folder_name (assuming folder is snake_case or similar)
                 # If your folder names match the plugin names exactly, use plugin_name.
-                # If your folders are snake_case (e.g. DeadCodeDetector -> dead_code_finder), 
-                # you might need the helper _to_snake_case(plugin_name).
-                # Assuming folders match the keys from get_discovered_plugins (usually folder names):
+                # If your folders are snake_case (e.g. DeadCodeDetector -> dead_code_finder),
                 
-                # NOTE: In your loader, the keys are usually PascalCase names. 
-                # We need to find the file. Let's try constructing the path.
-                
-                # Construct path: src/toolkit/plugins/<PluginName>/dashboard.html
-                # You might need to adjust if folder names differ from Class names.
                 snake_name = _to_snake_case(plugin_name)
                 dashboard_path = TOOLKIT_ROOT / "src/toolkit/plugins" / snake_name / f"{snake_name}_dashboard.html"
 
@@ -334,6 +237,102 @@ def get_discovered_plugins() -> Dict[str, Any]:
         print(f"Error exploring plugins: {e}")
         
     return plugins_map
+
+def _config_overrides(config,configs):
+    requested_plugins = []
+    try:
+        user_overrides = json.loads(configs)
+        if isinstance(user_overrides, dict) and user_overrides:
+            requested_plugins = list(user_overrides.keys())
+            
+            # Helper to get all valid config attributes available on the server
+            available_configs = []
+            if hasattr(config, "plugins"):
+                available_configs = [a for a in dir(config.plugins) if not a.startswith("_")]
+                
+            print(f"DEBUG: Available Backend Configs: {available_configs}")
+
+            for plugin_name, plugin_settings in user_overrides.items():
+                if not isinstance(plugin_settings, dict): continue
+
+                # A. Generate candidate names
+                snake_name = _to_snake_case(plugin_name)
+                potential_names = [
+                    snake_name,                                      # e.g. cyclomatic_complexity
+                    snake_name.replace("_detector", "").replace("_checker", "").replace("_finder", ""), # e.g. dead_code
+                    snake_name.split('_')[0]                         # e.g. cyclomatic
+                ]
+
+                # B. Locate the specific config object (if it exists)
+                target_config = None
+                for name in potential_names:
+                    if hasattr(config.plugins, name):
+                        target_config = getattr(config.plugins, name)
+                        print(f"DEBUG: Mapped '{plugin_name}' to config section '{name}'")
+                        break
+                
+                if not target_config:
+                    print(f"INFO: No specific section for '{plugin_name}', will check Global Rules.")
+
+                # C. Update Values (Check Plugin Config FIRST, then Global Rules)
+                for key, value in plugin_settings.items():
+                    final_target = None
+                    
+                    # 1. Try Specific Plugin Config
+                    if target_config and hasattr(target_config, key):
+                        final_target = target_config
+                    
+                    # 2. Try Global Rules (Fallback)
+                    elif hasattr(config, "rules") and hasattr(config.rules, key):
+                        final_target = config.rules
+                        print(f"DEBUG: Mapping {plugin_name}.{key} -> Global Rules")
+                    
+                    if not final_target:
+                        print(f"WARNING: Attribute '{key}' not found in specific config or Global Rules.")
+                        continue
+
+                    # D. Robust Type Casting and Update
+                    try:
+                        original_val = getattr(final_target, key)
+                        target_type = type(original_val)
+                        
+                        if target_type == bool:
+                            real_value = str(value).lower() in ('true', '1', 'yes', 'on')
+                        elif target_type == int:
+                            real_value = int(value)
+                        elif target_type == float:
+                            real_value = float(value)
+                        elif original_val is None:
+                            # Infer type if default is None
+                            if str(value).isdigit(): real_value = int(value)
+                            elif str(value).lower() in ['true', 'false']: real_value = str(value).lower() == 'true'
+                            else: real_value = value
+                        else:
+                            real_value = value 
+                            
+                        setattr(final_target, key, real_value)
+                        print(f"DEBUG: Updated {key} = {real_value}")
+                        
+                    except ValueError:
+                        print(f"WARNING: Cast failed for {key}={value}")
+
+        else:
+            requested_plugins = config.enabled_plugins
+
+    except json.JSONDecodeError:
+        print("Warning: Invalid JSON in configs. Using defaults.")
+        requested_plugins = config.enabled_plugins
+
+    if not requested_plugins:
+        requested_plugins = config.enabled_plugins
+
+    print(f"DEBUG: Running plugins: {requested_plugins}")
+    loaded_plugins = load_plugins(requested_plugins)
+        
+    if not loaded_plugins:
+        raise HTTPException(status_code=400, detail="No valid plugins could be loaded.")
+    
+    return loaded_plugins
 
 def get_all_plugin_names() -> List[str]:
     return sorted(list(get_discovered_plugins().keys()))
