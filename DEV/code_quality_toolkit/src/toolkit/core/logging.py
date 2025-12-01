@@ -6,7 +6,7 @@ import json
 import logging
 from typing import Any
 
-SEND_LOGS_TO_TERMINAL = False  # appends logs to a log file
+SEND_LOGS_TO_TERMINAL = True  # appends logs to a log file
 
 """
 Set up and configures a Python logger named "toolkit" using the standard loggin
@@ -46,6 +46,20 @@ if not _LOGGER.handlers:
 # will be ignored.
 _LOGGER.setLevel(logging.INFO)
 
+def set_log_level(level_name: str) -> None:
+    """
+    Dynamically sets the logging level for the toolkit logger.
+    
+    Args:
+        level_name: The desired log level (e.g., "DEBUG", "INFO", "WARNING").
+                    Case-insensitive.
+    """
+    level_name = level_name.upper()
+    
+    # Retrieves the integer value for the level, defaulting to INFO if invalid
+    level = getattr(logging, level_name, logging.INFO)
+    
+    _LOGGER.setLevel(level)
 
 def log(event: str, **payload: Any) -> None:
     """
