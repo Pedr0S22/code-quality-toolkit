@@ -7,6 +7,7 @@ import zipfile
 import shutil
 import tempfile
 from pathlib import Path
+from markdownify import markdownify as md
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QHBoxLayout, QPushButton, QLabel, QStackedWidget,
                             QFileDialog, QFrame, QCheckBox, QScrollArea,
@@ -657,7 +658,43 @@ class MainWindow(QMainWindow):
             self.web_view.setHtml(html_content)
 
     def executar_plugin_export(self):
-        print("--> EXPORT clicked")
+        """Converts report.html to Markdown and saves it."""
+        
+        if not hasattr(self, 'results_dir') or not self.results_dir.exists():
+            self.lbl_path.setText("Run analysis first!")
+            return
+
+        # Use the HTML report we already have!
+        html_path = self.results_dir / "report.html"
+        
+        if not html_path.exists():
+            self.lbl_path.setText("report.html not found.")
+            return
+
+        try:
+            # 1. Read HTML
+            with open(html_path, "r", encoding="utf-8") as f:
+                html_content = f.read()
+
+            # 2. Convert to Markdown using the library
+            # heading_style="ATX" ensures we get # headings instead of underlined ones
+            md_content = md(html_content, heading_style="ATX")
+
+            # 3. Open Save Dialog
+            file_dialog = QFileDialog(self)
+            save_path, _ = file_dialog.getSaveFileName(
+                self, "Export Report", "report.md", "Markdown Files (*.md)"
+            )
+
+            # 4. Save
+            if save_path:
+                with open(save_path, "w", encoding="utf-8") as f:
+                    f.write(md_content)
+                self.lbl_path.setText("Export Successful!")
+                self.lbl_path.setStyleSheet("color: #15FF23; font-weight: bold; border: none;")
+
+        except Exception as e:
+            print(f"Export Error: {e}")
 
     def compress_target(self, path_str):
         """Helper to zip a folder or file before sending"""

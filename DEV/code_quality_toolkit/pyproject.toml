@@ -29,6 +29,7 @@ dev = [
     "python-multipart>=0.0.9",
     "PyQt6>=6.6.1",
     "PyQt6-WebEngine",
+    "markdownify>=1.2.2",
     "requests>=2.31.0"
 ]
 
