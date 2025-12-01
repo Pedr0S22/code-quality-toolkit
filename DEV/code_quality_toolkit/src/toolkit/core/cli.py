@@ -342,7 +342,7 @@ def _run_analyze(args: argparse.Namespace) -> int:
         missing = requested_plugins_names - loaded_plugin_names
         raise PluginLoadError(f"Requested plugins not found: {', '.join(missing)}")
     
-    return 0  # success exit
+    return EXIT_SUCCESS  # success exit
 
 
 if __name__ == "__main__":  # pragma: no cover
