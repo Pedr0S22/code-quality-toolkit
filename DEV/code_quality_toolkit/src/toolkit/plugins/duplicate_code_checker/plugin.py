@@ -1,6 +1,6 @@
 """Plugin que procura por codigo duplicado."""
 
-import subprocess
+import subprocess  # nosec B404 - uso controlado do módulo subprocess para chamar pylint
 import sys
 from typing import Any
 from pathlib import Path
@@ -31,12 +31,13 @@ class Plugin:
         if not p.is_file():
             raise ValueError(f"Invalid file path: {file_path}")
 
-        # Run pylint safely without shell=True
-        proc = subprocess.run(
+        # Run pylint safely without shell=True; argumentos são controlados, sem input externo
+        proc = subprocess.run(  # nosec B603 - chamada a pylint com argumentos fixos, sem dados não confiáveis
             [sys.executable, "-m", "pylint", "--disable=all", "--enable=R0801", str(p)],
             capture_output=True,
             text=True,
         )
+
 
         results = []
 
