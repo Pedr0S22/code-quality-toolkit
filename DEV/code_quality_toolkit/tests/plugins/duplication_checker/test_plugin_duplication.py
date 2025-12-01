@@ -48,8 +48,12 @@ def test_duplication_detects_simple_repeat(tmp_path) -> None:
         report = plugin.analyze(code, str(file_path))
 
     assert report["summary"]["issues_found"] == 1
-    assert report["results"][0]["code"] == "DUPLICATED_CODE"
-    assert report["results"][0]["line"] == 1
+
+    first_issue = report["results"][0]
+    # O plugin usa R0801 como code para cada ocorrência individual
+    assert first_issue["code"] == "R0801"
+    assert first_issue["line"] == 1
+
 
 
 def test_duplication_detects_multiple_repeats(tmp_path) -> None:
