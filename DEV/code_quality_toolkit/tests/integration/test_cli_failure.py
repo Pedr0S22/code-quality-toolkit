@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
-from toolkit.core.cli import EXIT_MANAGED_ERROR, EXIT_SEVERITY_ERROR, EXIT_SUCCESS, main
+from toolkit.core.cli import EXIT_MANAGED_ERROR, EXIT_SEVERITY_ERROR, main
 from toolkit.core.errors import PluginLoadError
 
 # --- Mock Plugin ---
