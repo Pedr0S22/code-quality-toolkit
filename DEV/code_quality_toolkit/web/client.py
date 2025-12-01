@@ -431,7 +431,45 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'results_dir') and self.results_dir.exists():
             global_report = self.results_dir / "report.html"
             if global_report.exists():
-                self.web_view.setUrl(QUrl.fromLocalFile(str(global_report.resolve())))
+                # Read the raw HTML
+                with open(global_report, "r", encoding="utf-8") as f:
+                    raw_html = f.read()
+                
+                # CSS to inject (Modern Dark Theme)
+                style_block = """
+                <style>
+                    body { font-family: 'Segoe UI', sans-serif; background-color: #1e1e1e; color: #d4d4d4; padding: 30px; line-height: 1.6; }
+                    h1 { color: #007ACC; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; font-size: 28px; }
+                    h2 { color: #569cd6; margin-top: 30px; font-size: 22px; border-left: 4px solid #007ACC; padding-left: 10px; }
+                    h3 { color: #dcdcaa; margin-top: 20px; font-size: 18px; }
+                    h4 { color: #4ec9b0; font-size: 16px; margin-bottom: 5px; }
+                    hr { border: 0; border-top: 1px solid #333; margin: 30px 0; }
+                    
+                    ul { list-style-type: none; padding-left: 0; }
+                    li { margin-bottom: 8px; padding: 5px 10px; background: #252526; border-radius: 4px; }
+                    li strong { color: #9cdcfe; }
+                    
+                    /* Issue Severity Styling */
+                    li:contains("[HIGH]") { border-left: 4px solid #f44336; }
+                    li:contains("[MEDIUM]") { border-left: 4px solid #ff9800; }
+                    li:contains("[LOW]") { border-left: 4px solid #4caf50; }
+                    
+                    /* Scrollbar */
+                    ::-webkit-scrollbar { width: 10px; }
+                    ::-webkit-scrollbar-track { background: #1e1e1e; }
+                    ::-webkit-scrollbar-thumb { background: #424242; border-radius: 5px; }
+                    ::-webkit-scrollbar-thumb:hover { background: #555; }
+                </style>
+                """
+                
+                # Insert CSS before the closing </head> tag, or at the start if missing
+                if "</head>" in raw_html:
+                    styled_html = raw_html.replace("</head>", f"{style_block}</head>")
+                else:
+                    styled_html = style_block + raw_html
+
+                # Load the beautified HTML directly
+                self.web_view.setHtml(styled_html, QUrl.fromLocalFile(str(global_report.parent) + "/"))
             else:
                 self.web_view.setHtml("<h2 style='color:white'>Global Report not found.</h2>")
         else:
