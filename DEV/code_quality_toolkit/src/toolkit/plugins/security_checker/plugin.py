@@ -139,11 +139,18 @@ class Plugin:
                     results.append({
                         "severity": "medium",
                         "code": "B601",
-                        "message": "Chamadas ao sistema com concatenação de strings detectadas.",
+                        "message": (
+                            "Chamadas ao sistema com concatenação de strings "
+                            "detectadas."
+                        ),
                         "line": find_lineno("os.system"),
                         "col": 1,
-                        "hint": "Use chamadas seguras sem concatenar input do utilizador.",
+                        "hint": (
+                            "Use chamadas seguras sem "
+                            "concatenar input do utilizador."
+                        ),
                     })
+
 
                 if "%s" in src and "cursor.execute" in src:
                     results.append({
@@ -182,12 +189,19 @@ class Plugin:
                 manager.discover_files([temp_file_path])
                 manager.run_tests()
 
-                severity_map = {'LOW': LOW, 'MEDIUM': MEDIUM, 'HIGH': HIGH}
+                severity_map = {"LOW": LOW, "MEDIUM": MEDIUM, "HIGH": HIGH}
                 report_level = severity_map.get(self.report_severity_level, LOW)
-                bandit_issues = manager.get_issue_list(sev_level=report_level, conf_level=LOW)
+                bandit_issues = manager.get_issue_list(
+                    sev_level=report_level,
+                    conf_level=LOW,
+                )
 
                 for issue in bandit_issues:
-                    severity_translation = {'LOW': 'low', 'MEDIUM': 'medium', 'HIGH': 'high'}
+                    severity_translation = {
+                        "LOW": "low",
+                        "MEDIUM": "medium",
+                        "HIGH": "high",
+                    }
                     results.append({
                         "severity": severity_translation.get(issue.severity, "low"),
                         "code": issue.test_id,

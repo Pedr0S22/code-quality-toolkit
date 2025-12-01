@@ -1,9 +1,11 @@
 """Plugin que procura por codigo duplicado."""
 
+from __future__ import annotations
+
+from pathlib import Path
 import subprocess  # nosec B404 - uso controlado do módulo subprocess para chamar pylint
 import sys
 from typing import Any
-from pathlib import Path
 
 from ...utils.config import ToolkitConfig
 
