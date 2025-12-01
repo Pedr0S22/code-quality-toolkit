@@ -15,8 +15,8 @@ class Plugin:
     def configure(self, config: ToolkitConfig) -> None:
         """Configure plugin with rules"""
         self.config = config
-        self.min_density = getattr(config.rules, "min_comment_density", 0.1)
-        self.max_density = getattr(config.rules, "max_comment_density", 0.5)
+        self.min_density = getattr(config.rules, "min_density", 0.1)
+        self.max_density = getattr(config.rules, "max_density", 0.5)
 
     def get_metadata(self) -> dict[str, str]:
         """Return plugin metadata"""
