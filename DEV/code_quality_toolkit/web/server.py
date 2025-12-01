@@ -2,7 +2,6 @@
 FastAPI Backend for Code Quality Toolkit.
 Handles file uploads, runs the analysis engine in a sandbox, and returns the report.
 """
-
 import shutil
 import uuid
 import json
@@ -116,83 +115,86 @@ async def analyze_project(
         else:
             config = load_config(None)
 
-        # 5. Apply JSON Overrides
+        # 5. Apply JSON Overrides & Configuration
         requested_plugins = []
         try:
             user_overrides = json.loads(configs)
             if isinstance(user_overrides, dict) and user_overrides:
                 requested_plugins = list(user_overrides.keys())
                 
+                # Helper to get all valid config attributes available on the server
+                available_configs = []
+                if hasattr(config, "plugins"):
+                    available_configs = [a for a in dir(config.plugins) if not a.startswith("_")]
+                
+                print(f"DEBUG: Available Backend Configs: {available_configs}")
+
                 for plugin_name, plugin_settings in user_overrides.items():
                     if not isinstance(plugin_settings, dict): continue
+
+                    # A. Generate candidate names
+                    snake_name = _to_snake_case(plugin_name)
+                    potential_names = [
+                        snake_name,                                      # e.g. cyclomatic_complexity
+                        snake_name.replace("_detector", "").replace("_checker", "").replace("_finder", ""), # e.g. dead_code
+                        snake_name.split('_')[0]                         # e.g. cyclomatic
+                    ]
+
+                    # B. Locate the specific config object (if it exists)
+                    target_config = None
+                    for name in potential_names:
+                        if hasattr(config.plugins, name):
+                            target_config = getattr(config.plugins, name)
+                            print(f"DEBUG: Mapped '{plugin_name}' to config section '{name}'")
+                            break
                     
-                    # Update Global Rules (config.rules is now a mutable dataclass)
+                    if not target_config:
+                        print(f"INFO: No specific section for '{plugin_name}', will check Global Rules.")
+
+                    # C. Update Values (Check Plugin Config FIRST, then Global Rules)
                     for key, value in plugin_settings.items():
-                        if hasattr(config.rules, key):
-                            # Simple type conversion if needed, or trust input
-                            try:
-                                setattr(config.rules, key, value)
-                            except Exception:
-                                pass
-                    
-                    # Update Plugin Specifics (config.plugins.dead_code is now a SimpleNamespace)
-                    # Map "DeadCodeDetector" -> "dead_code"
-                    if plugin_name == "DeadCodeDetector":
-                        target = config.plugins.dead_code
-                        for key, value in plugin_settings.items():
-                            setattr(target, key, value)
-                    
-                    # Add other plugin mappings here as needed
+                        final_target = None
+                        
+                        # 1. Try Specific Plugin Config
+                        if target_config and hasattr(target_config, key):
+                            final_target = target_config
+                        
+                        # 2. Try Global Rules (Fallback)
+                        elif hasattr(config, "rules") and hasattr(config.rules, key):
+                            final_target = config.rules
+                            print(f"DEBUG: Mapping {plugin_name}.{key} -> Global Rules")
+                        
+                        if not final_target:
+                            print(f"WARNING: Attribute '{key}' not found in specific config or Global Rules.")
+                            continue
 
-                    # Generic Logic to replace hardcoded "if plugin_name == ..."
-                    # Updated Generic Logic to handle suffixes like 'Detector'
-                    #potential_attrs = [
-                    #    _to_snake_case(plugin_name),                                                 # dead_code_detector
-                    #    _to_snake_case(plugin_name).replace("_detector", "").replace("_checker", "") # dead_code
-                    #]
-
-                    #target_found = False
-                    #for attr in potential_attrs:
-                    #    if hasattr(config.plugins, attr):
-                    #        target = getattr(config.plugins, attr)
-                    #        for key, value in plugin_settings.items():
-                    #            setattr(target, key, value)
-                    #        target_found = True
-                    #        break
-
-                    # OR
-
-                    # B. Update Specific Plugin Configs (Generic)
-                    #if "plugins" in final_config_dict:
-                    #    # Ensure plugins section is a dict
-                    #    if not isinstance(final_config_dict["plugins"], dict):
-                    #         final_config_dict["plugins"] = _safe_export_config(final_config_dict["plugins"])
-                    #    
-                    #    plugins_section = final_config_dict["plugins"]
-                    #    
-                    #    # Generate potential keys (e.g., 'dead_code_detector', 'dead_code')
-                    #    snake_name = _to_snake_case(plugin_name)
-                    #    potential_keys = [
-                    #        snake_name, 
-                    #        snake_name.replace("_detector", "").replace("_checker", "")
-                    #    ]
-                    #    
-                    #    for pk in potential_keys:
-                    #        if pk in plugins_section:
-                    #            # We found the target config section!
-                    #            target_conf = plugins_section[pk]
-                    #            
-                    #            # Ensure target is a dict before updating
-                    #            if not isinstance(target_conf, dict):
-                    #                target_conf = _safe_export_config(target_conf)
-                    #                plugins_section[pk] = target_conf
-                    #            
-                    #            # Apply the user settings
-                    #            target_conf.update(plugin_settings)
-                    #            break # Stop looking after finding the match
+                        # D. Robust Type Casting and Update
+                        try:
+                            original_val = getattr(final_target, key)
+                            target_type = type(original_val)
+                            
+                            if target_type == bool:
+                                real_value = str(value).lower() in ('true', '1', 'yes', 'on')
+                            elif target_type == int:
+                                real_value = int(value)
+                            elif target_type == float:
+                                real_value = float(value)
+                            elif original_val is None:
+                                # Infer type if default is None
+                                if str(value).isdigit(): real_value = int(value)
+                                elif str(value).lower() in ['true', 'false']: real_value = str(value).lower() == 'true'
+                                else: real_value = value
+                            else:
+                                real_value = value 
+                            
+                            setattr(final_target, key, real_value)
+                            print(f"DEBUG: Updated {key} = {real_value}")
+                            
+                        except ValueError:
+                            print(f"WARNING: Cast failed for {key}={value}")
 
             else:
-                requested_plugins = get_all_plugin_names()
+                requested_plugins = config.enabled_plugins
 
         except json.JSONDecodeError:
             print("Warning: Invalid JSON in configs. Using defaults.")
