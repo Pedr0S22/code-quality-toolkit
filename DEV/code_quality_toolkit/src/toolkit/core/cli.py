@@ -122,9 +122,26 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Fail if finds error >= stated severity level",
     )
+
+    # Defines the verbosity/log-level of the application.
+    # type=str.upper ensures case-insensitivity at the parsing level.
+    analyze.add_argument(
+        "--log-level",
+        type=str.upper,
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        default="INFO",
+        help="Set the logging verbosity level",
+    )
+
+    # A shortcut flag for setting the log level to DEBUG.
+    analyze.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose output (equivalent to --log-level DEBUG)",
+    )
     # returns the fully configured parser object.
     return parser
-
 
 def _resolve_requested_plugins(option: str, config: ToolkitConfig) -> list[str] | None:
     """
@@ -262,6 +279,12 @@ def _run_analyze(args: argparse.Namespace) -> int:
     load plugins, run the file scan, generate a report, save the report, and
     determine the appropriate program exit code.
     """
+
+    # == Logging Configuration ==
+    # Check for verbose flag first (shortcut for DEBUG), otherwise use the
+    # value provided in --log-level.
+    target_log_level = "DEBUG" if args.verbose else args.log_level
+    logging.set_log_level(target_log_level)
 
     # == Configuration and Overrides ==
 
