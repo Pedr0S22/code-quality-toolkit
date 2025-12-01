@@ -201,7 +201,7 @@ def test_core_unified_report_generation(tmp_path: Path):
     # The system should create the html too
     output_html = output_json.with_suffix(".html")
     
-    assert output_html.exists(), "O ficheiro report.html não foi criado automaticamente!"
+    assert output_html.exists(),"O ficheiro report.html não foi criado automaticamente"
     
     #Checks if the file is not empty
     assert output_html.stat().st_size > 0
