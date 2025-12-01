@@ -81,7 +81,9 @@ class Plugin:
             if compiled:
                 self.ignore_patterns = compiled
         self.severity = getattr(sect, "severity", self.severity)
-        self.min_name_length = int(getattr(sect, "min_name_length", self.min_name_length))
+        self.min_name_length = int(
+            getattr(sect, "min_name_length", self.min_name_length)
+        )
 
     def get_metadata(self) -> dict[str, str]:
         return {
