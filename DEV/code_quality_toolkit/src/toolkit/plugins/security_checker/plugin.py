@@ -159,7 +159,11 @@ class Plugin:
                         "message": "Possível injeção SQL detectada.",
                         "line": find_lineno("cursor.execute"),
                         "col": 1,
-                        "hint": "Use queries parametrizadas em vez de formatação direta.",
+                        "hint":(
+                            "Use queries parametrizadas em vez de "
+                            "formatação direta."
+                        ),
+
                     })
 
                 if "PASSWORD" in src and "=" in src and ('"' in src or "'" in src):
