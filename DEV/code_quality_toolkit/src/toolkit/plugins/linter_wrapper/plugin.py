@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess  # nosec B404 - usamos subprocess apenas para invocar 'pylint' localmente com argumentos controlados
+import sys
 import tempfile
 from typing import Any
 
@@ -171,6 +172,8 @@ class Plugin:
         extra_args = list(self.pylint_args)
 
         cmd: list[str] = [
+            sys.executable,  # Points to .venv/bin/python or .venv/Scripts/python.exe
+            "-m",
             "pylint",
             "--output-format=json",
             *extra_args,
