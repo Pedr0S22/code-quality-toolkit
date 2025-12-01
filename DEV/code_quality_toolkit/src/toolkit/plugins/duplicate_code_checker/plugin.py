@@ -24,15 +24,10 @@ class Plugin:
         if not file_path:
             return {"error": "file_path required"}
 
-        # Run pylint duplicate-code checker
+        # Run pylint for R0801 duplicates
+        # Use --output-format=text and parse lines containing "R0801"
         proc = subprocess.run(
-            [
-                "pylint",
-                "--disable=all",
-                "--enable=R0801",
-                "--msg-template='{line}|{column}|{msg_id}|{msg}'",
-                file_path,
-            ],
+            ["pylint", "--disable=all", "--enable=R0801", file_path],
             capture_output=True,
             text=True,
         )
@@ -40,31 +35,39 @@ class Plugin:
         results = []
 
         for line in proc.stdout.splitlines():
-            try:
-                row, col, code, text = line.strip().strip("'").split("|", 3)
-            except ValueError:
-                continue
+            # Example Pylint R0801 line:
+            # duplicate_code_checker.py:2:0: R0801: Similar lines in 2 files
+            if "R0801" in line:
+                try:
+                    path_part, line_part, col_part, rest = line.split(":", 3)
+                    row = int(line_part)
+                    col = int(col_part)
+                    code = "R0801"
+                    message = rest.strip()
+                except Exception:
+                    # Skip lines we can't parse
+                    continue
 
-            results.append({
-                "plugin": self.get_metadata()["name"],
-                "file": file_path,
-                "entity": "bloco duplicado",
-                "line_numbers": [int(row)],
-                "similarity": 100,
-                "refactoring_suggestion": "Consolidar bloco",
-                "details": {
-                    "occurrences": 1,
-                    "message": text,
-                },
-                "metric": "duplicate_code",
-                "value": None,
-                "severity": "medium",
-                "code": code,
-                "message": text,
-                "line": int(row),
-                "col": int(col),
-                "hint": "Refactor to remove repeated logic.",
-            })
+                results.append({
+                    "plugin": self.get_metadata()["name"],
+                    "file": file_path,
+                    "entity": "bloco duplicado",
+                    "line_numbers": [row],
+                    "similarity": 100,
+                    "refactoring_suggestion": "Consolidar bloco",
+                    "details": {
+                        "occurrences": 1,
+                        "message": message,
+                    },
+                    "metric": "duplicate_code",
+                    "value": None,
+                    "severity": "medium",
+                    "code": code,
+                    "message": message,
+                    "line": row,
+                    "col": col,
+                    "hint": "Refactor to remove repeated logic.",
+                })
 
         summary = {"issues_found": len(results), "status": "completed"}
 
@@ -81,7 +84,7 @@ class Plugin:
             "value": None,
             "severity": "high" if len(results) > 2 else "medium",
             "code": "DUPLICATED_CODE",
-            "message": "Multiple duplicated code blocks found.",
+            "message": "Multiple duplicated code blocks found." if results else "",
             "line": results[0]["line"] if results else 0,
             "col": 0,
             "hint": "Consider refactoring to reduce code duplication.",

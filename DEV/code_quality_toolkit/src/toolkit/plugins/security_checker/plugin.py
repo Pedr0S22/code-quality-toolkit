@@ -34,14 +34,12 @@ class Plugin:
     def __init__(self) -> None:
         """Inicializa o plugin."""
         # Verifica se o import do Bandit funcionou
-
         # Só avisar se efectivamente não temos o Bandit disponível
         if BanditManager is None:
             print(
                 "AVISO: Dependência 'bandit' não instalada. "
                 "O SecurityChecker não vai funcionar. Usando verificação fallback."
             )
-
         # TAREFA 7: Configuração (TOML)
         # O Bandit usa o seu próprio ficheiro, mas podemos definir o nível
         # de severidade que queremos reportar.
@@ -76,12 +74,16 @@ class Plugin:
         Isto NUNCA DEVE levantar uma exceção (seguindo a Golden Rule).
         """
 
-        # Implementa a "Golden Rule" do Mathias
+        # Inicializa a estrutura padrão de retorno
+        report = {
+            "results": [],
+            "summary": {"issues_found": 0, "status": "completed"},
+        }
+
         try:
-            # Se o Bandit não estiver disponível, usamos um scanner simples
-            # por padrões comuns (fallback) para que os testes corram sem
-            # depender da biblioteca externa.
             results: list[IssueResult] = []
+
+            # --- Fallback scanner se Bandit não estiver disponível ---
             if BanditManager is None:
                 src = source_code or ""
                 lines = src.splitlines()
@@ -92,102 +94,125 @@ class Plugin:
                             return idx
                     return 1
 
-                # Detectar uso de eval/exec
+                # Heurísticas simples
                 if "eval(" in src:
-                    lineno = find_lineno("eval(")
                     results.append({
                         "severity": "high",
                         "code": "B307",
                         "message": "Uso de eval() detectado.",
-                        "line": lineno,
+                        "line": find_lineno("eval("),
                         "col": 1,
                         "hint": "Evite usar eval() em código não confiável.",
                     })
 
                 if "exec(" in src:
-                    lineno = find_lineno("exec(")
                     results.append({
                         "severity": "high",
                         "code": "B307",
                         "message": "Uso de exec() detectado.",
-                        "line": lineno,
+                        "line": find_lineno("exec("),
                         "col": 1,
                         "hint": "Evite usar exec() em código não confiável.",
                     })
 
-                # Detectar pickle
                 if "import pickle" in src or "pickle.load" in src:
-                    lineno = find_lineno("pickle")
                     results.append({
                         "severity": "medium",
                         "code": "B301",
                         "message": "Uso de pickle detectado.",
-                        "line": lineno,
+                        "line": find_lineno("pickle"),
                         "col": 1,
                         "hint": "Evite usar pickle para dados não confiáveis.",
                     })
 
-                # Detectar md5 / hashes fracos
                 if "hashlib.md5" in src or ".md5(" in src:
-                    lineno = find_lineno("md5")
                     results.append({
                         "severity": "low",
                         "code": "B303",
                         "message": "Uso de hash MD5 detectado.",
-                        "line": lineno,
+                        "line": find_lineno("md5"),
                         "col": 1,
                         "hint": "Use hashes seguros como sha256 para segurança.",
                     })
 
-                # Detectar comandos de shell concatenados (simples heurística)
                 if "os.system" in src and "+" in src:
-                    lineno = find_lineno("os.system")
                     results.append({
                         "severity": "medium",
                         "code": "B601",
                         "message": "Chamadas ao sistema com concatenação de strings detectadas.",
-                        "line": lineno,
+                        "line": find_lineno("os.system"),
                         "col": 1,
                         "hint": "Use chamadas seguras sem concatenar input do utilizador.",
                     })
 
-                # Detectar queries vulneráveis a SQLi (heurística simples)
                 if "%s" in src and "cursor.execute" in src:
-                    lineno = find_lineno("cursor.execute")
                     results.append({
                         "severity": "high",
                         "code": "B606",
                         "message": "Possível injeção SQL detectada.",
-                        "line": lineno,
+                        "line": find_lineno("cursor.execute"),
                         "col": 1,
                         "hint": "Use queries parametrizadas em vez de formatação direta.",
                     })
 
-                # Detectar senhas hardcoded (heurística simples)
                 if "PASSWORD" in src and "=" in src and ('"' in src or "'" in src):
-                    lineno = find_lineno("PASSWORD")
                     results.append({
                         "severity": "low",
                         "code": "B105",
                         "message": "Senha hardcoded detectada.",
-                        "line": lineno,
+                        "line": find_lineno("PASSWORD"),
                         "col": 1,
                         "hint": "Nunca guarde segredos em código fonte.",
                     })
 
-                return {
-                    "results": results,
-                    "summary": {"issues_found": len(results), "status": "completed"},
-                }
+                report["results"] = results
+                report["summary"]["issues_found"] = len(results)
+                return report
+
+            # --- Bandit analysis ---
+            with tempfile.NamedTemporaryFile(
+                suffix=".py", delete=False, mode="w", encoding="utf-8"
+            ) as temp_file:
+                temp_file.write(source_code)
+                temp_file_path = temp_file.name
+
+            try:
+                config = BanditConfig()
+                manager = BanditManager(config=config, agg_type='vuln')
+                manager.discover_files([temp_file_path])
+                manager.run_tests()
+
+                severity_map = {'LOW': LOW, 'MEDIUM': MEDIUM, 'HIGH': HIGH}
+                report_level = severity_map.get(self.report_severity_level, LOW)
+                bandit_issues = manager.get_issue_list(sev_level=report_level, conf_level=LOW)
+
+                for issue in bandit_issues:
+                    severity_translation = {'LOW': 'low', 'MEDIUM': 'medium', 'HIGH': 'high'}
+                    results.append({
+                        "severity": severity_translation.get(issue.severity, "low"),
+                        "code": issue.test_id,
+                        "message": issue.text,
+                        "line": issue.lineno,
+                        "col": issue.col_offset + 1,
+                        "hint": f"Bandit Test ID: {issue.test_id}",
+                        })
+
+                    report["results"] = results
+                    report["summary"]["issues_found"] = len(results)
+
+            finally:
+                if os.path.exists(temp_file_path):
+                    os.remove(temp_file_path)
+
+            return report
 
         except Exception as e:
-            # TAREFA 13: Error Handling 
-            # Apanha todos os outros erros e Devolve uma Resposta de Falha
+            # Sempre retorna um dicionário válido, mesmo em caso de erro
             return {
-                "results": [],
-                "summary": {
-                    "issues_found": 0,
-                    "status": "failed",
-                    "error": f"Erro interno no BanditSecurityChecker: {str(e)}",
-                },
-            }
+                    "results": [],
+                    "summary": {
+                        "issues_found": 0,
+                        "status": "failed",
+                        "error": f"Erro interno no BanditSecurityChecker: {str(e)}",
+                        },
+                    }
