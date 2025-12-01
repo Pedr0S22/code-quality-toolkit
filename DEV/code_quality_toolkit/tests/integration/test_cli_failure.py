@@ -99,7 +99,7 @@ def test_cli_partial_report_on_plugin_runtime_failure(tmp_path: Path):
         exit_code = main(["analyze", str(project_dir), "--out", str(output_file)])
 
     # 1. Verify it finished gracefully (Code 0)
-    assert exit_code == EXIT_SUCCESS
+    assert exit_code == EXIT_MANAGED_ERROR
 
     # 2. Verify report.json exists
     assert output_file.exists()
