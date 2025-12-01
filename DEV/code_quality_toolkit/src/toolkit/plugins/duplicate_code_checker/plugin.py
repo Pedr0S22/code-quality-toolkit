@@ -1,10 +1,11 @@
 """Plugin que procura por codigo duplicado."""
 
+import subprocess
+import sys
 from typing import Any
-import subprocess, sys
 
-from ...core.contracts import IssueResult
 from ...utils.config import ToolkitConfig
+
 
 class Plugin:
     def __init__(self) -> None:
@@ -30,6 +31,7 @@ class Plugin:
             [sys.executable, "-m", "pylint", "--disable=all", "--enable=R0801", file_path],
             capture_output=True,
             text=True,
+            shell=True
         )
 
         results = []
@@ -44,8 +46,7 @@ class Plugin:
                     col = int(col_part)
                     code = "R0801"
                     message = rest.strip()
-                except Exception:
-                    # Skip lines we can't parse
+                except (ValueError, IndexError):
                     continue
 
                 results.append({

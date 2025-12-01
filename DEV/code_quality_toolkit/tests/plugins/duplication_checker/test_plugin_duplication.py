@@ -1,5 +1,6 @@
 """Testes Unitários para o DuplicationChecker Plugin."""
 from unittest.mock import patch
+
 from toolkit.plugins.duplicate_code_checker.plugin import Plugin
 
 
