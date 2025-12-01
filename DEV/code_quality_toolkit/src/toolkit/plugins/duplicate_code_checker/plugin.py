@@ -3,6 +3,7 @@
 import subprocess
 import sys
 from typing import Any
+from pathlib import Path
 
 from ...utils.config import ToolkitConfig
 
@@ -25,13 +26,16 @@ class Plugin:
         if not file_path:
             return {"error": "file_path required"}
 
-        # Run pylint for R0801 duplicates
-        # Use --output-format=text and parse lines containing "R0801"
+        p = Path(file_path)
+        p = p.resolve()
+        if not p.is_file():
+            raise ValueError(f"Invalid file path: {file_path}")
+
+        # Run pylint safely without shell=True
         proc = subprocess.run(
-            [sys.executable, "-m", "pylint", "--disable=all", "--enable=R0801", file_path],
+            [sys.executable, "-m", "pylint", "--disable=all", "--enable=R0801", str(p)],
             capture_output=True,
             text=True,
-            shell=True
         )
 
         results = []
