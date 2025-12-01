@@ -124,43 +124,28 @@ async def analyze_project(
         report_data_json = aggregate(analyzed_files, plugin_status)
         report_data_html = generate_html(report_data_json)
 
-        # 7. Generate Output
-        
+        # 7. Generate Output~
+
         # A. Save JSON Report
         with open(report_json_path, "w", encoding="utf-8") as f:
             json.dump(report_data_json, f, indent=2, ensure_ascii=False)
 
         with open(report_html_path, "w", encoding="utf-8") as f:
             f.write(report_data_html)
-            
+                
         # B. Create the ZIP Response
         with zipfile.ZipFile(results_zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
             # 1. Add report.json
             zf.write(report_json_path, arcname="report.json")
-            
+                
             # 2. Add report.html (From Project Root)
             zf.write(report_html_path, arcname="report.html")
-
-            # 3. Add Plugin Dashboards
-            # We iterate over the plugins that were actually loaded/requested
-            for plugin_name in loaded_plugins.keys():
-                # Convert PascalCase to folder_name (assuming folder is snake_case or similar)
-                # If your folder names match the plugin names exactly, use plugin_name.
-                # If your folders are snake_case (e.g. DeadCodeDetector -> dead_code_finder),
-                
-                snake_name = _to_snake_case(plugin_name)
-                dashboard_path = TOOLKIT_ROOT / "src/toolkit/plugins" / snake_name / f"{snake_name}_dashboard.html"
-
-                if dashboard_path.exists():
-                    # Archive structure: <PluginName>/dashboard.html
-                    zf.write(dashboard_path, arcname=f"{snake_name}_dashboard.html")
-                
-                else:
-                    print(f"WARNING: Could not find {dashboard_path}")
-                    zf.writestr(f"{snake_name}_dashboard.html", "<html><body><h1>Dashboard Not Found on Server</h1></body></html>")
+        
+            _generate_output(loaded_plugins, zf)
 
         background_tasks.add_task(cleanup_sandbox, temp_dir)
         return FileResponse(path=results_zip_path, filename="analysis_results.zip", media_type="application/zip")
+
     except HTTPException:
         cleanup_sandbox(temp_dir)
         raise
@@ -333,6 +318,26 @@ def _config_overrides(config,configs):
         raise HTTPException(status_code=400, detail="No valid plugins could be loaded.")
     
     return loaded_plugins
+
+def _generate_output(loaded_plugins, zf):
+
+        # 3. Add Plugin Dashboards
+        # We iterate over the plugins that were actually loaded/requested
+        for plugin_name in loaded_plugins.keys():
+            # Convert PascalCase to folder_name (assuming folder is snake_case or similar)
+            # If your folder names match the plugin names exactly, use plugin_name.
+            # If your folders are snake_case (e.g. DeadCodeDetector -> dead_code_finder),
+                
+            snake_name = _to_snake_case(plugin_name)
+            dashboard_path = TOOLKIT_ROOT / "src/toolkit/plugins" / snake_name / f"{snake_name}_dashboard.html"
+
+            if dashboard_path.exists():
+                # Archive structure: <PluginName>/dashboard.html
+                zf.write(dashboard_path, arcname=f"{snake_name}_dashboard.html")
+                
+            else:
+                print(f"WARNING: Could not find {dashboard_path}")
+                zf.writestr(f"{snake_name}_dashboard.html", "<html><body><h1>Dashboard Not Found on Server</h1></body></html>")
 
 def get_all_plugin_names() -> List[str]:
     return sorted(list(get_discovered_plugins().keys()))
