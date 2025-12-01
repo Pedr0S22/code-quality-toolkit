@@ -163,6 +163,53 @@ def test_style_checker_integration(tmp_path: Path):
     assert "length" in msg or "characters" in msg or "caracteres" in msg
     assert issue["severity"] in ["info", "low"]
 
+def test_core_unified_report_generation(tmp_path: Path):
+    """
+    Integration tests(End-to-End):
+    Verify if the analyze function generate the 2 files (JSON e HTML)
+    correctly
+    """
+    
+    # 1. Setup
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    (project_dir / "main.py").write_text("print('hello')", encoding="utf-8")
+    
+    # Define where we want the file to be
+    output_json = tmp_path / "final_report.json"
+    
+    # 2. Execution
+    exit_code = main([
+        "analyze",
+        str(project_dir),
+        "--out", str(output_json),
+        "--plugins", "StyleChecker" 
+    ])
+
+    # 3.Succes verify
+    assert exit_code == EXIT_SUCCESS
+
+    # --- 1: JSON ---
+    #Just to be sure
+    assert output_json.exists(), "O ficheiro report.json não foi criado!"
+    
+    with open(output_json, encoding="utf-8") as f:
+        data = json.load(f)
+    assert data["analysis_metadata"]["status"] == "completed"
+
+    # --- 2: HTML (The issue) ---
+    # The system should create the html too
+    output_html = output_json.with_suffix(".html")
+    
+    assert output_html.exists(), "O ficheiro report.html não foi criado automaticamente!"
+    
+    #Checks if the file is not empty
+    assert output_html.stat().st_size > 0
+    
+    # Verify if the html file appeared
+    html_content = output_html.read_text(encoding="utf-8")
+    assert "<!DOCTYPE html>" in html_content
+    assert "Code Quality Report" in html_content
 
 def test_multiple_specific_plugins_integration(tmp_path: Path):
     """

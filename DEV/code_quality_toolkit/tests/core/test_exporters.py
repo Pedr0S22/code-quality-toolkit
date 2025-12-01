@@ -1,7 +1,7 @@
 from toolkit.core.aggregator import aggregate
 
 
-# --- Dados de Teste Completos (Para satisfazer a validação) ---
+# --- Data of Complete Tests (To satisfy the validation) ---
 def create_mock_result(severity="low", code="TEST001", count=1):
     """Ajuda a criar resultados que passam na validação rigorosa."""
     results = []
@@ -17,11 +17,11 @@ def create_mock_result(severity="low", code="TEST001", count=1):
         "results": results,
         "summary": {
             "issues_found": count,
-            "status": "completed"  # Campo obrigatório!
+            "status": "completed"  #Must have Field
         }
     }
 
-# --- Testes ---
+# --- Tests ---
 
 def test_aggregate_counts_total_issues_correctly():
     """Verifica a soma total de problemas."""
@@ -31,7 +31,7 @@ def test_aggregate_counts_total_issues_correctly():
             "plugins": [
                 {
                     "plugin": "PluginA",
-                    # Agora incluímos o dicionário completo
+                    # now the whole dicionary
                     **create_mock_result("low", count=2)
                 }
             ]
@@ -47,7 +47,7 @@ def test_aggregate_counts_total_issues_correctly():
         }
     ]
     
-    # Mock do status dos plugins também é necessário
+    # Mock of the status of the plugins is also necessary
     mock_status = {"PluginA": "completed", "PluginB": "completed"}
 
     report = aggregate(mock_files, mock_status)
@@ -57,7 +57,8 @@ def test_aggregate_counts_total_issues_correctly():
 
 def test_aggregate_counts_by_severity_correctly():
     """Verifica a contagem por severidade."""
-    # Criamos resultados mistos manualmente
+    
+    # the mixed results manually created
     results_list = [
         {"severity": "high", "code": "T1", "message": "m"},
         {"severity": "medium", "code": "T2", "message": "m"},
@@ -151,7 +152,7 @@ def test_top_offenders_sorting_logic():
     report = aggregate(mock_files, {"P1": "completed"})
     top = report["summary"]["top_offenders"]
     
-    # A lista deve ter pelo menos 2 itens (o clean.py pode ser excluído se count > 0)
+    # The list must have at least 2 itens (the clean.py can be erased if the count > 0)
     assert len(top) >= 2
     assert top[0]["file"] == "worst_offender.py"
     assert top[0]["issues"] == 50
