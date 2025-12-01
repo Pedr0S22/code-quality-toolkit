@@ -1,7 +1,7 @@
-# 🟦 USER DOCUMENTATION
-Code Quality Toolkit – User Guide
+# USER DOCUMENTATION
+##Code Quality Toolkit – User Guide
 
-(Sprint 2 – UI & Dashboard Integration)
+###(Sprint 2 – UI & Dashboard Integration)
 
 A User Interface (UI) desenvolvida nesta sprint fornece uma forma intuitiva e visual de utilizar o Code Quality Toolkit, permitindo:
 
