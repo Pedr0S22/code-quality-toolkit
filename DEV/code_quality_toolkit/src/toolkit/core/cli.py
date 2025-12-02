@@ -144,6 +144,7 @@ def _build_parser() -> argparse.ArgumentParser:
     # returns the fully configured parser object.
     return parser
 
+
 def _resolve_requested_plugins(option: str, config: ToolkitConfig) -> list[str] | None:
     """
     Determines the final list of analysis plugins to be loaded and run by reconciling
@@ -252,9 +253,7 @@ def main(
     # analysis run.
     except (ConfigurationError, PluginLoadError, AnalysisExecutionError) as exc:
         logging.log(
-            "cli.error",
-            level="ERROR",
-            error=str(exc)
+            "cli.error", level="ERROR", error=str(exc)
         )  # records the error internally for debugging purposes.
         print(
             f"Error: {exc}", file=sys.stderr
@@ -268,10 +267,7 @@ def main(
         # its rule BLE001, which typically warns against broad except Exception:
         # clauses. It has been added here because the intent is to catch all
         #  remaining exceptions to prevent an unhandled crash.
-        logging.log(
-            "cli.error",
-            level="ERROR",
-            error=str(exc))
+        logging.log("cli.error", level="ERROR", error=str(exc))
         print(f"Unexpected error: {exc}", file=sys.stderr)
         return EXIT_UNEXPECTED_ERROR
 
@@ -379,13 +375,13 @@ def _run_analyze(args: argparse.Namespace) -> int:
     if args.fail_on_severity and _should_fail(report, args.fail_on_severity):
         print("Failed on severity")
         return EXIT_SEVERITY_ERROR
-    
+
     loaded_plugin_names = set(plugins.keys())
     requested_plugins_names = set(requested_plugins)
-    if  requested_plugins_names != loaded_plugin_names:
+    if requested_plugins_names != loaded_plugin_names:
         missing = requested_plugins_names - loaded_plugin_names
         raise PluginLoadError(f"Requested plugins not found: {', '.join(missing)}")
-    
+
     return EXIT_SUCCESS  # success exit
 
 
@@ -396,4 +392,4 @@ if __name__ == "__main__":  # pragma: no cover
     sys.exit(
         main()
     )  # Executes main (the CLI entry point) and exits with a status code (0 is ok,
-    # otherwise is an error code). 
+    # otherwise is an error code).

@@ -1,6 +1,5 @@
-import html
 from toolkit.core.exporters import generate_html
-from unittest.mock import MagicMock
+
 
 # --- Mock Data Structure (Complete) ---
 def get_mock_unified_report():
@@ -57,14 +56,29 @@ def get_mock_unified_report():
                         "summary": {
                             "issues_found": 3,
                             "status": "failed",
-                            "metrics": {"loc": 50, "coverage": 0.8}, # Has metrics
-                            "error": "Timeout during analysis.", # Has error
+                            "metrics": {"loc": 50, "coverage": 0.8},  # Has metrics
+                            "error": "Timeout during analysis.",  # Has error
                         },
                         "results": [
                             # Issue with empty hint/no hint is okay for coverage
-                            {"severity": "high", "code": "B1", "message": "Msg B1", "line": 1},
-                            {"severity": "medium", "code": "B2", "message": "Msg B2", "line": 2},
-                            {"severity": "medium", "code": "B3", "message": "Msg B3", "line": 3},
+                            {
+                                "severity": "high",
+                                "code": "B1",
+                                "message": "Msg B1",
+                                "line": 1,
+                            },
+                            {
+                                "severity": "medium",
+                                "code": "B2",
+                                "message": "Msg B2",
+                                "line": 2,
+                            },
+                            {
+                                "severity": "medium",
+                                "code": "B3",
+                                "message": "Msg B3",
+                                "line": 3,
+                            },
                         ],
                     }
                 ],
@@ -81,10 +95,9 @@ def test_generate_html_with_complete_report():
     # Basic structure checks
     assert "Code Quality Toolkit Report" in html_output
     assert "Analysis Metadata" in html_output
-    
-    # FIX 1: Corrected assertion to match exact output structure (no newline/tab in output)
+
     assert "<li><strong>Total Issues:</strong> 5</li>" in html_output
-    
+
     assert "high: 2" in html_output
     assert "Plugin: P1" in html_output
     assert "File: file_A.py" in html_output
@@ -107,13 +120,8 @@ def test_generate_html_empty_details_and_top_offenders():
 
     html_output = generate_html(report)
 
-    # FIX 2: Corrected assertion for Top Offenders (no internal newline/tab in output)
-    # The output is rendered as: <h3>Top Offenders</h3><p>None</p>
     assert "<h3>Top Offenders</h3><p>None</p>" in html_output
 
-    # FIX 3: Corrected assertion for empty Details message
-    # The output is rendered as: <h2>Details</h2>\n \t <p>No details available.</p>
-    # Note: Using the exact string as generated in your exporters.py structure (includes newline before <p>)
     assert "<h2>Details</h2>\n    <p>No details available.</p>" in html_output
 
     # Ensure file/plugin details are NOT present
@@ -141,7 +149,10 @@ def test_generate_html_no_issues_found_in_plugin():
 
     # Check for the specific "No issues found" message (line 177 coverage)
     assert "<p><em>No issues found.</em></p>" in html_output
-    assert "<li><strong>[LOW]</strong>" not in html_output # Ensure no issues were listed
+    assert (
+        "<li><strong>[LOW]</strong>" not in html_output
+    )  # Ensure no issues were listed
+
 
 # Note: The use of html.escape (line 164) is covered by the comprehensive report
 # if the mock message contained characters like < or &

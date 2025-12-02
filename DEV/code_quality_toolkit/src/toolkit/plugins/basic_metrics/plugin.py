@@ -64,7 +64,6 @@ class Plugin:
                 "Reports basic code metrics like LOC, comments, blanks "
                 "and Halstead metrics."
             ),
-
         }
 
     def configure(self, config: ToolkitConfig) -> None:

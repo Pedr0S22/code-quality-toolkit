@@ -40,21 +40,21 @@ class Plugin:
 
         if not files_to_check:
             return {
-                    "plugin": self.get_metadata()["name"],
-                    "results": [],
-                    "summary": {
-                        "issues_found": 0,
-                        "status": "completed"}
-                    }
+                "plugin": self.get_metadata()["name"],
+                "results": [],
+                "summary": {"issues_found": 0, "status": "completed"},
+            }
 
         # Run pylint on all files at once
-        proc = subprocess.run( # nosec B603 - chamada a pylint com argumentos fixos, sem dados não confiáveis
-            [sys.executable,
-             "-m",
-             "pylint",
-             "--disable=all",
-             "--enable=R0801", 
-             *files_to_check],
+        proc = subprocess.run(  # nosec B603 - chamada a pylint com argumentos fixos, sem dados não confiáveis
+            [
+                sys.executable,
+                "-m",
+                "pylint",
+                "--disable=all",
+                "--enable=R0801",
+                *files_to_check,
+            ],
             capture_output=True,
             text=True,
         )
@@ -70,28 +70,30 @@ class Plugin:
             except (ValueError, IndexError):
                 continue
 
-            results.append({
-                "plugin": self.get_metadata()["name"],
-                "file": path_part,
-                "entity": "bloco duplicado",
-                "line_numbers": [row],
-                "similarity": 100,
-                "refactoring_suggestion": "Consolidar bloco",
-                "details": {"occurrences": 1, "message": message},
-                "metric": "duplicate_code",
-                "value": None,
-                "severity": "medium",
-                "code": code,
-                "message": message,
-                "line": row,
-                "col": col,
-                "hint": "Refactor to remove repeated logic.",
-            })
+            results.append(
+                {
+                    "plugin": self.get_metadata()["name"],
+                    "file": path_part,
+                    "entity": "bloco duplicado",
+                    "line_numbers": [row],
+                    "similarity": 100,
+                    "refactoring_suggestion": "Consolidar bloco",
+                    "details": {"occurrences": 1, "message": message},
+                    "metric": "duplicate_code",
+                    "value": None,
+                    "severity": "medium",
+                    "code": code,
+                    "message": message,
+                    "line": row,
+                    "col": col,
+                    "hint": "Refactor to remove repeated logic.",
+                }
+            )
 
         summary = {"issues_found": len(results), "status": "completed"}
 
         return {
-                "plugin": self.get_metadata()["name"],
-                "results": results,
-                "summary": summary
-                }
+            "plugin": self.get_metadata()["name"],
+            "results": results,
+            "summary": summary,
+        }

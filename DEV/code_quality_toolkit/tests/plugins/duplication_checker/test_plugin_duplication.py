@@ -9,6 +9,7 @@ from toolkit.plugins.duplicate_code_checker.plugin import Plugin
 
 class MockRulesConfig:
     """Mock simples para compatibilidade com ToolkitConfig."""
+
     max_line_length = 88
 
 

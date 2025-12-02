@@ -21,21 +21,25 @@ def test_core_continues_when_one_plugin_fails(tmp_path):
 
     # plugin FAIL (this forces an exception inside analyze)
     plugin_fail = tmp_path / "fail_plugin.py"
-    write(
-        plugin_fail,
-        "def run(f, c): raise Exception('boom')\n"
-    )
+    write(plugin_fail, "def run(f, c): raise Exception('boom')\n")
 
     write(
         project / "toolkit.toml",
-        f"[plugins.FAIL]\npath='{plugin_fail}'\nenabled=true\n"
+        f"[plugins.FAIL]\npath='{plugin_fail}'\nenabled=true\n",
     )
 
     report = project / "report.json"
 
     subprocess.run(
-        [sys.executable, "-m", "toolkit.core.cli", "analyze",
-         str(project), "--out", str(report)],
+        [
+            sys.executable,
+            "-m",
+            "toolkit.core.cli",
+            "analyze",
+            str(project),
+            "--out",
+            str(report),
+        ],
         cwd=ROOT,
         capture_output=True,
         text=True,
@@ -55,8 +59,7 @@ def test_core_continues_when_one_plugin_fails(tmp_path):
 
     # at least one plugin hit error OR completed
     assert any(
-        p["summary"]["status"] in ("completed", "failed", "partial")
-        for p in plugins
+        p["summary"]["status"] in ("completed", "failed", "partial") for p in plugins
     )
 
 
@@ -74,15 +77,24 @@ def test_status_partial(tmp_path):
 
     write(
         project / "toolkit.toml",
-        f"[plugins.FAIL]\npath='{plugin_fail}'\nenabled=true\n"
+        f"[plugins.FAIL]\npath='{plugin_fail}'\nenabled=true\n",
     )
 
     report = project / "report.json"
 
     subprocess.run(
-        [sys.executable, "-m", "toolkit.core.cli", "analyze",
-         str(project), "--out", str(report)],
-        cwd=ROOT, capture_output=True, text=True
+        [
+            sys.executable,
+            "-m",
+            "toolkit.core.cli",
+            "analyze",
+            str(project),
+            "--out",
+            str(report),
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
     )
 
     data = json.loads(report.read_text())
@@ -102,17 +114,23 @@ def test_status_completed(tmp_path):
     plugin_ok = tmp_path / "ok.py"
     write(plugin_ok, "def run(f, c): return [{'code':'OK'}]\n")
 
-    write(
-        project / "toolkit.toml",
-        f"[plugins.OK]\npath='{plugin_ok}'\nenabled=true\n"
-    )
+    write(project / "toolkit.toml", f"[plugins.OK]\npath='{plugin_ok}'\nenabled=true\n")
 
     report = project / "report.json"
 
     subprocess.run(
-        [sys.executable, "-m", "toolkit.core.cli", "analyze",
-         str(project), "--out", str(report)],
-        cwd=ROOT, capture_output=True, text=True
+        [
+            sys.executable,
+            "-m",
+            "toolkit.core.cli",
+            "analyze",
+            str(project),
+            "--out",
+            str(report),
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
     )
 
     data = json.loads(report.read_text())
@@ -133,15 +151,24 @@ def test_status_failed(tmp_path):
 
     write(
         project / "toolkit.toml",
-        f"[plugins.FAIL]\npath='{plugin_fail}'\nenabled=true\n"
+        f"[plugins.FAIL]\npath='{plugin_fail}'\nenabled=true\n",
     )
 
     report = project / "report.json"
 
     subprocess.run(
-        [sys.executable, "-m", "toolkit.core.cli", "analyze",
-         str(project), "--out", str(report)],
-        cwd=ROOT, capture_output=True, text=True
+        [
+            sys.executable,
+            "-m",
+            "toolkit.core.cli",
+            "analyze",
+            str(project),
+            "--out",
+            str(report),
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
     )
 
     data = json.loads(report.read_text())

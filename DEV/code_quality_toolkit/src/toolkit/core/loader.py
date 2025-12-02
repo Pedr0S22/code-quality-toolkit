@@ -283,7 +283,8 @@ def load_plugins(requested: Iterable[str] | None = None) -> dict[str, PluginProt
                 "plugin.skipped",
                 level="INFO",
                 plugin=metadata["name"],
-                reason="filtered")
+                reason="filtered",
+            )
             continue
 
         # Check if a plugin with the same name has already been loaded. If so, it
@@ -298,10 +299,11 @@ def load_plugins(requested: Iterable[str] | None = None) -> dict[str, PluginProt
         # the module file path.
         plugin_instances[metadata["name"]] = plugin
         logging.log(
-            "plugin.loaded", 
+            "plugin.loaded",
             level="INFO",
-            plugin=metadata["name"], 
-            module=str(module_file))
+            plugin=metadata["name"],
+            module=str(module_file),
+        )
 
     # == end of Iterating ==
 

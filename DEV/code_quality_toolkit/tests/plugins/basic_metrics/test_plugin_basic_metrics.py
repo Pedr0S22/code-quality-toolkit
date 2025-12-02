@@ -68,7 +68,7 @@ def test_metrics_with_only_comments() -> None:
     source = "# comment1\n# comment2\n\n"
     metrics = _run_metrics(source)
     assert metrics["total_lines"] == 3
-    assert metrics["blank_lines"] == 1 # blank line at end
+    assert metrics["blank_lines"] == 1  # blank line at end
     assert metrics["comment_lines"] == 2
     assert metrics["docstring_lines"] == 0
     assert metrics["logical_lines"] == 0

@@ -46,20 +46,22 @@ if not _LOGGER.handlers:
 # will be ignored.
 _LOGGER.setLevel(logging.INFO)
 
+
 def set_log_level(level_name: str) -> None:
     """
     Dynamically sets the logging level for the toolkit logger.
-    
+
     Args:
         level_name: The desired log level (e.g., "DEBUG", "INFO", "WARNING").
                     Case-insensitive.
     """
     level_name = level_name.upper()
-    
+
     # Retrieves the integer value for the level, defaulting to INFO if invalid
     level = getattr(logging, level_name, logging.INFO)
-    
+
     _LOGGER.setLevel(level)
+
 
 def log(event: str, level: str = "INFO", **payload: Any) -> None:
     """
