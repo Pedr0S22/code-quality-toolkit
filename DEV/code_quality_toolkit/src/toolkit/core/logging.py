@@ -6,7 +6,7 @@ import json
 import logging
 from typing import Any
 
-SEND_LOGS_TO_TERMINAL = True  # appends logs to a log file
+SEND_LOGS_TO_TERMINAL = False  # appends logs to a log file
 
 """
 Set up and configures a Python logger named "toolkit" using the standard loggin
