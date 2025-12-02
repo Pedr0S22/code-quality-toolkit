@@ -77,6 +77,7 @@ def test_load_plugins_requested_filter(mock_import, mock_iter, mock_log):
     # Verifica se o logger foi chamado com o evento e payload corretos
     mock_log.assert_called_with(
         "plugin.missing",
+        level="ERROR",
         plugin="OutroPlugin",
         error="Requested plugins not found: OutroPlugin"
     )
