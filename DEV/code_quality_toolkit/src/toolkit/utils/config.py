@@ -82,6 +82,10 @@ class RulesConfig:
     min_comment_density: float = 0.1
     max_comment_density: float = 0.5
 
+    warn_wildcard_imports: bool = True
+    max_relative_import_level: int = 1
+    track_stdlib_modules: bool = True
+
 
 # -------------ToolkitConfig -----------------------
 @dataclass(slots=True)
