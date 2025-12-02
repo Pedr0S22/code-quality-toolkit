@@ -39,6 +39,8 @@ make run arg=
   "--exclude-glob "tests/**" (repetível)"
   "--config toolkit.toml"
   "--fail-on-severity low|medium|high"
+  "--log-level DEBUG|INFO|WARNING|ERROR"
+  "-v | --verbose"
 ```
 
 2. Usando o CLI com: 
@@ -55,6 +57,8 @@ toolkit analyze <path>
   --exclude-glob "tests/**" (repetível)
   --config toolkit.toml
   --fail-on-severity low|medium|high
+  --log-level DEBUG|INFO|WARNING|ERROR
+  -v | --verbose
 ```
 
 Exit codes:
