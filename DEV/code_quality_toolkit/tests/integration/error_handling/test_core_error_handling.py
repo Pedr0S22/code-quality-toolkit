@@ -34,6 +34,8 @@ def test_core_continues_when_one_plugin_fails(tmp_path):
 
     write(
         project / "toolkit.toml",
+        "[plugins]\n"
+        "enabled = ['OK', 'FAIL']\n"
         f"[plugins.OK]\npath='{plugin_ok}'\nenabled=true\n"
         f"[plugins.FAIL]\npath='{plugin_fail}'\nenabled=true\n"
     )
@@ -82,6 +84,8 @@ def test_status_partial(tmp_path):
 
     write(
         project / "toolkit.toml",
+        "[plugins]\n"
+        "enabled = ['OK', 'FAIL']\n"
         f"[plugins.OK]\npath='{plugin_ok}'\nenabled=true\n"
         f"[plugins.FAIL]\npath='{plugin_fail}'\nenabled=true\n"
     )
@@ -114,8 +118,11 @@ def test_status_completed(tmp_path):
 
     write(
         project / "toolkit.toml",
+        "[plugins]\n"
+        "enabled = ['OK']\n"
         f"[plugins.OK]\npath='{plugin_ok}'\nenabled=true\n"
     )
+
 
     report = project / "report.json"
 
@@ -144,6 +151,8 @@ def test_status_failed(tmp_path):
 
     write(
         project / "toolkit.toml",
+        "[plugins]\n"
+        "enabled = ['FAIL']\n"
         f"[plugins.FAIL]\npath='{plugin_fail}'\nenabled=true\n"
     )
 
