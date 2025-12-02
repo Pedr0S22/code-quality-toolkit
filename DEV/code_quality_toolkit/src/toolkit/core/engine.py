@@ -50,8 +50,9 @@ def run_analysis(
     # glob patterns defined in config.analyze to filter the file list.
     file_paths = fs.discover_files(root, config.analyze.include, config.analyze.exclude)
     logging.log(
-        "engine.files_discovered", count=len(file_paths)
-    )  # The total number of files found is logged.
+        "engine.files_discovered",
+        level="INFO",
+        count=len(file_paths))  # The total number of files found is logged.
 
     # == Main Analysis Loop (File Iteration) ==
 
@@ -84,6 +85,7 @@ def run_analysis(
             except Exception as exc:  # noqa: BLE001 - convert to structured error
                 logging.log(
                     "plugin.failure",
+                    level="ERROR",
                     plugin=plugin_name,
                     file=str(file_path),
                     error=str(exc),
