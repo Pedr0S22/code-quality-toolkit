@@ -96,3 +96,44 @@ def test_metrics_on_empty_source() -> None:
     assert metrics["comment_lines"] == 0
     assert metrics["docstring_lines"] == 0
     assert metrics["logical_lines"] == 0
+
+def test_halstead_fallback(monkeypatch) -> None:
+    """Test Halstead metrics fallback when radon is not available."""
+    import toolkit.plugins.basic_metrics.plugin as bm
+    monkeypatch.setattr(bm, "RADON_AVAILABLE", False)
+    metrics = _run_metrics(SAMPLE_CODE)
+    assert metrics["h_volume"] == 0.0
+    assert metrics["h_difficulty"] == 0.0
+    assert metrics["h_effort"] == 0.0
+    assert metrics["h_bugs"] == 0.0
+
+@pytest.mark.parametrize("lines,expected_severity", [
+    (1001, "low"), (2001, "medium"), (3001, "high")
+])
+def test_total_lines_issue(lines, expected_severity) -> None:
+    source = "\n".join("x = 1" for _ in range(lines))
+    plugin = Plugin()
+    plugin.configure(ToolkitConfig())
+    report = plugin.analyze(source, "big_file.py")
+    found = any(i["code"] == "total_lines" and i["severity"] == expected_severity
+                for i in report["results"])
+    assert found
+
+def test_invalid_code_triggers_failure() -> None:
+    source = "def foo(:"
+    plugin = Plugin()
+    plugin.configure(ToolkitConfig())
+    report = plugin.analyze(source, "bad_file.py")
+    assert report["summary"]["status"] == "failed"
+    assert report["summary"]["issues_found"] == 0
+
+def test_comment_lines_percent_thresholds() -> None:
+    # <2% comments
+    lines = ["x = 1"] * 100
+    lines.append("# comment")
+    plugin = Plugin()
+    plugin.configure(ToolkitConfig())
+    report = plugin.analyze("\n".join(lines), "file.py")
+    issue = next((i for i in report["results"] if i["code"] == "comment_lines"), None)
+    assert issue is not None
+    assert issue["severity"] == "high"
