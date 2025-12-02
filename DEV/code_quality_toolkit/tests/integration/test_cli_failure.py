@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
-from toolkit.core.cli import EXIT_MANAGED_ERROR, EXIT_SEVERITY_ERROR, EXIT_SUCCESS, main
+from toolkit.core.cli import EXIT_MANAGED_ERROR, EXIT_SEVERITY_ERROR, main
 from toolkit.core.errors import PluginLoadError
 
 # --- Mock Plugin ---
@@ -79,7 +79,9 @@ def test_cli_partial_report_on_plugin_runtime_failure(tmp_path: Path):
     1. CLI must NOT crash (python traceback) when a plugin fails
         during execution.
     2. report.json must be generated.
-    3. The status in report.json must be 'partial'.
+    3. The status in report.json must be 'failed' because the only
+       plugin crashed during execution and no plugin completed
+       successfully.
     """
     # Setup dummy project
     project_dir = tmp_path / "project"
@@ -99,7 +101,7 @@ def test_cli_partial_report_on_plugin_runtime_failure(tmp_path: Path):
         exit_code = main(["analyze", str(project_dir), "--out", str(output_file)])
 
     # 1. Verify it finished gracefully (Code 0)
-    assert exit_code == EXIT_SUCCESS
+    assert exit_code == EXIT_MANAGED_ERROR
 
     # 2. Verify report.json exists
     assert output_file.exists()
@@ -109,7 +111,7 @@ def test_cli_partial_report_on_plugin_runtime_failure(tmp_path: Path):
         data = json.load(f)
 
     # Check global status
-    assert data["analysis_metadata"]["status"] == "partial"
+    assert data["analysis_metadata"]["status"] == "failed"
 
     # Check that the plugin error was recorded in the details
     # The engine should have caught the RuntimeError and logged it as

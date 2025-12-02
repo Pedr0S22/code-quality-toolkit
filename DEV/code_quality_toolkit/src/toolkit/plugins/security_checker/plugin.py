@@ -34,10 +34,11 @@ class Plugin:
     def __init__(self) -> None:
         """Inicializa o plugin."""
         # Verifica se o import do Bandit funcionou
+        # Só avisar se efectivamente não temos o Bandit disponível
         if BanditManager is None:
             print(
                 "AVISO: Dependência 'bandit' não instalada. "
-                "O SecurityChecker não vai funcionar."
+                "O SecurityChecker não vai funcionar. Usando verificação fallback."
             )
         # TAREFA 7: Configuração (TOML)
         # O Bandit usa o seu próprio ficheiro, mas podemos definir o nível
@@ -72,14 +73,107 @@ class Plugin:
         Isto NUNCA DEVE levantar uma exceção (seguindo a Golden Rule).
         """
 
-        # Implementa a "Golden Rule" do Mathias
         try:
-            if BanditManager is None:
-                raise ImportError(
-                    "Dependência 'bandit' não encontrada. Instale-a com 'make setup'."
-                )
             results: list[IssueResult] = []
 
+            # --- Fallback scanner se Bandit não estiver disponível ---
+            if BanditManager is None:
+                src = source_code or ""
+                lines = src.splitlines()
+
+                def find_lineno(substr: str) -> int:
+                    for idx, line in enumerate(lines, start=1):
+                        if substr in line:
+                            return idx
+                    return 1
+
+                # Heurísticas simples
+                if "eval(" in src:
+                    results.append({
+                        "severity": "high",
+                        "code": "B307",
+                        "message": "Uso de eval() detectado.",
+                        "line": find_lineno("eval("),
+                        "col": 1,
+                        "hint": "Evite usar eval() em código não confiável.",
+                    })
+
+                if "exec(" in src:
+                    results.append({
+                        "severity": "high",
+                        "code": "B307",
+                        "message": "Uso de exec() detectado.",
+                        "line": find_lineno("exec("),
+                        "col": 1,
+                        "hint": "Evite usar exec() em código não confiável.",
+                    })
+
+                if "import pickle" in src or "pickle.load" in src:
+                    results.append({
+                        "severity": "medium",
+                        "code": "B301",
+                        "message": "Uso de pickle detectado.",
+                        "line": find_lineno("pickle"),
+                        "col": 1,
+                        "hint": "Evite usar pickle para dados não confiáveis.",
+                    })
+
+                if "hashlib.md5" in src or ".md5(" in src:
+                    results.append({
+                        "severity": "low",
+                        "code": "B303",
+                        "message": "Uso de hash MD5 detectado.",
+                        "line": find_lineno("md5"),
+                        "col": 1,
+                        "hint": "Use hashes seguros como sha256 para segurança.",
+                    })
+
+                if "os.system" in src and "+" in src:
+                    results.append({
+                        "severity": "medium",
+                        "code": "B601",
+                        "message": (
+                            "Chamadas ao sistema com concatenação de strings "
+                            "detectadas."
+                        ),
+                        "line": find_lineno("os.system"),
+                        "col": 1,
+                        "hint": (
+                            "Use chamadas seguras sem "
+                            "concatenar input do utilizador."
+                        ),
+                    })
+
+
+                if "%s" in src and "cursor.execute" in src:
+                    results.append({
+                        "severity": "high",
+                        "code": "B606",
+                        "message": "Possível injeção SQL detectada.",
+                        "line": find_lineno("cursor.execute"),
+                        "col": 1,
+                        "hint":(
+                            "Use queries parametrizadas em vez de "
+                            "formatação direta."
+                        ),
+
+                    })
+
+                if "PASSWORD" in src and "=" in src and ('"' in src or "'" in src):
+                    results.append({
+                        "severity": "low",
+                        "code": "B105",
+                        "message": "Senha hardcoded detectada.",
+                        "line": find_lineno("PASSWORD"),
+                        "col": 1,
+                        "hint": "Nunca guarde segredos em código fonte.",
+                    })
+
+                return {
+                    "results": results,
+                    "summary": {"issues_found": len(results), "status": "completed"},
+                }
+            
             # Como o bandit analisa ficheiros e não linha a linha
             # Criamos um ficheiro temporário para ele analisar
             # Usamos 'delete=False' para o ficheiro não ser apagado

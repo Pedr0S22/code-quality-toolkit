@@ -1,0 +1,1 @@
+""" Package for web client/server (FastAPI + PyQt6 UI) """

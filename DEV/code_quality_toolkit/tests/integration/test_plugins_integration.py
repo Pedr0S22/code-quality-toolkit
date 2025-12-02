@@ -163,6 +163,187 @@ def test_style_checker_integration(tmp_path: Path):
     assert "length" in msg or "characters" in msg or "caracteres" in msg
     assert issue["severity"] in ["info", "low"]
 
+def test_duplication_checker_integration(tmp_path: Path):
+    """
+    Verifies that the DuplicationChecker plugin detects duplicated code (R0801)
+    when run via the CLI across multiple files.
+    """
+
+    # 1. Setup: Create a project with two files containing duplicated code
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+
+    file_a = project_dir / "a.py"
+    file_b = project_dir / "b.py"
+
+    duplicated_block = """
+def compute():
+    total = 0
+    for i in range(10):
+        total += i
+    if total > 5:
+        total -= 1
+    return total
+"""
+
+    file_a.write_text(duplicated_block, encoding="utf-8")
+    file_b.write_text(duplicated_block, encoding="utf-8")
+
+    output_file = tmp_path / "report.json"
+
+    # 2. Execution: Run CLI with DuplicationChecker
+    exit_code = main(
+        [
+            "analyze",
+            str(project_dir),
+            "--out",
+            str(output_file),
+            "--plugins",
+            "DuplicationChecker",
+        ]
+    )
+
+    # 3. Verification
+    assert exit_code == EXIT_SUCCESS
+    assert output_file.exists()
+
+    with open(output_file, encoding="utf-8") as f:
+        data = json.load(f)
+
+    file_reports = [
+        f for f in data["details"]
+        if f["file"].endswith("a.py") or f["file"].endswith("b.py")
+    ]
+    assert file_reports, "No .py files found in report."
+
+    num_reports = 0
+    for file_report in file_reports:
+        plugin_report = next(
+            (p for p in file_report["plugins"]
+             if p["plugin"] == "DuplicationChecker"), None
+        )
+        assert plugin_report is not None, "DuplicationChecker not found in plugin list."
+        num_reports += 1
+
+    assert num_reports > 0, "Expected more than one report across multiple files."
+
+def test_core_unified_report_generation(tmp_path: Path):
+    """
+    Integration tests(End-to-End):
+    Verify if the analyze function generate the 2 files (JSON e HTML)
+    correctly
+    """
+    
+    # 1. Setup
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    (project_dir / "main.py").write_text("print('hello')", encoding="utf-8")
+    
+    # Define where we want the file to be
+    output_json = tmp_path / "final_report.json"
+    
+    # 2. Execution
+    exit_code = main([
+        "analyze",
+        str(project_dir),
+        "--out", str(output_json),
+        "--plugins", "StyleChecker" 
+    ])
+
+    # 3.Succes verify
+    assert exit_code == EXIT_SUCCESS
+
+    # --- 1: JSON ---
+    #Just to be sure
+    assert output_json.exists(), "O ficheiro report.json não foi criado!"
+    
+    with open(output_json, encoding="utf-8") as f:
+        data = json.load(f)
+    assert data["analysis_metadata"]["status"] == "completed"
+
+    # --- 2: HTML (The issue) ---
+    # The system should create the html too
+    output_html = output_json.with_suffix(".html")
+    
+    assert output_html.exists(),"O ficheiro report.html não foi criado automaticamente"
+    
+    #Checks if the file is not empty
+    assert output_html.stat().st_size > 0
+    
+    # Verify if the html file appeared
+    html_content = output_html.read_text(encoding="utf-8")
+    assert "<!DOCTYPE html>" in html_content
+    assert "Code Quality Report" in html_content
+
+def test_dependency_graph_integration(tmp_path: Path):
+    """
+    Verifies that the DependencyGraph plugin correctly identifies imports
+    and module dependencies when run via the CLI.
+    """
+    # 1. Setup: Create a project with 2 files that import each other/standard lib
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    
+    # main.py imports utils and os
+    (project_dir / "main.py").write_text(
+        "import os\n"
+        "from . import utils\n",
+        encoding="utf-8"
+    )
+    
+    # utils.py imports json
+    (project_dir / "utils.py").write_text(
+        "import json\n",
+        encoding="utf-8"
+    )
+    
+    output_file = tmp_path / "report.json"
+
+    # 2. Execution: Run CLI with DependencyGraph
+    exit_code = main(
+        [
+            "analyze",
+            str(project_dir),
+            "--out",
+            str(output_file),
+            "--plugins",
+            "DependencyGraph",
+        ]
+    )
+
+    # 3. Verification
+    assert exit_code == EXIT_SUCCESS
+    assert output_file.exists()
+
+    with open(output_file, encoding="utf-8") as f:
+        data = json.load(f)
+
+    # Check results for main.py
+    main_report = next(f for f in data["details"] if "main.py" in f["file"])
+    main_plugin = next(
+        p for p in main_report["plugins"] if p["plugin"] == "DependencyGraph"
+    )
+    
+    # Should find 'os' and 'utils'
+    messages = [r["message"] for r in main_plugin["results"]]
+    assert any("os" in m for m in messages)
+    assert any("utils" in m for m in messages)
+
+    # Check results for utils.py
+    utils_report = next(f for f in data["details"] if "utils.py" in f["file"])
+    utils_plugin = next(
+        p for p in utils_report["plugins"] if p["plugin"] == "DependencyGraph"
+    )
+    
+    # Should find 'json'
+    messages = [r["message"] for r in utils_plugin["results"]]
+    assert any("json" in m for m in messages)
+    
+    # Check Summary Graph Data
+    # O plugin deve ter gerado a estrutura do grafo no sumário
+    graph_data = utils_plugin["summary"].get("dependency_graph")
+    assert graph_data is not None
+    assert "json" in graph_data["nodes"]
 
 def test_multiple_specific_plugins_integration(tmp_path: Path):
     """

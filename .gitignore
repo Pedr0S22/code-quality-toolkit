@@ -24,6 +24,8 @@ build/
 # Project specific
 report.json
 toolkit.log
+report.html
+report.md
 
 # IDE settings
 .vscode/

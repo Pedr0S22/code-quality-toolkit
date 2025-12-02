@@ -21,6 +21,7 @@ from . import logging
 from .aggregator import aggregate
 from .engine import run_analysis
 from .errors import AnalysisExecutionError, ConfigurationError, PluginLoadError
+from .exporters import generate_html
 from .loader import load_plugins
 
 # Our classification of severity, the final verdict after the analysis performed
@@ -122,9 +123,26 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Fail if finds error >= stated severity level",
     )
+
+    # Defines the verbosity/log-level of the application.
+    # type=str.upper ensures case-insensitivity at the parsing level.
+    analyze.add_argument(
+        "--log-level",
+        type=str.upper,
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        default="INFO",
+        help="Set the logging verbosity level",
+    )
+
+    # A shortcut flag for setting the log level to DEBUG.
+    analyze.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose output (equivalent to --log-level DEBUG)",
+    )
     # returns the fully configured parser object.
     return parser
-
 
 def _resolve_requested_plugins(option: str, config: ToolkitConfig) -> list[str] | None:
     """
@@ -234,7 +252,9 @@ def main(
     # analysis run.
     except (ConfigurationError, PluginLoadError, AnalysisExecutionError) as exc:
         logging.log(
-            "cli.error", error=str(exc)
+            "cli.error",
+            level="ERROR",
+            error=str(exc)
         )  # records the error internally for debugging purposes.
         print(
             f"Error: {exc}", file=sys.stderr
@@ -248,7 +268,10 @@ def main(
         # its rule BLE001, which typically warns against broad except Exception:
         # clauses. It has been added here because the intent is to catch all
         #  remaining exceptions to prevent an unhandled crash.
-        logging.log("cli.error", error=str(exc))
+        logging.log(
+            "cli.error",
+            level="ERROR",
+            error=str(exc))
         print(f"Unexpected error: {exc}", file=sys.stderr)
         return EXIT_UNEXPECTED_ERROR
 
@@ -262,6 +285,12 @@ def _run_analyze(args: argparse.Namespace) -> int:
     load plugins, run the file scan, generate a report, save the report, and
     determine the appropriate program exit code.
     """
+
+    # == Logging Configuration ==
+    # Check for verbose flag first (shortcut for DEBUG), otherwise use the
+    # value provided in --log-level.
+    target_log_level = "DEBUG" if args.verbose else args.log_level
+    logging.set_log_level(target_log_level)
 
     # == Configuration and Overrides ==
 
@@ -318,10 +347,25 @@ def _run_analyze(args: argparse.Namespace) -> int:
     output_path.write_text(
         json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8"
     )
+
+    # Create the HTML path, changing the extension (report.json -> report.html)
+    html_path = output_path.with_suffix(".html")
+
+    try:
+        # Create the html report
+        html_content = generate_html(report)
+
+        # write the report on disc
+        html_path.write_text(html_content, encoding="utf-8")
+
+    except Exception as e:
+        print(f"⚠️ Aviso: Não foi possível gerar o HTML: {e}")
+
     # records that the report was successfully written, including the path and
     # the total number of issues found.
     logging.log(
         "cli.report_written",
+        level="INFO",
         path=str(output_path),
         issues=report["summary"]["total_issues"],
     )
@@ -335,8 +379,14 @@ def _run_analyze(args: argparse.Namespace) -> int:
     if args.fail_on_severity and _should_fail(report, args.fail_on_severity):
         print("Failed on severity")
         return EXIT_SEVERITY_ERROR
-
-    return 0  # success exit
+    
+    loaded_plugin_names = set(plugins.keys())
+    requested_plugins_names = set(requested_plugins)
+    if  requested_plugins_names != loaded_plugin_names:
+        missing = requested_plugins_names - loaded_plugin_names
+        raise PluginLoadError(f"Requested plugins not found: {', '.join(missing)}")
+    
+    return EXIT_SUCCESS  # success exit
 
 
 if __name__ == "__main__":  # pragma: no cover
@@ -346,4 +396,4 @@ if __name__ == "__main__":  # pragma: no cover
     sys.exit(
         main()
     )  # Executes main (the CLI entry point) and exits with a status code (0 is ok,
-    # otherwise is an error code).
+    # otherwise is an error code). 
