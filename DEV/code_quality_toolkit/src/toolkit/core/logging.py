@@ -61,17 +61,19 @@ def set_log_level(level_name: str) -> None:
     
     _LOGGER.setLevel(level)
 
-def log(event: str, **payload: Any) -> None:
+def log(event: str, level: str = "INFO", **payload: Any) -> None:
     """
     This function is a simple wrapper around the standard Python logging mechanism
     designed to emit structured log entries in JSON format.
 
-    -'event:str' is a unique identifier for the type of activity or situation
-        being logged (e.g., "plugin.loaded", "cli.error",
-        "engine.files_discovered").
-    -'**payload:Any' captures any number of additional keyword arguments passed
-    to the function. These arguments form the "payload," containing the
-    information relevant to the event (e.g., count=10, plugin="StyleChecker").
+    - 'event': A unique identifier for the type of activity or situation
+      being logged (e.g., "plugin.loaded", "cli.error",
+      "engine.files_discovered").
+    - 'level': The severity level ("DEBUG", "INFO", "WARNING", "ERROR").
+      Defaults to "INFO".
+    - '**payload': Captures any number of additional keyword arguments passed
+      to the function. These arguments form the "payload," containing the
+      information relevant to the event (e.g., count=10, plugin="StyleChecker").
     """
 
     # A dictionary named record is initialized, and is immediately populated with
@@ -79,8 +81,12 @@ def log(event: str, **payload: Any) -> None:
     # all the remaining keyword arguments directly into the record dictionary.
     record: dict[str, Any] = {"event": event, **payload}
 
+    # Resolve the string level (e.g., "ERROR") to the integer constant (40)
+    # default to INFO (20) if the string is invalid.
+    log_level_int = getattr(logging, level.upper(), logging.INFO)
+
     # json.dumps converts the entire Python dictionary (record) into a single JSON
     # formatted string.
     # _LOGGER.info(...) sends the resulting JSON string as the message to the
     # logger (thus print to the console)
-    _LOGGER.info(json.dumps(record, ensure_ascii=False))
+    _LOGGER.log(log_level_int, json.dumps(record, ensure_ascii=False))
