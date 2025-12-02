@@ -1,69 +1,166 @@
-# Web UI Specification
+# Developer Documentation — Web UI / Client–Server Architecture
+## TECHNICAL DOCUMENTATION
 
-## Visão Geral
+### Description
 
-A interface Web serve apenas para consumir o `report.json` previamente gerado pela CLI. Não executa a análise. O foco é permitir aos estudantes explorar o
-relatório e construir visualizações.
+This document outlines the technical architecture of the Web UI system, covering the Client-Server interaction, file processing, and the role of the FastAPI Controller in orchestrating the Toolkit Engine.
 
-## Funcionalidades
+## 1. Purpose
 
-1. **Dashboard**
-   - Cartões com totais (`total_files`, `total_issues`).
-   - Gráfico (pode ser tabela simples) com contagem por severidade.
-   - Gráfico por plugin (`issues_by_plugin`).
-   - Lista “Top Offenders” mostrando ficheiros com mais issues.
+The primary purpose of this architecture is to provide a robust, decoupled, and user-friendly interface for the static analysis engine. By separating the GUI (Client) from the heavy processing (Toolkit Engine) via an API gateway (Controller), we achieve better scalability, responsiveness, and platform independence.
 
-2. **Lista de Issues**
-   - Tabela com colunas: Ficheiro, Plugin, Severidade, Código, Mensagem, Linha.
-   - Filtros por severidade e plugin (dropdowns).
-   - Ao clicar numa linha, mostrar detalhes/hint.
+## 2. Client-Server Architecture (Rich Client)
 
-## Wireframes (ASCII)
+The application adheres to a three-tiered architecture. The `client.py` component acts as a Rich Client, handling all user interface and presentation logic, while relying on the FastAPI server `server.py` for all core business logic and analysis execution. Below is the UML Diagram of the architecture:
 
 ```
-+-----------------------------------------------------------+
-| Dashboard                                                 |
-+-------------------+------------------+--------------------+
-| Total Files: 10   | Total Issues: 24 | Status: completed  |
-+-------------------+------------------+--------------------+
-| Severity Counts: info=5 low=10 medium=6 high=3            |
-| Plugin Issues: StyleChecker=14 Cyclomatic=10              |
-+-----------------------------------------------------------+
-| Top Offenders                                            |
-| 1. src/app.py (6)                                        |
-| 2. src/utils.py (4)                                      |
-+-----------------------------------------------------------+
-
-+-----------------------------------------------------------+
-| Issues Table                                              |
-+-----------------------------------------------------------+
-| Filters: [Plugin v] [Severity v] [Search ____]            |
-|-----------------------------------------------------------|
-| File           | Plugin     | Sev | Code     | Line | Msg |
-|-----------------------------------------------------------|
-| src/app.py     | StyleCheck | low | LINE_LEN |  45  | ... |
-| src/utils.py   | Cyclomatic | med | HIGH_C   |  22  | ... |
-+-----------------------------------------------------------+
++-------------------+         +----------------------+        +-----------------------+
+|      CLIENT       | <---->  |        SERVER        | <----> |     TOOLKIT ENGINE    |
+|  (client.py GUI)  |         |   (FastAPI server)   |        |    (Core + Plugins)   |
++-------------------+         +----------------------+        +-----------------------+
 ```
 
-## API Endpoints
+## 2.1 Architecture Components
+The three main components are:
 
-Implementados em `web/app_stub.py` usando Starlette/FastAPI minimalista:
+### CLIENT (client.py GUI)
 
-- `GET /api/report` — devolve o JSON completo carregado de disco.
-- `GET /api/summary` — devolve apenas `report["summary"]`.
+- **Role**: Presentation & I/O
 
-Os endpoints lêem o ficheiro `report.json` no diretório de execução. Em caso de
-erro (ficheiro inexistente), retornar HTTP 404 com mensagem amigável.
+- **Description**: Handles user input (directory selection, configuration), manages file packaging/unpacking, and renders the final report. Communicates with the server via HTTP (`http://127.0.0.1:8000`)
 
-## Fluxo sugerido
+### SERVER (server.py FastAPI Server)
 
-1. CLI gera `report.json`.
-2. Servidor Web lê e mantém cache leve (opcional) para responder aos pedidos.
-3. Frontend (React, Vue ou HTML estático) consome `GET /api/report`.
+- **Role**: Orchestration & API Gateway
 
-## Notas Pedagógicas
+- **Description**: Receives and routes client requests, manages temporary file storage, invokes the Toolkit Engine, and packages the final results for return. It runs in `http://127.0.0.1:8000`.
 
-- Incentivar estudantes a desenhar componentes reutilizáveis para cartões e
-  tabelas.
-- Destacar boas práticas de separação entre backend (servindo JSON) e frontend.
+### TOOLKIT ENGINE (Core + Plugins)
+
+- **Role**: Business Logic & Processing
+
+- **Description**: Loads configurations, executes analysis on the source code, and produces analysis artifacts (issues.json, dashboards, report.html).
+
+## 3. Endpoints
+
+The FastAPI Controller exposes the following key endpoints:
+
+#### `GET /api/v1/plugins`
+
+- Returns a list of all available and configured plugins.
+
+#### `GET /api/v1/plugins/configs`
+
+- Returns the default configuration settings for each available plugin.
+
+#### `POST /api/v1/analyze`
+
+- Initiates the complete analysis cycle.
+  - Endpoint Flow:
+
+     - Receives the ZIP archive containing the file(s) to be analyzed and the plugins with their respective configurations from the Client.
+
+    - Extracts the contents into a temporary directory on the server.
+
+    - Invokes the Toolkit Engine's primary analysis function: `run_analysis(path, configs)`.
+
+    - The Engine generates analysis artifacts (`report.html`, D3 dashboards (`<plugin_name>_dashboard.html`), `report.json`).
+
+    - The Controller creates a return ZIP archive containing all generated files.
+
+    - Sends the results ZIP back to the Client.
+
+
+## 4. File Transaction Flow
+
+The complete cycle involves a robust file exchange process using ZIP archives to efficiently transfer potentially large source code and result sets.
+
+```txt
+sequenceDiagram
+    participant C as CLIENT (client.py)
+    participant S as SERVER (server.py)
+    participant E as TOOLKIT ENGINE (core + plugins)
+
+    C->>C: Create Source Code ZIP
+    C->>S: POST /api/v1/analyze (Send ZIP)
+    S->>S: Extract ZIP to Temp Directory
+    S->>E: run_analysis(path, configs)
+    E->>E: Execute Analysis & Generate Artifacts (report.html, dashboards)
+    E->>S: Return Analysis Results
+    S->>S: Create Results ZIP
+    S->>C: Return Results ZIP
+    C->>C: Extract Results ZIP
+    C->>C: Auto-open report.html
+    C->>C: Possibilty to visualize each plugins dashboard
+```
+
+## 5. Asynchronous Communication (Signal/Slot Equivalent)
+
+The application uses asynchronous mechanisms to ensure responsiveness, which serves as the equivalent of a Signal/Slot pattern for network I/O.
+
+### Client Side
+
+- **User Actions**: User interactions trigger GUI events.
+
+- **HTTP Calls**: Network requests are executed asynchronously (e.g., using threads or non-blocking I/O) to prevent the graphical user interface from freezing during the potentially long analysis process.
+
+- **Callbacks**: Upon receiving an HTTP response from the server, callbacks are used to safely update the interface with the results or status indicators.
+
+### Server Side
+
+- **Requests**: All incoming requests are handled asynchronously.
+
+- **Handlers**: FastAPI uses async def for its route handlers, allowing the server to efficiently manage multiple concurrent client connections.
+
+- **Event Loop**: This design ensures the server's event loop is not blocked by a single analysis task, maximizing throughput and stability.
+
+## 6. Project Structure
+
+The Web UI components are logically separated from the core toolkit components:
+
+```txt
+DEV/
+ └─ code_quality_toolkit/
+     ├─ web/
+     │   ├─ server.py
+     │   ├─ client.py
+     │   └─ SPEC.md (DEV Docs)
+     └─ src/
+         └─ toolkit/
+             ├─ core/
+             ├─ plugins/
+             │   └─ DASHBOARD.md
+             └─ ...
+```
+
+## 7. Running the App
+
+To run the Code Quality Toolkit App, you must follow this steps:
+
+1. Run server.py in `http://127.0.0.1:8000` using the command:
+
+```
+make run_server
+```
+
+2. Run client.py using the command:
+
+```
+make run_client
+```
+
+## Authors
+Pedro Silva, 2023235452, @Pedr0S22
+
+André Silva, 2023212648, @andresilva219
+
+Oleksandra Grymalyuk, 2023218767, @my3007sunshine
+
+Rabia Saygin, 2024187186, @rferyals
+
+Isaque Capra, 2023221892, @Isaque_capra
+
+Tiago Alves, 2023207875, @tiagoalves.21
+
+#### Disclaimer: This web application component was build using AI.
+

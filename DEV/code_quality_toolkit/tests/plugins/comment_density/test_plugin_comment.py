@@ -25,7 +25,7 @@ def test_plugin_configuration():
     plugin = Plugin()
 
     # Cria uma configuração simulada com as novas regras que adicionaste ao config.py
-    custom_rules = RulesConfig(min_comment_density=0.25, max_comment_density=0.75)
+    custom_rules = RulesConfig(min_density=0.25, max_density=0.75)
     custom_config = ToolkitConfig(rules=custom_rules)
 
     # Configura o plugin

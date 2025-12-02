@@ -68,7 +68,7 @@ class Plugin:
             re.compile(r"^__")
         ]  # ignora dunders
         self.severity: str = "low"
-        self.min_name_len: int = 1
+        self.min_name_length: int = 1
 
     def configure(self, config: ToolkitConfig) -> None:
         """Recebe parâmetros de [plugins.dead_code] do toolkit.toml."""
@@ -81,7 +81,9 @@ class Plugin:
             if compiled:
                 self.ignore_patterns = compiled
         self.severity = getattr(sect, "severity", self.severity)
-        self.min_name_len = int(getattr(sect, "min_name_length", self.min_name_len))
+        self.min_name_length = int(
+            getattr(sect, "min_name_length", self.min_name_length)
+        )
 
     def get_metadata(self) -> dict[str, str]:
         return {
@@ -93,7 +95,7 @@ class Plugin:
 
     # helpers
     def _ignored(self, name: str) -> bool:
-        if len(name) < self.min_name_len:
+        if len(name) < self.min_name_length:
             return True
         for rx in self.ignore_patterns:
             if rx.search(name):

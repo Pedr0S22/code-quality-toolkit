@@ -31,10 +31,16 @@ typecheck:
 	$(BIN)/mypy src/toolkit
 
 test:
-	$(BIN)/pytest $(DIR)
+	$(BIN)/pytest $(DIR) -rs
 
 run:
 	$(BIN)/python -m toolkit.core.cli analyze examples/sample_project --out report.json $(arg)
+
+run_server:
+	$(BIN)/python -m web.server
+
+run_client:
+	$(BIN)/python -m web.client
 
 report: run
 
