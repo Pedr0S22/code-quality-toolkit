@@ -73,12 +73,6 @@ class Plugin:
         Isto NUNCA DEVE levantar uma exceção (seguindo a Golden Rule).
         """
 
-        # Inicializa a estrutura padrão de retorno
-        report = {
-            "results": [],
-            "summary": {"issues_found": 0, "status": "completed"},
-        }
-
         try:
             results: list[IssueResult] = []
 

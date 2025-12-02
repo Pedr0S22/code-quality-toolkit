@@ -39,11 +39,22 @@ class Plugin:
             files_to_check = [str(path_obj)]
 
         if not files_to_check:
-            return {"plugin": self.get_metadata()["name"], "results": [], "summary": {"issues_found": 0, "status": "completed"}}
+            return {
+                    "plugin": self.get_metadata()["name"],
+                    "results": [],
+                    "summary": {
+                        "issues_found": 0,
+                        "status": "completed"}
+                    }
 
         # Run pylint on all files at once
         proc = subprocess.run( # nosec B603 - chamada a pylint com argumentos fixos, sem dados não confiáveis
-            [sys.executable, "-m", "pylint", "--disable=all", "--enable=R0801", *files_to_check],
+            [sys.executable,
+             "-m",
+             "pylint",
+             "--disable=all",
+             "--enable=R0801", 
+             *files_to_check],
             capture_output=True,
             text=True,
         )
@@ -79,4 +90,8 @@ class Plugin:
 
         summary = {"issues_found": len(results), "status": "completed"}
 
-        return {"plugin": self.get_metadata()["name"], "results": results, "summary": summary}
+        return {
+                "plugin": self.get_metadata()["name"],
+                "results": results,
+                "summary": summary
+                }

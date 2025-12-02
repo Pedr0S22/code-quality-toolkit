@@ -211,14 +211,16 @@ def compute():
         data = json.load(f)
 
     file_reports = [
-        f for f in data["details"] if f["file"].endswith("a.py") or f["file"].endswith("b.py")
+        f for f in data["details"]
+        if f["file"].endswith("a.py") or f["file"].endswith("b.py")
     ]
     assert file_reports, "No .py files found in report."
 
     num_reports = 0
     for file_report in file_reports:
         plugin_report = next(
-            (p for p in file_report["plugins"] if p["plugin"] == "DuplicationChecker"), None
+            (p for p in file_report["plugins"]
+             if p["plugin"] == "DuplicationChecker"), None
         )
         assert plugin_report is not None, "DuplicationChecker not found in plugin list."
         num_reports += 1

@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-import pytest
-
 from toolkit.plugins.duplicate_code_checker.plugin import Plugin
 
 
