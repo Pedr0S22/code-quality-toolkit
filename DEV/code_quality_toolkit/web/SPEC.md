@@ -133,6 +133,22 @@ DEV/
              └─ ...
 ```
 
+## 7. Running the App
+
+To run the Code Quality Toolkit App, you must follow this steps:
+
+1. Run server.py in `http://127.0.0.1:8000` using the command:
+
+```
+make run_server
+```
+
+2. Run client.py using the command:
+
+```
+make run_client
+```
+
 ## Authors
 Pedro Silva, 2023235452, @Pedr0S22
 

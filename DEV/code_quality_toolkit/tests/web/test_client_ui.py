@@ -2,22 +2,24 @@ from __future__ import annotations
 
 import io
 import zipfile
-from pathlib import Path
 
 import pytest
 
 # --- CI PROTECTION BLOCK ---
-#pytest.importorskip("PyQt6")
+pytest.importorskip("PyQt6")
 
 try:
     from PyQt6.QtWidgets import QApplication
-    
+
     # Importing 'client' assuming the UI code provided is saved as web/client.py
     from web import client
     from web.client import MainWindow
 except ImportError:
-    pytest.skip("UI libraries or application code not installed", allow_module_level=True)
+    pytest.skip(
+        "UI libraries or application code not installed", allow_module_level=True
+    )
 # -----------------------------
+
 
 @pytest.fixture(scope="session")
 def app():
@@ -36,7 +38,7 @@ class DummyResponse:
 
     def __init__(self, json_data=None, content=b"", status_code: int = 200) -> None:
         self._json_data = json_data if json_data else {}
-        self.content = content # Required for zip file download simulation
+        self.content = content  # Required for zip file download simulation
         self.status_code = status_code
 
     def json(self):
@@ -71,12 +73,12 @@ def main_window(app, monkeypatch):
         if url.endswith("/analyze"):
             # Create a valid in-memory zip file to return
             mem_zip = io.BytesIO()
-            with zipfile.ZipFile(mem_zip, 'w', zipfile.ZIP_DEFLATED) as zf:
+            with zipfile.ZipFile(mem_zip, "w", zipfile.ZIP_DEFLATED) as zf:
                 # Add a dummy report.html so the UI finds it
                 zf.writestr("report.html", "<html><body>Mock Report</body></html>")
                 # Add a dummy dashboard
                 zf.writestr("style_checker_dashboard.html", "<html></html>")
-            
+
             return DummyResponse(content=mem_zip.getvalue(), status_code=200)
         return DummyResponse(status_code=404)
 
@@ -91,6 +93,7 @@ def main_window(app, monkeypatch):
 
 
 # ---------- UI / LOGIC TESTS ----------
+
 
 def test_select_all_checks_and_unchecks_individual(main_window):
     """Test that the 'Select All' checkbox toggles all individual plugins."""
@@ -118,8 +121,10 @@ def test_unchecking_single_plugin_unchecks_select_all(main_window):
     # Uncheck the first plugin
     first = main_window.plugin_widgets[0]
     first.checkbox.setChecked(False)
-    # Note: In the actual UI code, the widget connects stateChanged -> check_mutex_state,
-    # but in unit tests without a running event loop, we sometimes need to call the slot manually
+    # Note: In the actual UI code, the widget connects stateChanged ->
+    # check_mutex_state,
+    # but in unit tests without a running event loop, we sometimes need to
+    # call the slot manually
     # if we programmatically change the state, or rely on signals.
     # The UI code: self.checkbox.stateChanged.connect(self.on_checkbox_changed)
     # manual trigger for test safety:
@@ -132,7 +137,7 @@ def test_run_without_path_shows_error_in_label(main_window):
     """Test validation: Run button should fail if no path is selected."""
     main_window.caminho_selecionado = None
     main_window.executar_plugin_run()
-    
+
     # Check that error message is set in the label
     assert "Please, select a path" in main_window.lbl_path.text()
     # Button should remain enabled
@@ -142,13 +147,13 @@ def test_run_without_path_shows_error_in_label(main_window):
 def test_run_without_any_plugin_selected_shows_error(main_window, tmp_path):
     """Test validation: Run button should fail if no plugins are selected."""
     main_window.caminho_selecionado = str(tmp_path)
-    
+
     # Uncheck all widgets
     for w in main_window.plugin_widgets:
         w.checkbox.setChecked(False)
 
     main_window.executar_plugin_run()
-    
+
     assert "Please, select at least one plugin" in main_window.lbl_path.text()
     assert main_window.btn_run.isEnabled()
 
@@ -176,7 +181,7 @@ def test_run_success_enables_report_and_eyes(main_window, tmp_path):
     # Check if results_dir was set
     assert hasattr(main_window, "results_dir")
     assert main_window.results_dir.exists()
-    
+
     # Check if report button was enabled
     assert main_window.btn_report.isEnabled()
 
@@ -193,6 +198,6 @@ def test_export_without_running_analysis_shows_message(main_window):
         delattr(main_window, "results_dir")
 
     main_window.executar_plugin_export()
-    
+
     # UI message when results_dir doesn't exist
     assert "Run analysis first" in main_window.lbl_path.text()
