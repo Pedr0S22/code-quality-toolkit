@@ -350,14 +350,13 @@ def _run_analyze(args: argparse.Namespace) -> int:
 
     # Create the HTML path, changing the extension (report.json -> report.html)
     html_path = output_path.with_suffix(".html")
-    
+
     try:
         # Create the html report
         html_content = generate_html(report)
-        
+
         # write the report on disc
         html_path.write_text(html_content, encoding="utf-8")
-        
 
     except Exception as e:
         print(f"⚠️ Aviso: Não foi possível gerar o HTML: {e}")

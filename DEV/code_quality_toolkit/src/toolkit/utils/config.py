@@ -4,9 +4,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import get_type_hints
+from typing import Any, get_type_hints
 
 from ..core.errors import ConfigurationError
+
+
+class SimpleNamespace:
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+    def __repr__(self):
+        return str(self.__dict__)
+
 
 # This block of code implements a version check for TOML parsing capability
 # (introduced in Python 3.11 as part of the standard library)
@@ -58,29 +67,39 @@ class AnalyzeConfig:
 
 
 @dataclass(slots=True)
+class PluginsConfig:
+    """Container for plugin-specific configurations."""
+
+    # We use Any/dict to allow dynamic loading of plugin settings
+    dead_code: Any = field(
+        default_factory=lambda: SimpleNamespace(
+            **{
+                "ignore_patterns": ["^__", "^test_"],
+                "min_name_length": 2,
+                "severity": "low",
+            }
+        )
+    )
+
+
+@dataclass(slots=True)
 class RulesConfig:
     # This class acts as the reference source for the code quality toolkit's
     # default rules. These values can then be overridden if a configuration file
     # specifies different limits.
+    check_naming: bool = False
+
     max_line_length: int = 88
-    max_complexity: int = (
-        10  # This is a widely accepted threshold. Functions with a complexity
-    )
-    # higher than this are generally considered difficult to read, test,
-    # and maintain.
+    max_complexity: int = 10
     check_whitespace: bool = True
-    indent_style = "spaces"
-    indent_size = 4
-    allow_mixed_indentation = False
+    indent_style: str = "spaces"
+    indent_size: int = 4
+    allow_mixed_indentation: bool = False
     check_naming = False
-    max_function_length: int = (
-        50  # New rule: maximum number of lines allowed in a function
-    )
-    max_arguments: int = (
-        5  # New rule: maximum number of arguments allowed in a function
-    )
-    min_comment_density: float = 0.1
-    max_comment_density: float = 0.5
+    max_function_length: int = 50
+    max_arguments: int = 5
+    min_density: float = 0.1
+    max_density: float = 0.5
 
     warn_wildcard_imports: bool = True
     max_relative_import_level: int = 1
@@ -115,6 +134,8 @@ class ToolkitConfig:
     # therefore, 'ToolkitConfig' provides a structured way to manage
     # the application's entire configuration, with clear separation between
     # different concerns (plugins, rules, and analysis scope).
+
+    plugins: PluginsConfig = field(default_factory=PluginsConfig)
 
 
 # ------------------------------------

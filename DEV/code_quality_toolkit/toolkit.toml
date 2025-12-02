@@ -18,8 +18,10 @@ allow_mixed_indentation = false
 check_naming = true
 metrics_report_level = "MEDIUM"
 
-min_comment_density = 0.1
-max_comment_density = 0.5
+security_report_level="LOW"
+
+min_density = 0.1  
+max_density = 0.5  
 
 warn_wildcard_imports = true
 max_relative_import_level = 1
