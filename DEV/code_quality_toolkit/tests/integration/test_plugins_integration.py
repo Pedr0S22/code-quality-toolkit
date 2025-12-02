@@ -463,3 +463,64 @@ def test_multiple_specific_plugins_integration(tmp_path: Path):
     assert "DeadCodeDetector" in plugin_names
     assert "StyleChecker" in plugin_names
     assert len(plugin_names) == 2  # Ensure no extra plugins appeared
+
+def test_comment_density_integration(tmp_path: Path):
+    """
+    Verifies that the CommentDensity plugin finds comment density violations
+    when run via the CLI.
+    """
+    # 1. Setup: Create a file with very low comment density
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    code_file = project_dir / "nocomments.py"
+    
+    # Create a file with NO comments (will trigger low density violation)
+    code_content = """def function_one():
+    x = 1
+    y = 2
+    return x + y
+
+def function_two():
+    a = 3
+    b = 4
+    return a * b
+
+class MyClass:
+    def method(self):
+        pass
+"""
+    code_file.write_text(code_content, encoding="utf-8")
+    output_file = tmp_path / "report.json"
+
+    # 2. Execution: Run CLI with CommentDensity plugin
+    exit_code = main(
+        [
+            "analyze",
+            str(project_dir),
+            "--out",
+            str(output_file),
+            "--plugins",
+            "CommentDensity",
+        ]
+    )
+
+    # 3. Verification
+    assert exit_code == EXIT_SUCCESS
+    assert output_file.exists()
+
+    with open(output_file, encoding="utf-8") as f:
+        data = json.load(f)
+
+    file_report = next(f for f in data["details"] if "nocomments.py" in f["file"])
+    plugin_report = next(
+        p for p in file_report["plugins"] if p["plugin"] == "CommentDensity"
+    )
+
+    # Expect to find a low comment density issue
+    assert len(plugin_report["results"]) >= 1
+    issue = plugin_report["results"][0]
+
+    # Check the issue details
+    assert "LOW_COMMENT_DENSITY" == issue["code"]
+    assert "low comment density" in issue["message"].lower()
+    assert issue["severity"] == "high"
