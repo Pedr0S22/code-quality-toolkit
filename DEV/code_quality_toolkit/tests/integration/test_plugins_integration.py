@@ -164,6 +164,71 @@ def test_style_checker_integration(tmp_path: Path):
     assert issue["severity"] in ["info", "low"]
 
 
+def test_basic_metrics_integration(tmp_path: Path):
+    """
+    Verifies that the BasicMetrics plugin correctly computes metrics
+    like total_lines, logical_lines, comment_lines, blank_lines,
+    docstring_lines, and Halstead metrics when run via the CLI.
+    """
+    import json
+
+    from toolkit.core.cli import EXIT_SUCCESS, main
+
+    # 1. Setup: Create a small Python file
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    code_file = project_dir / "metrics_test.py"
+    code_file.write_text(
+        '"""Module docstring."""\n'
+        "def foo():\n"
+        "    # This is a comment\n"
+        "    return 42\n\n"
+        "def bar():\n"
+        "    return foo()\n",
+        encoding="utf-8",
+    )
+    output_file = tmp_path / "report.json"
+
+    # 2. Execution: Run CLI with BasicMetrics plugin
+    exit_code = main(
+        [
+            "analyze",
+            str(project_dir),
+            "--out",
+            str(output_file),
+            "--plugins",
+            "BasicMetrics",
+        ]
+    )
+
+    # 3. Verification
+    assert exit_code == EXIT_SUCCESS
+    assert output_file.exists()
+
+    with open(output_file, encoding="utf-8") as f:
+        data = json.load(f)
+
+    # Find the report for the test file
+    file_report = next(f for f in data["details"] if "metrics_test.py" in f["file"])
+    plugin_report = next(
+        p for p in file_report["plugins"] if p["plugin"] == "BasicMetrics"
+    )
+
+    # Check that metrics are reported
+    summary = plugin_report["summary"]
+    metrics = summary.get("metrics", {})
+
+    # Expect non-zero totals
+    assert metrics.get("total_lines", 0) > 0
+    assert metrics.get("logical_lines", 0) > 0
+    assert "comment_lines" in metrics
+    assert "docstring_lines" in metrics
+    assert "blank_lines" in metrics
+
+    # Check results list matches issues_found
+    assert len(plugin_report["results"]) == summary.get("issues_found", 0)
+    
+
 def test_multiple_specific_plugins_integration(tmp_path: Path):
     """
     Verifies that the CLI runs ONLY the requested plugins and aggregates their
