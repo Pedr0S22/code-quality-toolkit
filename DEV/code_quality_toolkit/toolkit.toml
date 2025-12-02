@@ -1,5 +1,5 @@
 [plugins]
-enabled = ["StyleChecker","CyclomaticComplexity", "SecurityChecker", "DuplicationChecker","CommentDensity", "DeadCodeDetector"]
+enabled = ["StyleChecker","CyclomaticComplexity", "SecurityChecker", "DuplicationChecker","CommentDensity", "DeadCodeDetector", "BasicMetrics" ]
 
 [plugins.dead_code]
 ignore_patterns = ["^__", "^test_"]
@@ -16,6 +16,7 @@ indent_style = "spaces"
 indent_size = 4
 allow_mixed_indentation = false
 check_naming = true
+metrics_report_level = "MEDIUM"
 
 min_comment_density = 0.1  
 max_comment_density = 0.5  
