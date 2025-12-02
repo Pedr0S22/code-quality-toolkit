@@ -55,7 +55,7 @@ def test_core_continues_when_one_plugin_fails(tmp_path):
         capture_output=True,
         check=False
     )
-
+    
     # report must exist
     assert report.exists()
 
@@ -102,7 +102,7 @@ def test_status_partial(tmp_path):
     )
 
     data = json.loads(report.read_text())
-    
+
     assert data["analysis_metadata"]["status"] == "partial"
 
 
