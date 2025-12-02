@@ -176,61 +176,88 @@ class Plugin:
                         "hint": "Nunca guarde segredos em código fonte.",
                     })
 
-                report["results"] = results
-                report["summary"]["issues_found"] = len(results)
-                return report
-
-            # --- Bandit analysis ---
+                return {
+                    "results": results,
+                    "summary": {"issues_found": len(results), "status": "completed"},
+                }
+            
+            # Como o bandit analisa ficheiros e não linha a linha
+            # Criamos um ficheiro temporário para ele analisar
+            # Usamos 'delete=False' para o ficheiro não ser apagado
+            # imediatamente, para que o Bandit o possa ler.
             with tempfile.NamedTemporaryFile(
-                suffix=".py", delete=False, mode="w", encoding="utf-8"
+                suffix=".py",
+                delete=False,
+                mode="w",
+                encoding="utf-8",
             ) as temp_file:
                 temp_file.write(source_code)
-                temp_file_path = temp_file.name
+                temp_file_path = temp_file.name # Guardamos o caminho do ficheiro
 
             try:
+                # 2. Criar uma config e um gestor do Bandit
                 config = BanditConfig()
                 manager = BanditManager(config=config, agg_type='vuln')
+
+                # 3. Mandar o Bandit "descobrir" o nosso ficheiro temporário
                 manager.discover_files([temp_file_path])
+
+                # 4. Executar o Bandit (nos ficheiros que ele descobriu)
+                # (Isto cumpre as TAREFAS 2, 3, 4, 5, 6 de uma só vez)
                 manager.run_tests()
 
-                severity_map = {"LOW": LOW, "MEDIUM": MEDIUM, "HIGH": HIGH}
+                # 5. Mapear o nosso nível de severidade para o do Bandit
+                severity_map = {
+                    'LOW': LOW,
+                    'MEDIUM': MEDIUM,
+                    'HIGH': HIGH
+                }
                 report_level = severity_map.get(self.report_severity_level, LOW)
+
+                # 6. Obter os resultados do Bandit
                 bandit_issues = manager.get_issue_list(
                     sev_level=report_level,
-                    conf_level=LOW,
+                    conf_level=LOW
                 )
 
+                # 7. TRADUZIR os resultados do Bandit para o nosso formato JSON
                 for issue in bandit_issues:
                     severity_translation = {
-                        "LOW": "low",
-                        "MEDIUM": "medium",
-                        "HIGH": "high",
+                        'LOW': 'low',
+                        'MEDIUM': 'medium',
+                        'HIGH': 'high'
                     }
                     results.append({
                         "severity": severity_translation.get(issue.severity, "low"),
-                        "code": issue.test_id,
+                        "code": issue.test_id, # ex: B301 (pickle) ou B307 (eval)
                         "message": issue.text,
                         "line": issue.lineno,
                         "col": issue.col_offset + 1,
                         "hint": f"Bandit Test ID: {issue.test_id}",
-                        })
-
-                    report["results"] = results
-                    report["summary"]["issues_found"] = len(results)
+                    })
 
             finally:
+                # 8. Limpar (apagar o ficheiro temporário), funcionando ou não
                 if os.path.exists(temp_file_path):
                     os.remove(temp_file_path)
 
-            return report
+
+            # Devolve uma Resposta de Sucesso
+            return {
+                "results": results,
+                "summary": {
+                    "issues_found": len(results),
+                    "status": "completed",
+                },
+            }
 
         except Exception as e:
             # Sempre retorna um dicionário válido, mesmo em caso de erro
             return {
-                    "results": [],
-                    "summary": {
-                        "issues_found": 0,
-                        "status": "failed",
-                        "error": f"Erro interno no BanditSecurityChecker: {str(e)}",
-                        },
-                    }
+                "results": [],
+                "summary": {
+                    "issues_found": 0,
+                    "status": "failed",
+                    "error": f"Erro interno no BanditSecurityChecker: {str(e)}",
+                },
+            }

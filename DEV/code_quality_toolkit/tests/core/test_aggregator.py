@@ -14,6 +14,7 @@ def test_derive_status_failed_if_any_failed() -> None:
     }
     assert _derive_status(plugin_status) == "failed"
 
+
 def test_derive_status_partial_if_any_partial_and_none_failed() -> None:
     plugin_status = {
         "style": "completed",
