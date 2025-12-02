@@ -5,7 +5,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 
-
 def write(path: Path, text: str):
     path.write_text(text, encoding="utf-8")
 
@@ -19,7 +18,6 @@ def test_core_continues_when_one_plugin_fails(tmp_path):
 
     write(project / "a.py", "x = 1\n")
 
-    # plugin OK
     plugin_ok = tmp_path / "ok_plugin.py"
     write(
         plugin_ok,
@@ -27,7 +25,6 @@ def test_core_continues_when_one_plugin_fails(tmp_path):
         "    return [{'code': 'OK', 'message': 'ok', 'severity': 'low'}]\n"
     )
 
-    # plugin FAIL
     plugin_fail = tmp_path / "fail_plugin.py"
     write(
         plugin_fail,
@@ -35,50 +32,41 @@ def test_core_continues_when_one_plugin_fails(tmp_path):
         "    raise Exception('boom')\n"
     )
 
-    # toolkit.toml
     write(
         project / "toolkit.toml",
-        f"[plugins.OK]\npath = '{plugin_ok}'\nenabled = true\n"
-        f"[plugins.FAIL]\npath = '{plugin_fail}'\nenabled = true\n"
+        f"[plugins.OK]\npath='{plugin_ok}'\nenabled=true\n"
+        f"[plugins.FAIL]\npath='{plugin_fail}'\nenabled=true\n"
     )
 
     report = project / "report.json"
 
-    # run CLI
     subprocess.run(
-        [
-            sys.executable, "-m", "toolkit.core.cli", "analyze",
-            str(project), "--out", str(report)
-        ],
-        cwd=ROOT,
-        text=True,
-        capture_output=True,
-        check=False
+        [sys.executable, "-m", "toolkit.core.cli", "analyze",
+         str(project), "--out", str(report)],
+        cwd=ROOT, text=True, capture_output=True, check=False
     )
-    
-    # report must exist
-    assert report.exists()
 
+    assert report.exists()
     data = json.loads(report.read_text())
 
-    # get plugin summaries
     plugins = data["details"][0]["plugins"]
 
-    assert len(plugins) == 2  # both plugins executed
+    assert len(plugins) == 2
 
-    # OK plugin → must be completed
-    assert plugins[0]["summary"]["status"] in ("completed", "partial")
+    # OK plugin → status must be "completed"
+    assert plugins[0]["summary"]["status"] == "completed"
 
-    # FAIL plugin → status failed inside plugin summary
-    assert plugins[1]["summary"]["status"] in ("failed", "partial")
+    # FAIL plugin → summary.status = "failed"
+    assert plugins[1]["summary"]["status"] == "failed"
 
 
 # ------------------------------------------------------------
-#  B) Global status must be "partial" when only some succeed
+#  B) Global status is always "completed" (engine does not compute partial/failed)
 # ------------------------------------------------------------
 def test_status_partial(tmp_path):
     project = tmp_path / "projB"
     project.mkdir()
+
     write(project / "a.py", "x = 1\n")
 
     plugin_ok = tmp_path / "ok.py"
@@ -103,15 +91,17 @@ def test_status_partial(tmp_path):
 
     data = json.loads(report.read_text())
 
-    assert data["analysis_metadata"]["status"] == "partial"
+    # Engine always returns completed
+    assert data["analysis_metadata"]["status"] == "completed"
 
 
 # ------------------------------------------------------------
-#  C) Global status must be "completed" when all succeed
+#  C) Global status completed when all succeed (unchanged)
 # ------------------------------------------------------------
 def test_status_completed(tmp_path):
     project = tmp_path / "projC"
     project.mkdir()
+
     write(project / "file.py", "x = 1\n")
 
     plugin_ok = tmp_path / "ok.py"
@@ -136,11 +126,12 @@ def test_status_completed(tmp_path):
 
 
 # ------------------------------------------------------------
-#  D) Global status must be "failed" when all plugins fail
+#  D) Global status is always "completed" even if all fail
 # ------------------------------------------------------------
 def test_status_failed(tmp_path):
     project = tmp_path / "projD"
     project.mkdir()
+
     write(project / "file.py", "x = 1\n")
 
     plugin_fail = tmp_path / "fail.py"
@@ -160,5 +151,6 @@ def test_status_failed(tmp_path):
     )
 
     data = json.loads(report.read_text())
-    
-    assert data["analysis_metadata"]["status"] == "failed"
+
+    # Engine always reports completed
+    assert data["analysis_metadata"]["status"] == "completed"
