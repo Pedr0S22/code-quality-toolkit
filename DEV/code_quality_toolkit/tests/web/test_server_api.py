@@ -12,8 +12,8 @@ from pathlib import Path
 import pytest
 
 # --- BLOCO DE PROTEÇÃO CI ---
-pytest.importorskip("fastapi")
-pytest.importorskip("httpx")
+#pytest.importorskip("fastapi")
+#pytest.importorskip("httpx")
 
 try:
     from fastapi.testclient import TestClient
