@@ -11,8 +11,8 @@ from markdownify import markdownify as md
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QHBoxLayout, QPushButton, QLabel, QStackedWidget,
                             QFileDialog, QFrame, QCheckBox, QScrollArea,
-                            QLineEdit, QFormLayout)
-from PyQt6.QtCore import Qt, QUrl
+                            QLineEdit, QFormLayout, QMessageBox)
+from PyQt6.QtCore import Qt, QUrl, QThread, pyqtSignal
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 
 # --- CONFIG ---
@@ -21,36 +21,69 @@ API_BASE_URL = "http://127.0.0.1:8000/api/v1"
 # --- WEB ENGINE CHECK (Required for D3.js/HTML Rendering) ---W
 HAS_WEBENGINE = True
 
-# --- MOCK API RESPONSE (Simulating GET /api/v1/plugins/configs) ---
-def mock_fetch_plugins():
-    return {
-        "CyclomaticComplexity": {
-            "enabled": True,
-            "threshold": 10,
-            "exclude_tests": True
-        },
-        "DuplicationHunter": {
-            "enabled": True,
-            "min_lines": 5,
-            "ignore_imports": False
-        },
-        "DeadCodeFinder": {
-            "enabled": True,
-            "deep_scan": True
-        },
-        "SecurityScanner": {
-            "enabled": True,
-            "level": "high"
-        },
-        "StyleChecker": {
-            "enabled": True,
-            "standard": "pep8"
-        },
-        "DependencyGraph": {
-            "enabled": True,
-            "depth": 3
-        }
-    }
+# --- WORKER THREAD (Para evitar congelamento da UI) ---
+class AnalysisWorker(QThread):
+    finished = pyqtSignal(object) # Retorna o path dos resultados
+    error = pyqtSignal(str)       # Retorna mensagem de erro
+
+    def __init__(self, target_path, payload, api_url):
+        super().__init__()
+        self.target_path = Path(target_path)
+        self.payload = payload
+        self.api_url = api_url
+        self.tmp_dir = None
+
+    def run(self):
+        try:
+            # 1. Comprimir o alvo (Operação pesada de IO)
+            zip_path, self.tmp_dir = self.compress_target(self.target_path)
+
+            # 2. Enviar Request (Operação de Rede)
+            with open(zip_path, 'rb') as f:
+                files = {'file': f}
+                # O payload agora inclui configs dos plugins E os patterns
+                data = {'configs': json.dumps(self.payload)}
+                
+                response = requests.post(f"{self.api_url}/analyze", files=files, data=data)
+
+            # 3. Validar Resposta
+            if response.status_code != 200:
+                raise Exception(f"Server Error ({response.status_code}): {response.text}")
+
+            # 4. Processar ZIP de Resposta
+            results_dir = Path(tempfile.mkdtemp(prefix="toolkit_results_"))
+            results_zip = results_dir / "results.zip"
+            
+            with open(results_zip, "wb") as f:
+                f.write(response.content)
+
+            with zipfile.ZipFile(results_zip, 'r') as zf:
+                zf.extractall(results_dir)
+
+            self.finished.emit(results_dir)
+
+        except Exception as e:
+            self.error.emit(str(e))
+        finally:
+            # Limpar o zip de upload criado localmente
+            if self.tmp_dir and os.path.exists(self.tmp_dir):
+                shutil.rmtree(self.tmp_dir)
+
+    def compress_target(self, path):
+        """Helper to zip a folder or file before sending"""
+        tmp_dir = Path(tempfile.mkdtemp())
+        zip_path = tmp_dir / "upload.zip"
+        
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+            if path.is_dir():
+                for root, _, files in os.walk(path):
+                    for file in files:
+                        file_path = Path(root) / file
+                        arcname = file_path.relative_to(path)
+                        zf.write(file_path, arcname)
+            else:
+                zf.write(path, arcname=path.name)
+        return zip_path, tmp_dir
 
 # --- CUSTOM PLUGIN WIDGET ---
 class PluginItemWidget(QWidget):
@@ -484,6 +517,25 @@ class MainWindow(QMainWindow):
         bar_layout.setContentsMargins(30, 10, 30, 10)
         bar_layout.setSpacing(15)
 
+        # --- NOVOS INPUTS DE CONFIGURAÇÃO (Include/Exclude) ---
+        input_style = "background: #1e1e1e; color: #ddd; border: 1px solid #3e3e42; padding: 4px; border-radius: 3px;"
+        
+        self.inp_include = QLineEdit()
+        self.inp_include.setPlaceholderText("Include (e.g. **/*.py)")
+        self.inp_include.setStyleSheet(input_style)
+        self.inp_include.setFixedWidth(150)
+
+        self.inp_exclude = QLineEdit()
+        self.inp_exclude.setPlaceholderText("Exclude (e.g. tests/**)")
+        self.inp_exclude.setStyleSheet(input_style)
+        self.inp_exclude.setFixedWidth(150)
+
+        bar_layout.addWidget(QLabel("In:"))
+        bar_layout.addWidget(self.inp_include)
+        bar_layout.addWidget(QLabel("Ex:"))
+        bar_layout.addWidget(self.inp_exclude)
+        # ---------------------------------------------------
+
         secondary_btn_style = """
             QPushButton { background-color: #3e3e42; color: #cccccc; border: 1px solid #3e3e42; border-radius: 4px; padding: 8px 15px; font-weight: 600; }
             QPushButton:hover { background-color: #4e4e52; color: white; }
@@ -540,7 +592,7 @@ class MainWindow(QMainWindow):
             self.lbl_path.setStyleSheet("color: #cccccc; font-weight: bold; border: none;")
 
     def executar_plugin_run(self):
-        """Logic: Gather Configs -> Zip Target -> POST to API -> Unzip Result"""
+        """Logic: Gather Configs -> Threaded Analysis via Worker"""
         if not self.caminho_selecionado:
             self.lbl_path.setText("Please, select a path!")
             self.lbl_path.setStyleSheet("color: #f48771; font-weight: bold; border: none;")
@@ -563,69 +615,57 @@ class MainWindow(QMainWindow):
             self.lbl_path.setText("Please, select at least one plugin!")
             self.lbl_path.setStyleSheet("color: #f48771; font-weight: bold; border: none;")
             return
-
-        print("--- RUNNING ANALYSIS ON SERVER ---")
         
-        # 2. PREPARE FILE AND DATA
-        try:
-            # Zip the target
-            zip_path, tmp_dir = self.compress_target(self.caminho_selecionado)
-            
-            files = {'file': open(zip_path, 'rb')}
-            data = {'configs': json.dumps(selected_payload)}
-            
-            # 3. CALL API
-            response = requests.post(f"{API_BASE_URL}/analyze", files=files, data=data)
-            
-            # Cleanup upload zip
-            files['file'].close()
-            shutil.rmtree(tmp_dir)
-            
-            if response.status_code != 200:
-                print(f"Server Error: {response.text}")
-                self.lbl_path.setText("Analysis Failed (Server Error)")
-                self.lbl_path.setStyleSheet("color: #f48771; font-weight: bold;")
-                return
+        # --- ADDED: INCLUDE/EXCLUDE PATTERNS ---
+        selected_payload["analyze"] = {
+            "include": [self.inp_include.text()] if self.inp_include.text() else [],
+            "exclude": [self.inp_exclude.text()] if self.inp_exclude.text() else []
+        }
 
-            # 4. PROCESS RESPONSE (ZIP)
-            # Save response zip to temp
-            self.results_dir = Path(tempfile.mkdtemp(prefix="toolkit_results_"))
-            results_zip = self.results_dir / "results.zip"
-            
-            with open(results_zip, "wb") as f:
-                f.write(response.content)
-            
-            # Extract
-            with zipfile.ZipFile(results_zip, 'r') as zf:
-                zf.extractall(self.results_dir)
-                
-            print(f"Results extracted to: {self.results_dir}")
+        print("--- RUNNING ANALYSIS ON SERVER (THREADED) ---")
+        
+        # 2. UI UPDATE (LOCK BUTTON)
+        self.btn_run.setEnabled(False)
+        self.btn_run.setText("Running...")
+        self.lbl_path.setText(f"⏳ Processing {nome_atual}...")
+        self.lbl_path.setStyleSheet("color: #ebc034; font-weight: bold; border: none;")
 
-            # 5. ENABLE DASHBOARDS
-            for widget in self.plugin_widgets:
-                is_active = widget.checkbox.isChecked()
-                widget.set_dashboard_status(is_active)
+        # 3. START WORKER
+        self.worker = AnalysisWorker(self.caminho_selecionado, selected_payload, API_BASE_URL)
+        self.worker.finished.connect(self.on_analysis_finished)
+        self.worker.error.connect(self.on_analysis_error)
+        self.worker.start()
 
-            # Enable the Report Button
-            self.btn_report.setEnabled(True)
-            
-            # Show the global report immediately after run
-            self.show_global_report()
+    def on_analysis_finished(self, results_dir):
+        """Called by Worker when analysis is successfully complete"""
+        self.results_dir = results_dir
+        
+        # Restore UI
+        self.btn_run.setEnabled(True)
+        self.btn_run.setText("RUN")
+        self.lbl_path.setText("✅ Analysis Complete!")
+        self.lbl_path.setStyleSheet("color: #4caf50; font-weight: bold; border: none;")
 
-        except Exception as e:
-            
-            if HAS_WEBENGINE:
-                # Try to load global report.html if it exists
-                global_report = self.results_dir / "report.html"
-                if global_report.exists():
-                    self.web_view.setUrl(QUrl.fromLocalFile(str(global_report.resolve())))
-                else:
-                    self.web_view.setHtml("<h2 style='color:white'>Analysis Complete. Select a plugin to view details.</h2>")
+        # Enable Dashboards
+        for widget in self.plugin_widgets:
+            is_active = widget.checkbox.isChecked()
+            widget.set_dashboard_status(is_active)
 
-        except Exception as e:
-            print(f"Client Error: {e}")
-            self.lbl_path.setText(f"Error: {str(e)}")
-            self.lbl_path.setStyleSheet("color: #f48771;")
+        # Enable the Report Button
+        self.btn_report.setEnabled(True)
+        
+        # Show the global report immediately after run
+        self.show_global_report()
+        print(f"Results extracted to: {self.results_dir}")
+
+    def on_analysis_error(self, error_msg):
+        """Called by Worker when something fails"""
+        print(f"Client Error: {error_msg}")
+        self.btn_run.setEnabled(True)
+        self.btn_run.setText("RUN")
+        self.lbl_path.setText("❌ Analysis Failed")
+        self.lbl_path.setStyleSheet("color: #f44336; font-weight: bold; border: none;")
+        QMessageBox.critical(self, "Analysis Failed", f"An error occurred during analysis:\n{error_msg}")
 
     def show_plugin_dashboard(self, plugin_name):
         """
@@ -733,23 +773,6 @@ class MainWindow(QMainWindow):
 
         except Exception as e:
             print(f"Export Error: {e}")
-
-    def compress_target(self, path_str):
-        """Helper to zip a folder or file before sending"""
-        path = Path(path_str)
-        tmp_dir = Path(tempfile.mkdtemp())
-        zip_path = tmp_dir / "upload.zip"
-        
-        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
-            if path.is_dir():
-                for root, dirs, files in os.walk(path):
-                    for file in files:
-                        file_path = Path(root) / file
-                        arcname = file_path.relative_to(path)
-                        zf.write(file_path, arcname)
-            else:
-                zf.write(path, arcname=path.name)
-        return zip_path, tmp_dir
 
 def _to_snake_case(name: str) -> str:
     """Converts PascalCase to snake_case (e.g. 'DeadCodeDetector' -> 'dead_code')."""
