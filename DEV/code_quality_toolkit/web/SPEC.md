@@ -27,13 +27,13 @@ The three main components are:
 
 - **Role**: Presentation & I/O
 
-- **Description**: Handles user input (directory selection, configuration), manages file packaging/unpacking, and renders the final report. Communicates with the server via HTTP.
+- **Description**: Handles user input (directory selection, configuration), manages file packaging/unpacking, and renders the final report. Communicates with the server via HTTP (`http://127.0.0.1:8000`)
 
 ### SERVER (server.py FastAPI Server)
 
 - **Role**: Orchestration & API Gateway
 
-- **Description**: Receives and routes client requests, manages temporary file storage, invokes the Toolkit Engine, and packages the final results for return.
+- **Description**: Receives and routes client requests, manages temporary file storage, invokes the Toolkit Engine, and packages the final results for return. It runs in `http://127.0.0.1:8000`.
 
 ### TOOLKIT ENGINE (Core + Plugins)
 
