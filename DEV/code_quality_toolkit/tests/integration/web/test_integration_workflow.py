@@ -11,10 +11,19 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 
 import pytest
-from PyQt6.QtWidgets import QApplication
 
-from web.client import MainWindow, AnalysisWorker
-from web import client
+# --- BLOCO DE PROTEÇÃO CI ---
+# Impede erros no GitLab se as bibliotecas de UI não estiverem instaladas
+pytest.importorskip("PyQt6")
+
+try:
+    from PyQt6.QtWidgets import QApplication
+    # AQUI: Importamos 'client' explicitamente para permitir monkeypatching
+    from web import client
+    from web.client import MainWindow, AnalysisWorker
+except ImportError:
+    pytest.skip("UI libraries missing (Running in CI?)", allow_module_level=True)
+# -----------------------------
 
 
 @pytest.fixture(scope="session")

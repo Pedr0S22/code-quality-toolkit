@@ -9,11 +9,18 @@ import tempfile
 import zipfile
 from pathlib import Path
 from typing import Dict, Any
-
 import pytest
-from fastapi.testclient import TestClient
 
-from web.server import app
+# --- BLOCO DE PROTEÇÃO CI ---
+pytest.importorskip("fastapi")
+pytest.importorskip("httpx") # O TestClient precisa disto
+
+try:
+    from fastapi.testclient import TestClient
+    from web.server import app
+except ImportError:
+    pytest.skip("FastAPI not installed in CI", allow_module_level=True)
+# -----------------------------
 
 # Use TestClient for synchronous testing
 client = TestClient(app)
