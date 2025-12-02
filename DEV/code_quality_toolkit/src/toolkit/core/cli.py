@@ -251,7 +251,9 @@ def main(
     # analysis run.
     except (ConfigurationError, PluginLoadError, AnalysisExecutionError) as exc:
         logging.log(
-            "cli.error", error=str(exc)
+            "cli.error",
+            level="ERROR",
+            error=str(exc)
         )  # records the error internally for debugging purposes.
         print(
             f"Error: {exc}", file=sys.stderr
@@ -265,7 +267,10 @@ def main(
         # its rule BLE001, which typically warns against broad except Exception:
         # clauses. It has been added here because the intent is to catch all
         #  remaining exceptions to prevent an unhandled crash.
-        logging.log("cli.error", error=str(exc))
+        logging.log(
+            "cli.error",
+            level="ERROR",
+            error=str(exc))
         print(f"Unexpected error: {exc}", file=sys.stderr)
         return EXIT_UNEXPECTED_ERROR
 
@@ -345,6 +350,7 @@ def _run_analyze(args: argparse.Namespace) -> int:
     # the total number of issues found.
     logging.log(
         "cli.report_written",
+        level="INFO",
         path=str(output_path),
         issues=report["summary"]["total_issues"],
     )
