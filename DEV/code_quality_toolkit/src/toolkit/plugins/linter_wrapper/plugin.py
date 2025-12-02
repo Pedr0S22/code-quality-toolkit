@@ -171,7 +171,7 @@ class Plugin:
         timeout_seconds = self.timeout_seconds
         extra_args = list(self.pylint_args)
 
-        # Keep using sys.executable -m as requested
+        # Usamos sys.executable -m para garantir o ambiente correto
         cmd: list[str] = [
             sys.executable,
             "-m",
@@ -182,12 +182,14 @@ class Plugin:
         ]
 
         try:
+            # nosec B603: Validamos que cmd é uma lista e usamos shell=False (padrão).
+            # O executável é o próprio interpretador Python (confiável).
             proc = subprocess.run( 
                 cmd,
                 capture_output=True,
                 text=True,
                 timeout=timeout_seconds,
-            )
+            ) 
         except FileNotFoundError:
             # rare when using sys.executable, but good to keep
             return [
