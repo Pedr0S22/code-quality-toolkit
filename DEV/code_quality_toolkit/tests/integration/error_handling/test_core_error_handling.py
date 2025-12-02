@@ -102,7 +102,7 @@ def test_status_partial(tmp_path):
     )
 
     data = json.loads(report.read_text())
-
+    
     assert data["analysis_metadata"]["status"] == "partial"
 
 
@@ -162,4 +162,3 @@ def test_status_failed(tmp_path):
     data = json.loads(report.read_text())
     
     assert data["analysis_metadata"]["status"] == "failed"
-    
