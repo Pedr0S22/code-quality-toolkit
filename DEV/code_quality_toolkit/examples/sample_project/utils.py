@@ -5,9 +5,12 @@ def format_message(name: str) -> str:
     greeting = "Olá, " + name
     return greeting + "!" * 3
 
-# Testing stylecheck plugin making the plugin detect comment lines with extension greater than #<lines>
 
-def complex_branching(value: int) -> int: 
+# Testing stylecheck plugin making the plugin 
+# detect comment lines with extension greater than #<lines>
+
+
+def complex_branching(value: int) -> int:
     if value < 0:
         return -1
     elif value == 0:
@@ -17,7 +20,8 @@ def complex_branching(value: int) -> int:
     else:
         return value * 2
 
-def number_to_name():
+
+def number_to_name() -> None:
     number = input()
     if not number.isdigit():
         print("Enter a valid number")
@@ -47,5 +51,14 @@ def number_to_name():
     elif number == 9:
         print("nine")
 
+
 def utils_args(arg1, arg2, arg3, arg4, arg5, arg6, arg7):
     return arg1 + arg2 + arg3 + arg4 + arg5 + arg6 + arg7
+
+
+def duplicate_sum(data: int) -> int:
+    """Intentionally duplicated helper to demonstrate the duplication plugin."""
+    total = 0
+    for index in range(data):
+        total += index
+    return total
