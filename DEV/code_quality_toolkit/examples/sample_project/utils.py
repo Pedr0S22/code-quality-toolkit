@@ -1,11 +1,8 @@
 """Utility functions with intentionally long lines for demonstration."""
-
-
 def format_message(name: str) -> str:
     greeting = "Olá, " + name
     return greeting + "!" * 3
 
-# Testing stylecheck plugin making the plugin detect comment lines with extension greater than #<lines>
 
 def complex_branching(value: int) -> int:
     if value < 0:
@@ -17,7 +14,8 @@ def complex_branching(value: int) -> int:
     else:
         return value * 2
 
-def number_to_name():
+
+def number_to_name() -> None:
     number = input()
     if not number.isdigit():
         print("Enter a valid number")
@@ -47,5 +45,25 @@ def number_to_name():
     elif number == 9:
         print("nine")
 
+
 def utils_args(arg1, arg2, arg3, arg4, arg5, arg6, arg7):
     return arg1 + arg2 + arg3 + arg4 + arg5 + arg6 + arg7
+
+class Orange:  # [duplicate-code]
+    def __init__(self):
+        self.remaining_bites = 3
+
+    def take_bite(self):
+        if self.remaining_bites > 0:
+            print("You take a bite of the apple.")
+            self.remaining_bites -= 1
+        else:
+            print("The orange is already eaten up!")
+
+    def eaten_by_animal(self, animal):
+        if animal == "cat":
+            raise ValueError("A cat would never do that !")
+        self.remaining_bites = 0
+        print("The orange has been eaten by an animal.")
+
+

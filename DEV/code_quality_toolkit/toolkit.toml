@@ -11,14 +11,15 @@ max_line_length = 88
 max_complexity = 10
 max_function_length = 50
 max_arguments = 5
-check_whitespace = true 
-indent_style = "spaces" 
+check_whitespace = true
+indent_style = "spaces"
 indent_size = 4
 allow_mixed_indentation = false
 check_naming = true
+metrics_report_level = "MEDIUM"
 
-min_comment_density = 0.1  
-max_comment_density = 0.5  
+min_comment_density = 0.1
+max_comment_density = 0.5
 
 warn_wildcard_imports = true
 max_relative_import_level = 1

@@ -163,6 +163,70 @@ def test_style_checker_integration(tmp_path: Path):
     assert "length" in msg or "characters" in msg or "caracteres" in msg
     assert issue["severity"] in ["info", "low"]
 
+def test_duplication_checker_integration(tmp_path: Path):
+    """
+    Verifies that the DuplicationChecker plugin detects duplicated code (R0801)
+    when run via the CLI across multiple files.
+    """
+
+    # 1. Setup: Create a project with two files containing duplicated code
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+
+    file_a = project_dir / "a.py"
+    file_b = project_dir / "b.py"
+
+    duplicated_block = """
+def compute():
+    total = 0
+    for i in range(10):
+        total += i
+    if total > 5:
+        total -= 1
+    return total
+"""
+
+    file_a.write_text(duplicated_block, encoding="utf-8")
+    file_b.write_text(duplicated_block, encoding="utf-8")
+
+    output_file = tmp_path / "report.json"
+
+    # 2. Execution: Run CLI with DuplicationChecker
+    exit_code = main(
+        [
+            "analyze",
+            str(project_dir),
+            "--out",
+            str(output_file),
+            "--plugins",
+            "DuplicationChecker",
+        ]
+    )
+
+    # 3. Verification
+    assert exit_code == EXIT_SUCCESS
+    assert output_file.exists()
+
+    with open(output_file, encoding="utf-8") as f:
+        data = json.load(f)
+
+    file_reports = [
+        f for f in data["details"]
+        if f["file"].endswith("a.py") or f["file"].endswith("b.py")
+    ]
+    assert file_reports, "No .py files found in report."
+
+    num_reports = 0
+    for file_report in file_reports:
+        plugin_report = next(
+            (p for p in file_report["plugins"]
+             if p["plugin"] == "DuplicationChecker"), None
+        )
+        assert plugin_report is not None, "DuplicationChecker not found in plugin list."
+        num_reports += 1
+
+    assert num_reports > 0, "Expected more than one report across multiple files."
+
 def test_core_unified_report_generation(tmp_path: Path):
     """
     Integration tests(End-to-End):
