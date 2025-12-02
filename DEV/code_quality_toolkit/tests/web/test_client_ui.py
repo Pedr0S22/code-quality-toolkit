@@ -1,22 +1,20 @@
 from __future__ import annotations
+
 from pathlib import Path
+
 import pytest
-from unittest.mock import MagicMock, patch
 
 # --- BLOCO DE PROTEÇÃO CI ---
-# Tenta importar as bibliotecas de UI. Se falhar (no CI), salta os testes.
 pytest.importorskip("PyQt6")
 
 try:
     from PyQt6.QtWidgets import QApplication
-    from PyQt6.QtCore import Qt
-    
-    # --- A CORREÇÃO ESTÁ AQUI ---
-    from web import client  # Importa o módulo 'client' para o monkeypatch funcionar
-    from web.client import MainWindow, AnalysisWorker
-    
+
+    # Importar 'client' explicitamente para permitir monkeypatching
+    from web import client
+    from web.client import MainWindow
 except ImportError:
-    pytest.skip("UI libraries not installed (Running in CI?)", allow_module_level=True)
+    pytest.skip("UI libraries not installed", allow_module_level=True)
 # -----------------------------
 
 @pytest.fixture(scope="session")
@@ -71,7 +69,7 @@ def main_window(app, monkeypatch):
     """
     Cria a MainWindow num estado controlado.
     """
-    # 1) Desativa WebEngine (Agora funciona porque 'client' foi importado)
+    # 1) Desativa WebEngine
     monkeypatch.setattr(client, "HAS_WEBENGINE", False, raising=False)
 
     # 2) Finge API /plugins/configs

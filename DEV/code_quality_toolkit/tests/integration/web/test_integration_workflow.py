@@ -4,11 +4,7 @@ Tests the complete user journey: file selection → analysis → report viewing.
 """
 from __future__ import annotations
 
-import json
-import tempfile
-import zipfile
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock
 
 import pytest
 
@@ -18,9 +14,10 @@ pytest.importorskip("PyQt6")
 
 try:
     from PyQt6.QtWidgets import QApplication
+
     # AQUI: Importamos 'client' explicitamente para permitir monkeypatching
     from web import client
-    from web.client import MainWindow, AnalysisWorker
+    from web.client import AnalysisWorker, MainWindow
 except ImportError:
     pytest.skip("UI libraries missing (Running in CI?)", allow_module_level=True)
 # -----------------------------

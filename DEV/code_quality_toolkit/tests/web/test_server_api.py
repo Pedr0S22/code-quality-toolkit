@@ -8,22 +8,26 @@ import json
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import Dict, Any
+
 import pytest
 
 # --- BLOCO DE PROTEÇÃO CI ---
 pytest.importorskip("fastapi")
-pytest.importorskip("httpx") # O TestClient precisa disto
+pytest.importorskip("httpx")
 
 try:
     from fastapi.testclient import TestClient
+
     from web.server import app
 except ImportError:
     pytest.skip("FastAPI not installed in CI", allow_module_level=True)
 # -----------------------------
 
-# Use TestClient for synchronous testing
-client = TestClient(app)
+# Use TestClient for synchronous testing (se importado com sucesso)
+if 'TestClient' in globals():
+    client = TestClient(app)
+else:
+    client = None
 
 
 # ============================================================================
@@ -54,9 +58,6 @@ class TestListPluginsEndpoint:
         
         # Should include StyleChecker and CyclomaticComplexity at minimum
         assert len(plugins) > 0
-        # Check if common plugins are present
-        plugin_names = [p.lower() for p in plugins]
-        # We don't assume specific plugins, just that some exist
 
 
 # ============================================================================
@@ -85,8 +86,7 @@ class TestListPluginConfigsEndpoint:
         for plugin_name, config in data.items():
             assert isinstance(plugin_name, str)
             assert isinstance(config, dict)
-            # Config should have at least some keys
-            assert len(config) >= 0  # May be empty dict for plugins with no config
+            assert len(config) >= 0
 
 
 # ============================================================================
@@ -103,11 +103,9 @@ class TestAnalyzeEndpoint:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
             
-            # Create a simple Python file
             py_file = tmp_path / "test.py"
             py_file.write_text(content)
             
-            # Create ZIP in memory
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
                 zf.write(py_file, arcname="test.py")
@@ -125,7 +123,7 @@ class TestAnalyzeEndpoint:
         )
         
         assert response.status_code == 200
-        assert response.headers["content-disposition"]  # Should be a file download
+        assert response.headers["content-disposition"]
 
     def test_analyze_returns_zip_file(self, tmp_path):
         """POST /api/v1/analyze returns a ZIP file with results."""
@@ -139,17 +137,14 @@ class TestAnalyzeEndpoint:
         
         assert response.status_code == 200
         
-        # Should be a ZIP file
         result_zip = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
         result_zip.write(response.content)
         result_zip.close()
         
-        # Verify it's a valid ZIP
         assert zipfile.is_zipfile(result_zip.name)
         
         with zipfile.ZipFile(result_zip.name, 'r') as zf:
             files = zf.namelist()
-            # Should contain report.json or report.html
             assert any('report' in f.lower() for f in files)
         
         Path(result_zip.name).unlink()
@@ -180,7 +175,6 @@ class TestAnalyzeEndpoint:
             data={"configs": "{}"}
         )
         
-        # Should either return 400 (bad request) or 500 (internal error)
         assert response.status_code in (400, 500)
 
     def test_analyze_with_invalid_json_config(self):
@@ -193,8 +187,6 @@ class TestAnalyzeEndpoint:
             data={"configs": "not valid json"}
         )
         
-        # Should handle gracefully (either accept or reject)
-        # The server should not crash
         assert response.status_code in (200, 400, 500)
 
     def test_analyze_missing_file(self):
@@ -204,7 +196,6 @@ class TestAnalyzeEndpoint:
             data={"configs": "{}"}
         )
         
-        # Should return 422 (validation error)
         assert response.status_code == 422
 
     def test_analyze_with_multiple_python_files(self):
@@ -212,13 +203,11 @@ class TestAnalyzeEndpoint:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
             
-            # Create multiple Python files
             (tmp_path / "file1.py").write_text("x = 1\n")
             (tmp_path / "file2.py").write_text("y = 2\n")
             (tmp_path / "subdir").mkdir()
             (tmp_path / "subdir" / "file3.py").write_text("z = 3\n")
             
-            # Create ZIP in memory
             import io
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
@@ -245,19 +234,16 @@ class TestFullAnalysisWorkflow:
 
     def test_workflow_list_plugins_then_analyze(self):
         """Full workflow: list plugins, then run analysis."""
-        # Step 1: List available plugins
         list_response = client.get("/api/v1/plugins")
         assert list_response.status_code == 200
         plugins = list_response.json()["plugins"]
         assert len(plugins) > 0
         
-        # Step 2: Get plugin configs
         config_response = client.get("/api/v1/plugins/configs")
         assert config_response.status_code == 200
         configs = config_response.json()
         assert len(configs) > 0
         
-        # Step 3: Run analysis with discovered plugins
         zip_content = TestAnalyzeEndpoint.create_test_zip(
             "def hello():\n    print('hello')\n\nx = 1\n"
         )
