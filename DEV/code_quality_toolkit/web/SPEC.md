@@ -1,180 +1,150 @@
 # Developer Documentation — Web UI / Client–Server Architecture
-## Introdução
+## TECHNICAL DOCUMENTATION
 
-Este documento descreve a arquitetura técnica do sistema Web UI desenvolvido na Sprint, incluindo:
+### Description
 
-Arquitetura Client–Server
+This document outlines the technical architecture of the Web UI system, covering the Client-Server interaction, file processing, and the role of the FastAPI Controller in orchestrating the Toolkit Engine.
 
-Fluxo de transação de ficheiros
+## 1. Purpose
 
-Comunicação com FastAPI
+The primary purpose of this architecture is to provide a robust, decoupled, and user-friendly interface for the static analysis engine. By separating the GUI (Client) from the heavy processing (Toolkit Engine) via an API gateway (Controller), we achieve better scalability, responsiveness, and platform independence.
 
-Mecanismos internos da análise
+## 2. Client-Server Architecture (Rich Client)
 
-Integração com Toolkit Engine
+The application adheres to a three-tiered architecture. The `client.py` component acts as a Rich Client, handling all user interface and presentation logic, while relying on the FastAPI server `server.py` for all core business logic and analysis execution. Below is the UML Diagram of the architecture:
 
-Estrutura dos endpoints
-
-## Arquitetura Geral
-
-A aplicação é constituída por três camadas:
-
+```
 +-------------------+         +----------------------+        +-----------------------+
-|      CLIENT       | ----->  |      CONTROLLER      | -----> |      TOOLKIT ENGINE   |
-|  (client.py GUI)  |         |   (FastAPI server)   |        |  (Core + Plugins)     |
+|      CLIENT       | <---->  |        SERVER        | <----> |     TOOLKIT ENGINE    |
+|  (client.py GUI)  |         |   (FastAPI server)   |        |    (Core + Plugins)   |
 +-------------------+         +----------------------+        +-----------------------+
+```
 
-Funções de cada camada:
-### Client (UI)
+## 2.1 Architecture Components
+The three main components are:
 
-Seleção de diretórios
+### CLIENT (client.py GUI)
 
-Configuração de plugins
+- **Role**: Presentation & I/O
 
-Criação automática de ZIP
+- **Description**: Handles user input (directory selection, configuration), manages file packaging/unpacking, and renders the final report. Communicates with the server via HTTP.
 
-Envio de pedidos ao servidor
+### SERVER (server.py FastAPI Server)
 
-Receção de ZIP devolvido
+- **Role**: Orchestration & API Gateway
 
-Abertura automática de report.html
+- **Description**: Receives and routes client requests, manages temporary file storage, invokes the Toolkit Engine, and packages the final results for return.
 
-### Controller (FastAPI)
+### TOOLKIT ENGINE (Core + Plugins)
 
-Recebe ZIP via POST /api/v1/analyze
+- **Role**: Business Logic & Processing
 
-Extrai para diretório temporário
+- **Description**: Loads configurations, executes analysis on the source code, and produces analysis artifacts (issues.json, dashboards, report.html).
 
-Invoca a engine do toolkit
+## 3. Endpoints
 
-Gera dashboards e report.html
+The FastAPI Controller exposes the following key endpoints:
 
-Reempacota resultados e devolve ao cliente
+#### `GET /api/v1/plugins`
 
-### Toolkit Engine
+- Returns a list of all available and configured plugins.
 
-Carrega e configura plugins
+#### `GET /api/v1/plugins/configs`
 
-Executa análise sobre os ficheiros
+- Returns the default configuration settings for each available plugin.
 
-Produz:
+#### `POST /api/v1/analyze`
 
-issues.json
+- Initiates the complete analysis cycle.
+  - Endpoint Flow:
 
-dashboards
+     - Receives the ZIP archive containing the file(s) to be analyzed and the plugins with their respective configurations from the Client.
 
-report.html
+    - Extracts the contents into a temporary directory on the server.
 
-## Endpoints
- GET /api/v1/plugins
+    - Invokes the Toolkit Engine's primary analysis function: `run_analysis(path, configs)`.
 
-Retorna lista de plugins disponíveis.
+    - The Engine generates analysis artifacts (`report.html`, D3 dashboards (`<plugin_name>_dashboard.html`), `report.json`).
 
- GET /api/v1/plugins/configs
+    - The Controller creates a return ZIP archive containing all generated files.
 
-Retorna configurações default de cada plugin.
+    - Sends the results ZIP back to the Client.
 
- POST /api/v1/analyze
 
-###Fluxo completo:
+## 4. File Transaction Flow
 
-Recebe ZIP do cliente.
+The complete cycle involves a robust file exchange process using ZIP archives to efficiently transfer potentially large source code and result sets.
 
-Extrai para pasta temporária.
+```txt
+sequenceDiagram
+    participant C as CLIENT (client.py)
+    participant S as SERVER (server.py)
+    participant E as TOOLKIT ENGINE (core + plugins)
 
-Carrega configs enviadas.
+    C->>C: Create Source Code ZIP
+    C->>S: POST /api/v1/analyze (Send ZIP)
+    S->>S: Extract ZIP to Temp Directory
+    S->>E: run_analysis(path, configs)
+    E->>E: Execute Analysis & Generate Artifacts (report.html, dashboards)
+    E->>S: Return Analysis Results
+    S->>S: Create Results ZIP
+    S->>C: Return Results ZIP
+    C->>C: Extract Results ZIP
+    C->>C: Auto-open report.html
+    C->>C: Possibilty to visualize each plugins dashboard
+```
 
-Invoca engine:
+## 5. Asynchronous Communication (Signal/Slot Equivalent)
 
-run_analysis(path, configs)
+The application uses asynchronous mechanisms to ensure responsiveness, which serves as the equivalent of a Signal/Slot pattern for network I/O.
 
-Gera ficheiros:
+### Client Side
 
-report.html
+- **User Actions**: User interactions trigger GUI events.
 
-dashboards D3
+- **HTTP Calls**: Network requests are executed asynchronously (e.g., using threads or non-blocking I/O) to prevent the graphical user interface from freezing during the potentially long analysis process.
 
-meta.json
+- **Callbacks**: Upon receiving an HTTP response from the server, callbacks are used to safely update the interface with the results or status indicators.
 
-Cria ZIP de retorno.
+### Server Side
 
-Envia ZIP ao cliente.
+- **Requests**: All incoming requests are handled asynchronously.
 
-## File Transaction Flow
+- **Handlers**: FastAPI uses async def for its route handlers, allowing the server to efficiently manage multiple concurrent client connections.
 
-Ciclo completo ZIP Upload → Analysis → ZIP Return
+- **Event Loop**: This design ensures the server's event loop is not blocked by a single analysis task, maximizing throughput and stability.
 
-CLIENT
-  ↓ cria ZIP
-POST /analyze
-  ↓ envia ZIP
-SERVER
-  ↓ extrai
-TOOLKIT ENGINE
-  ↓ analisa
-  ↓ gera report.html
-SERVER
-  ↓ cria ZIP
-  ↓ devolve ZIP
-CLIENT
-  ↓ extrai
-  ↓ abre report.html
+## 6. Project Structure
 
-## Comunicação Assíncrona (Signal/Slot Equivalent)
+The Web UI components are logically separated from the core toolkit components:
 
-Embora o projeto não use diretamente Qt signals/slots, o mecanismo equivalente é:
-
-### No Cliente:
-
-Ações do utilizador → eventos GUI
-
-Chamadas HTTP → assíncronas via threads
-
-Callbacks → atualizam interface
-
-### No Servidor FastAPI:
-
-Requests → assíncronos
-
-Handlers usam async def
-
-Não bloqueiam event loop
-
-## Estrutura do Projeto
+```txt
 DEV/
  └─ code_quality_toolkit/
      ├─ web/
      │   ├─ server.py
      │   ├─ client.py
-     │   └─ README.md (User Docs)
+     │   └─ SPEC.md (DEV Docs)
      └─ src/
          └─ toolkit/
              ├─ core/
              ├─ plugins/
              │   └─ DASHBOARD.md
              └─ ...
+```
 
-## Considerações Técnicas do Dashboard
+## Authors
+Pedro Silva, 2023235452, @Pedr0S22
 
-Gerado automaticamente durante análise
+André Silva, 2023212648, @andresilva219
 
-Criado por cada plugin no método analyze()
+Oleksandra Grymalyuk, 2023218767, @my3007sunshine
 
-Deve usar D3.js
+Rabia Saygin, 2024187186, @rferyals
 
-Dimensões: 1066 × 628 px
+Isaque Capra, 2023221892, @Isaque_capra
 
-## Conclusão
+Tiago Alves, 2023207875, @tiagoalves.21
 
-Este SPEC documenta claramente:
-
-A arquitetura client-server
-
-O fluxo técnico completo da análise
-
-O comportamento dos endpoints
-
-A integração com a engine
-
-O ciclo de dados entre cliente, servidor e toolkit
+#### Disclaimer: This web application component was build using AI.
 
