@@ -165,6 +165,6 @@ def test_status_failed(tmp_path):
     )
 
     data = json.loads(report.read_text())
-
+    
     # Engine always reports completed
     assert data["analysis_metadata"]["status"] == "completed"
