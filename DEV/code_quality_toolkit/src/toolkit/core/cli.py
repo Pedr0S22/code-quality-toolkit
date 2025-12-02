@@ -122,9 +122,26 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Fail if finds error >= stated severity level",
     )
+
+    # Defines the verbosity/log-level of the application.
+    # type=str.upper ensures case-insensitivity at the parsing level.
+    analyze.add_argument(
+        "--log-level",
+        type=str.upper,
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        default="INFO",
+        help="Set the logging verbosity level",
+    )
+
+    # A shortcut flag for setting the log level to DEBUG.
+    analyze.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose output (equivalent to --log-level DEBUG)",
+    )
     # returns the fully configured parser object.
     return parser
-
 
 def _resolve_requested_plugins(option: str, config: ToolkitConfig) -> list[str] | None:
     """
@@ -234,7 +251,9 @@ def main(
     # analysis run.
     except (ConfigurationError, PluginLoadError, AnalysisExecutionError) as exc:
         logging.log(
-            "cli.error", error=str(exc)
+            "cli.error",
+            level="ERROR",
+            error=str(exc)
         )  # records the error internally for debugging purposes.
         print(
             f"Error: {exc}", file=sys.stderr
@@ -248,7 +267,10 @@ def main(
         # its rule BLE001, which typically warns against broad except Exception:
         # clauses. It has been added here because the intent is to catch all
         #  remaining exceptions to prevent an unhandled crash.
-        logging.log("cli.error", error=str(exc))
+        logging.log(
+            "cli.error",
+            level="ERROR",
+            error=str(exc))
         print(f"Unexpected error: {exc}", file=sys.stderr)
         return EXIT_UNEXPECTED_ERROR
 
@@ -262,6 +284,12 @@ def _run_analyze(args: argparse.Namespace) -> int:
     load plugins, run the file scan, generate a report, save the report, and
     determine the appropriate program exit code.
     """
+
+    # == Logging Configuration ==
+    # Check for verbose flag first (shortcut for DEBUG), otherwise use the
+    # value provided in --log-level.
+    target_log_level = "DEBUG" if args.verbose else args.log_level
+    logging.set_log_level(target_log_level)
 
     # == Configuration and Overrides ==
 
@@ -322,6 +350,7 @@ def _run_analyze(args: argparse.Namespace) -> int:
     # the total number of issues found.
     logging.log(
         "cli.report_written",
+        level="INFO",
         path=str(output_path),
         issues=report["summary"]["total_issues"],
     )
@@ -352,4 +381,4 @@ if __name__ == "__main__":  # pragma: no cover
     sys.exit(
         main()
     )  # Executes main (the CLI entry point) and exits with a status code (0 is ok,
-    # otherwise is an error code).
+    # otherwise is an error code). 

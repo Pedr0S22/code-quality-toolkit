@@ -22,6 +22,8 @@ Pode personalizar a execução utilizando as seguintes *flags*:
 | `--include-glob` | Padrão de ficheiros a incluir. Pode ser repetido. | `--include-glob "**/*.py"` |
 | `--exclude-glob` | Padrão de ficheiros a ignorar (ex: testes). | `--exclude-glob "tests/**"` |
 | `--fail-on-severity` | Define um nível de severidade que fará a ferramenta falhar (exit code > 0). | `--fail-on-severity high` |
+|`--log-level` | Define a verbosidade dos logs (DEBUG, INFO, WARNING, ERROR). |	`--log-level DEBUG`
+| `-v, --verbose` |	Atalho para ativar logs de debug (equivalente a `--log-level DEBUG`).	| `-v`
 
 ---
 
