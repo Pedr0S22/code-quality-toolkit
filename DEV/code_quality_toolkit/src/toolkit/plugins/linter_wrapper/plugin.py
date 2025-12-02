@@ -171,8 +171,9 @@ class Plugin:
         timeout_seconds = self.timeout_seconds
         extra_args = list(self.pylint_args)
 
+        # Keep using sys.executable -m as requested
         cmd: list[str] = [
-            sys.executable,  # Points to .venv/bin/python or .venv/Scripts/python.exe
+            sys.executable,
             "-m",
             "pylint",
             "--output-format=json",
@@ -181,24 +182,22 @@ class Plugin:
         ]
 
         try:
-            proc = subprocess.run( # nosec B603 - comando 'pylint' com lista de argumentos controlados, sem shell=True nem input do utilizador
+            proc = subprocess.run( 
                 cmd,
                 capture_output=True,
                 text=True,
                 timeout=timeout_seconds,
             )
         except FileNotFoundError:
+            # rare when using sys.executable, but good to keep
             return [
                 {
                     "severity": "high",
                     "code": "LINTER_NOT_FOUND",
-                    "message": (
-                        "Não foi possível executar 'pylint'. "
-                        "Verifique se está instalado e disponível no PATH."
-                    ),
+                    "message": "Python interpreter not found.",
                     "line": 1,
                     "col": 1,
-                    "hint": "Instale pylint (por exemplo, 'pip install pylint').",
+                    "hint": "Check your python installation.",
                 }
             ]
         except subprocess.TimeoutExpired:
@@ -206,20 +205,31 @@ class Plugin:
                 {
                     "severity": "high",
                     "code": "LINTER_TIMEOUT",
-                    "message": (
-                        f"'pylint' não terminou dentro de {timeout_seconds} segundos."
-                    ),
+                    "message": f"'pylint' não terminou "
+                    f"dentro de {timeout_seconds} segundos.",
                     "line": 1,
                     "col": 1,
-                    "hint": (
-                        "Simplifique o ficheiro ou aumente o timeout "
-                        "em [plugins.linter_wrapper]."
-                    ),
+                    "hint": "Simplifique o ficheiro ou aumente o timeout.",
                 }
             ]
 
         stdout = proc.stdout.strip()
         stderr = proc.stderr.strip()
+
+        # Handle the case where python runs but module is missing
+        if proc.returncode != 0 and "No module named" in stderr and "pylint" in stderr:
+             return [
+                {
+                    "severity": "high",
+                    "code": "LINTER_NOT_FOUND",
+                    "message": (
+                        "O módulo 'pylint' não foi encontrado no ambiente Python atual."
+                    ),
+                    "line": 1,
+                    "col": 1,
+                    "hint": "Instale pylint (pip install pylint).",
+                }
+            ]
 
         if not stdout:
             if proc.returncode != 0:
@@ -227,9 +237,8 @@ class Plugin:
                     {
                         "severity": "high",
                         "code": "LINTER_ERROR",
-                        "message": (
-                            "pylint terminou com erro e não produziu saída JSON."
-                        ),
+                        "message": "pylint terminou com "
+                        "erro e não produziu saída JSON.",
                         "line": 1,
                         "col": 1,
                         "hint": f"Verifique a saída de erro: {stderr or 'sem stderr'}.",
