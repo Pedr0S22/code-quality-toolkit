@@ -1,6 +1,4 @@
 """Utility functions with intentionally long lines for demonstration."""
-
-
 def format_message(name: str) -> str:
     greeting = "Olá, " + name
     return greeting + "!" * 3
@@ -51,10 +49,21 @@ def number_to_name() -> None:
 def utils_args(arg1, arg2, arg3, arg4, arg5, arg6, arg7):
     return arg1 + arg2 + arg3 + arg4 + arg5 + arg6 + arg7
 
+class Orange:  # [duplicate-code]
+    def __init__(self):
+        self.remaining_bites = 3
 
-def duplicate_sum(data: int) -> int:
-    """Intentionally duplicated helper to demonstrate the duplication plugin."""
-    total = 0
-    for index in range(data):
-        total += index
-    return total
+    def take_bite(self):
+        if self.remaining_bites > 0:
+            print("You take a bite of the apple.")
+            self.remaining_bites -= 1
+        else:
+            print("The orange is already eaten up!")
+
+    def eaten_by_animal(self, animal):
+        if animal == "cat":
+            raise ValueError("A cat would never do that !")
+        self.remaining_bites = 0
+        print("The orange has been eaten by an animal.")
+
+

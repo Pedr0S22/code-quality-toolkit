@@ -247,12 +247,8 @@ class Plugin:
             }
 
         except Exception as e:
-<<<<<<< HEAD
-            # Sempre retorna um dicionário válido, mesmo em caso de erro
-=======
             # TAREFA 13: Error Handling
             # Apanha todos os outros erros e Devolve uma Resposta de Falha
->>>>>>> parent of c13195f (revert merge)
             return {
                 "results": [],
                 "summary": {

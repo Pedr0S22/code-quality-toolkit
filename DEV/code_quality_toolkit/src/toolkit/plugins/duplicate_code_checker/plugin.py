@@ -28,80 +28,55 @@ class Plugin:
         if not file_path:
             return {"error": "file_path required"}
 
-        p = Path(file_path)
-        p = p.resolve()
-        if not p.is_file():
-            raise ValueError(f"Invalid file path: {file_path}")
+        path_obj = Path(file_path).resolve()
+        if not path_obj.exists():
+            raise ValueError(f"Invalid path: {file_path}")
 
-        # Run pylint safely without shell=True; argumentos são controlados,
-        # sem input externo
-        proc = subprocess.run(  # nosec B603 - chamada a pylint com argumentos fixos, sem dados não confiáveis
-            [sys.executable, "-m", "pylint", "--disable=all", "--enable=R0801", str(p)],
+        # If it's a directory, gather all .py files
+        if path_obj.is_dir():
+            files_to_check = [str(p) for p in path_obj.rglob("*.py")]
+        else:
+            files_to_check = [str(path_obj)]
+
+        if not files_to_check:
+            return {"plugin": self.get_metadata()["name"], "results": [], "summary": {"issues_found": 0, "status": "completed"}}
+
+        # Run pylint on all files at once
+        proc = subprocess.run( # nosec B603 - chamada a pylint com argumentos fixos, sem dados não confiáveis
+            [sys.executable, "-m", "pylint", "--disable=all", "--enable=R0801", *files_to_check],
             capture_output=True,
             text=True,
         )
 
-
         results = []
-
         for line in proc.stdout.splitlines():
-            # Example Pylint R0801 line:
-            # duplicate_code_checker.py:2:0: R0801: Similar lines in 2 files
-            if "R0801" in line:
-                try:
-                    path_part, line_part, col_part, rest = line.split(":", 3)
-                    row = int(line_part)
-                    col = int(col_part)
-                    code = "R0801"
-                    message = rest.strip()
-                except (ValueError, IndexError):
-                    continue
+            try:
+                path_part, line_part, col_part, rest = line.split(":", 3)
+                row = int(line_part)
+                col = int(col_part)
+                code = "R0801"
+                message = rest.strip()
+            except (ValueError, IndexError):
+                continue
 
-                results.append({
-                    "plugin": self.get_metadata()["name"],
-                    "file": file_path,
-                    "entity": "bloco duplicado",
-                    "line_numbers": [row],
-                    "similarity": 100,
-                    "refactoring_suggestion": "Consolidar bloco",
-                    "details": {
-                        "occurrences": 1,
-                        "message": message,
-                    },
-                    "metric": "duplicate_code",
-                    "value": None,
-                    "severity": "medium",
-                    "code": code,
-                    "message": message,
-                    "line": row,
-                    "col": col,
-                    "hint": "Refactor to remove repeated logic.",
-                })
+            results.append({
+                "plugin": self.get_metadata()["name"],
+                "file": path_part,
+                "entity": "bloco duplicado",
+                "line_numbers": [row],
+                "similarity": 100,
+                "refactoring_suggestion": "Consolidar bloco",
+                "details": {"occurrences": 1, "message": message},
+                "metric": "duplicate_code",
+                "value": None,
+                "severity": "medium",
+                "code": code,
+                "message": message,
+                "line": row,
+                "col": col,
+                "hint": "Refactor to remove repeated logic.",
+            })
 
         summary = {"issues_found": len(results), "status": "completed"}
 
-        summary_entry = {
-            "plugin": self.get_metadata()["name"],
-            "file": file_path,
-            "entity": "bloco duplicado",
-            "line_numbers": [r["line"] for r in results],
-            "details": {
-                "occurrences": len(results),
-                "message": f"Found {len(results)} duplicated code blocks.",
-            },
-            "metric": "duplicate_code",
-            "value": None,
-            "severity": "high" if len(results) > 2 else "medium",
-            "code": "DUPLICATED_CODE",
-            "message": "Multiple duplicated code blocks found." if results else "",
-            "line": results[0]["line"] if results else 0,
-            "col": 0,
-            "hint": "Consider refactoring to reduce code duplication.",
-            "summary": summary,
-        }
-
-        return {
-            "plugin": self.get_metadata()["name"],
-            "results": results + [summary_entry],
-            "summary": summary,
-        }
+        return {"plugin": self.get_metadata()["name"], "results": results, "summary": summary}
