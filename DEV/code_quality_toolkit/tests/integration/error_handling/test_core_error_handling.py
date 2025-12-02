@@ -18,6 +18,7 @@ def test_core_continues_when_one_plugin_fails(tmp_path):
 
     write(project / "a.py", "x = 1\n")
 
+    # plugin OK
     plugin_ok = tmp_path / "ok_plugin.py"
     write(
         plugin_ok,
@@ -25,6 +26,7 @@ def test_core_continues_when_one_plugin_fails(tmp_path):
         "    return [{'code': 'OK', 'message': 'ok', 'severity': 'low'}]\n"
     )
 
+    # plugin FAIL
     plugin_fail = tmp_path / "fail_plugin.py"
     write(
         plugin_fail,
@@ -32,48 +34,50 @@ def test_core_continues_when_one_plugin_fails(tmp_path):
         "    raise Exception('boom')\n"
     )
 
+    # toolkit.toml
     write(
         project / "toolkit.toml",
-        "[plugins]\n"
-        "enabled = ['OK', 'FAIL']\n"
-        f"[plugins.OK]\npath='{plugin_ok}'\nenabled=true\n"
-        f"[plugins.FAIL]\npath='{plugin_fail}'\nenabled=true\n"
+        f"[plugins.OK]\npath = '{plugin_ok}'\nenabled = true\n"
+        f"[plugins.FAIL]\npath = '{plugin_fail}'\nenabled = true\n"
     )
 
     report = project / "report.json"
 
+    # run CLI
     subprocess.run(
-        [sys.executable, "-m", "toolkit.core.cli", "analyze",
-         str(project), "--out", str(report)],
-        cwd=ROOT, text=True, capture_output=True, check=False
+        [
+            sys.executable, "-m", "toolkit.core.cli", "analyze",
+            str(project), "--out", str(report)
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False
     )
 
-    # 1) El informe se ha generado
+    # report must exist
     assert report.exists()
 
     data = json.loads(report.read_text())
 
-    # 2) Hay resultados para ambos plugins
+    # get plugin summaries
     plugins = data["details"][0]["plugins"]
-    assert len(plugins) == 2
 
-    plugin_statuses = {p["plugin"]: p["summary"]["status"] for p in plugins}
+    assert len(plugins) == 2  # both plugins executed
 
-    # 3) El plugin OK está presente y ha terminado bien (o parcial)
-    assert "OK" in plugin_statuses
-    assert plugin_statuses["OK"] in ("completed", "partial")
+    # OK plugin → must be completed
+    assert plugins[0]["summary"]["status"] in ("completed", "partial")
 
-    # No imponemos nada sobre el plugin FAIL porque el engine
-    # actual no marca su status como "failed" en el summary.
+    # FAIL plugin → status failed inside plugin summary
+    assert plugins[1]["summary"]["status"] in ("failed", "partial")
 
 
 # ------------------------------------------------------------
-#  B) Global status is always "completed" (engine does not compute partial/failed)
+#  B) Global status must be "partial" when only some succeed
 # ------------------------------------------------------------
 def test_status_partial(tmp_path):
     project = tmp_path / "projB"
     project.mkdir()
-
     write(project / "a.py", "x = 1\n")
 
     plugin_ok = tmp_path / "ok.py"
@@ -84,8 +88,6 @@ def test_status_partial(tmp_path):
 
     write(
         project / "toolkit.toml",
-        "[plugins]\n"
-        "enabled = ['OK', 'FAIL']\n"
         f"[plugins.OK]\npath='{plugin_ok}'\nenabled=true\n"
         f"[plugins.FAIL]\npath='{plugin_fail}'\nenabled=true\n"
     )
@@ -99,18 +101,16 @@ def test_status_partial(tmp_path):
     )
 
     data = json.loads(report.read_text())
-
-    # Engine always returns completed
-    assert data["analysis_metadata"]["status"] == "completed"
+    
+    assert data["analysis_metadata"]["status"] == "partial"
 
 
 # ------------------------------------------------------------
-#  C) Global status completed when all succeed (unchanged)
+#  C) Global status must be "completed" when all succeed
 # ------------------------------------------------------------
 def test_status_completed(tmp_path):
     project = tmp_path / "projC"
     project.mkdir()
-
     write(project / "file.py", "x = 1\n")
 
     plugin_ok = tmp_path / "ok.py"
@@ -118,11 +118,8 @@ def test_status_completed(tmp_path):
 
     write(
         project / "toolkit.toml",
-        "[plugins]\n"
-        "enabled = ['OK']\n"
         f"[plugins.OK]\npath='{plugin_ok}'\nenabled=true\n"
     )
-
 
     report = project / "report.json"
 
@@ -138,12 +135,11 @@ def test_status_completed(tmp_path):
 
 
 # ------------------------------------------------------------
-#  D) Global status is always "completed" even if all fail
+#  D) Global status must be "failed" when all plugins fail
 # ------------------------------------------------------------
 def test_status_failed(tmp_path):
     project = tmp_path / "projD"
     project.mkdir()
-
     write(project / "file.py", "x = 1\n")
 
     plugin_fail = tmp_path / "fail.py"
@@ -151,8 +147,6 @@ def test_status_failed(tmp_path):
 
     write(
         project / "toolkit.toml",
-        "[plugins]\n"
-        "enabled = ['FAIL']\n"
         f"[plugins.FAIL]\npath='{plugin_fail}'\nenabled=true\n"
     )
 
@@ -166,5 +160,4 @@ def test_status_failed(tmp_path):
 
     data = json.loads(report.read_text())
     
-    # Engine always reports completed
-    assert data["analysis_metadata"]["status"] == "completed"
+    assert data["analysis_metadata"]["status"] == "failed"
