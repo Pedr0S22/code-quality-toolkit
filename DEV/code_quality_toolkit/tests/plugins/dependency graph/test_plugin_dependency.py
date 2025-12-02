@@ -1,22 +1,9 @@
-import unittest
 import json
-import ast
-from typing import Any # Necessário para usar a anotação 'Any' nos tipos
+import unittest
 
 # IMPORTAÇÃO DO PLUGIN:
 from toolkit.plugins.dependency_graph.plugin import Plugin
-
-# --- Mocks e Auxiliares ---
-
-class MockToolkitConfig:
-    """Simulação da classe de configuração da Toolkit, para o método configure()."""
-    def __init__(self, rules_config=None):
-        # Cria uma classe interna para simular o acesso via ponto (config.rules.property)
-        class Rules:
-            def __init__(self, **kwargs):
-                self.__dict__.update(kwargs)
-        self.rules = Rules(**rules_config) if rules_config is not None else Rules()
-
+from toolkit.utils.config import ToolkitConfig
 
 # --- CORPO DA CLASSE DE TESTES ---
 
@@ -31,8 +18,9 @@ class UnitTestsDependencyGraph(unittest.TestCase):
         # Se a classe Plugin não estiver definida neste arquivo, este passo falhará.
         self.plugin = Plugin() 
         self.file_path = "my_test_module.py"
-        self.mock_config = MockToolkitConfig()
-        self.plugin.configure(self.mock_config) # Configuração padrão
+        self.config = ToolkitConfig() 
+        self.plugin.configure(self.config)
+        
 
     # ====================================================================
     # Testes de Contrato e Configuração (Feature B & Test G)
@@ -53,12 +41,18 @@ class UnitTestsDependencyGraph(unittest.TestCase):
 
     def test_g2_plugin_configuration_override(self):
         """Test G.2: Verifica se o configure() aceita e aplica configurações."""
-        custom_config = MockToolkitConfig(rules_config={
-            "warn_wildcard_imports": False,
-            "max_relative_import_level": 3,
-            "track_stdlib_modules": False
-        })
-        self.plugin.configure(custom_config)
+        # Cria uma config real
+        config = ToolkitConfig()
+        
+        # Altera as regras diretamente no objeto
+        config.rules.warn_wildcard_imports = False
+        config.rules.max_relative_import_level = 3
+        config.rules.track_stdlib_modules = False
+        
+        # Configura o plugin
+        self.plugin.configure(config)
+        
+        # Verifica se o plugin assumiu os valores
         self.assertFalse(self.plugin.warn_wildcard_imports)
         self.assertEqual(self.plugin.max_relative_import_level, 3)
         self.assertFalse(self.plugin.track_stdlib_modules)
@@ -77,7 +71,11 @@ class UnitTestsDependencyGraph(unittest.TestCase):
         # Verifica se o módulo é capturado
         self.assertEqual(result["summary"]["unique_modules"], 1)
         # Verifica a categoria (Third-party ou Local) - deve ser 1 no total
-        self.assertIn(result["summary"]["third_party_count"] + result["summary"]["local_count"], [1])
+        self.assertIn(
+            result["summary"]["third_party_count"]
+            + result["summary"]["local_count"],
+            [1],
+        )
 
     def test_b_from_package_import_function(self):
         """Test B: Verifica 'from package import function'."""
@@ -94,8 +92,10 @@ class UnitTestsDependencyGraph(unittest.TestCase):
         self.assertEqual(result["summary"]["unique_modules"], 1)
 
     def test_c_top_level_only(self):
-        """Test C: Verifica que todos os imports são capturados, incluindo os aninhados, 
-           e verifica a linha de código para confirmar a captura do aninhado."""
+        """
+        Test C: Verifica que todos os imports são capturados, incluindo os
+        aninhados, e verifica a linha de código para confirmar a captura.
+        """
         
         code = (
             "import top_level_1\n" # Linha 1
@@ -128,7 +128,10 @@ class UnitTestsDependencyGraph(unittest.TestCase):
         self.assertEqual(len(result["results"]), 0)
 
     def test_e_file_with_syntax_error_graceful_fail(self):
-        """Test E: Verifica se o analyze() falha graciosamente em caso de SyntaxError."""
+        """
+        Test E: Verifica se o analyze() falha graciosamente em caso de
+        SyntaxError.
+        """
         # Código sintaticamente inválido
         code = "import module\n import" 
         
@@ -149,12 +152,19 @@ class UnitTestsDependencyGraph(unittest.TestCase):
         self.assertEqual(result["summary"]["wildcard_imports"], 1)
         self.assertEqual(len(result["results"]), 1)
         
-        # Verifica a severidade e a mensagem de aviso (Requisito: Must ensure it is treated as a dependency)
+        # Verifica a severidade e a mensagem de aviso
+        # (Requisito: Must ensure it is treated as a dependency)
         self.assertEqual(result["results"][0]["severity"], "medium")
-        self.assertIn("[AVISO: wildcard import desencorajado]", result["results"][0]["message"])
+        self.assertIn(
+            "[AVISO: wildcard import desencorajado]",
+            result["results"][0]["message"],
+        )
 
     def test_g_contract_json_structure(self):
-        """Test G: Verifica se a saída (analyze output) é estruturalmente válida JSON."""
+        """
+        Test G: Verifica se a saída (analyze output) é estruturalmente
+        válida JSON.
+        """
         code = "import json\nfrom local import util"
         result = self.plugin.analyze(code, self.file_path)
         

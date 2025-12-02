@@ -17,34 +17,37 @@ class Plugin:
 
     # Lista parcial de módulos da biblioteca padrão do Python
     STDLIB_MODULES = {
-        'abc', 'aifc', 'argparse', 'array', 'ast', 'asynchat', 'asyncio', 'asyncore',
-        'atexit', 'audioop', 'base64', 'bdb', 'binascii', 'binhex', 'bisect', 'builtins',
-        'bz2', 'calendar', 'cgi', 'cgitb', 'chunk', 'cmath', 'cmd', 'code', 'codecs',
-        'codeop', 'collections', 'colorsys', 'compileall', 'concurrent', 'configparser',
-        'contextlib', 'contextvars', 'copy', 'copyreg', 'cProfile', 'crypt', 'csv',
-        'ctypes', 'curses', 'dataclasses', 'datetime', 'dbm', 'decimal', 'difflib',
-        'dis', 'distutils', 'doctest', 'email', 'encodings', 'enum', 'errno', 'faulthandler',
-        'fcntl', 'filecmp', 'fileinput', 'fnmatch', 'formatter', 'fractions', 'ftplib',
-        'functools', 'gc', 'getopt', 'getpass', 'gettext', 'glob', 'grp', 'gzip',
-        'hashlib', 'heapq', 'hmac', 'html', 'http', 'imaplib', 'imghdr', 'imp', 'importlib',
-        'inspect', 'io', 'ipaddress', 'itertools', 'json', 'keyword', 'lib2to3',
-        'linecache', 'locale', 'logging', 'lzma', 'mailbox', 'mailcap', 'marshal',
-        'math', 'mimetypes', 'mmap', 'modulefinder', 'multiprocessing', 'netrc', 'nis',
-        'nntplib', 'numbers', 'operator', 'optparse', 'os', 'ossaudiodev', 'parser',
-        'pathlib', 'pdb', 'pickle', 'pickletools', 'pipes', 'pkgutil', 'platform',
-        'plistlib', 'poplib', 'posix', 'posixpath', 'pprint', 'profile', 'pstats',
-        'pty', 'pwd', 'py_compile', 'pyclbr', 'pydoc', 'queue', 'quopri', 'random',
-        're', 'readline', 'reprlib', 'resource', 'rlcompleter', 'runpy', 'sched',
-        'secrets', 'select', 'selectors', 'shelve', 'shlex', 'shutil', 'signal',
-        'site', 'smtpd', 'smtplib', 'sndhdr', 'socket', 'socketserver', 'spwd',
-        'sqlite3', 'ssl', 'stat', 'statistics', 'string', 'stringprep', 'struct',
-        'subprocess', 'sunau', 'symbol', 'symtable', 'sys', 'sysconfig', 'syslog',
-        'tabnanny', 'tarfile', 'telnetlib', 'tempfile', 'termios', 'test', 'textwrap',
-        'threading', 'time', 'timeit', 'tkinter', 'token', 'tokenize', 'trace',
-        'traceback', 'tracemalloc', 'tty', 'turtle', 'turtledemo', 'types', 'typing',
-        'unicodedata', 'unittest', 'urllib', 'uu', 'uuid', 'venv', 'warnings',
-        'wave', 'weakref', 'webbrowser', 'winreg', 'winsound', 'wsgiref', 'xdrlib',
-        'xml', 'xmlrpc', 'zipapp', 'zipfile', 'zipimport', 'zlib'
+       'abc', 'aifc', 'argparse', 'array', 'ast', 'asynchat', 'asyncio', 'asyncore',
+       'atexit', 'audioop', 'base64', 'bdb', 'binascii', 'binhex', 'bisect', 
+       'builtins',
+       'bz2', 'calendar', 'cgi', 'cgitb', 'chunk', 'cmath', 'cmd', 'code', 'codecs',
+       'codeop', 'collections', 'colorsys', 'compileall', 'concurrent', 'configparser',
+       'contextlib', 'contextvars', 'copy', 'copyreg', 'cProfile', 'crypt', 'csv',
+       'ctypes', 'curses', 'dataclasses', 'datetime', 'dbm', 'decimal', 'difflib',
+       'dis', 'distutils', 'doctest', 'email', 'encodings', 'enum', 'errno', 
+       'faulthandler',
+       'fcntl', 'filecmp', 'fileinput', 'fnmatch', 'formatter', 'fractions', 'ftplib',
+       'functools', 'gc', 'getopt', 'getpass', 'gettext', 'glob', 'grp', 'gzip',
+       'hashlib', 'heapq', 'hmac', 'html', 'http', 'imaplib', 'imghdr', 'imp', 
+       'importlib',
+       'inspect', 'io', 'ipaddress', 'itertools', 'json', 'keyword', 'lib2to3',
+       'linecache', 'locale', 'logging', 'lzma', 'mailbox', 'mailcap', 'marshal',
+       'math', 'mimetypes', 'mmap', 'modulefinder', 'multiprocessing', 'netrc', 'nis',
+       'nntplib', 'numbers', 'operator', 'optparse', 'os', 'ossaudiodev', 'parser',
+       'pathlib', 'pdb', 'pickle', 'pickletools', 'pipes', 'pkgutil', 'platform',
+       'plistlib', 'poplib', 'posix', 'posixpath', 'pprint', 'profile', 'pstats',
+       'pty', 'pwd', 'py_compile', 'pyclbr', 'pydoc', 'queue', 'quopri', 'random',
+       're', 'readline', 'reprlib', 'resource', 'rlcompleter', 'runpy', 'sched',
+       'secrets', 'select', 'selectors', 'shelve', 'shlex', 'shutil', 'signal',
+       'site', 'smtpd', 'smtplib', 'sndhdr', 'socket', 'socketserver', 'spwd',
+       'sqlite3', 'ssl', 'stat', 'statistics', 'string', 'stringprep', 'struct',
+       'subprocess', 'sunau', 'symbol', 'symtable', 'sys', 'sysconfig', 'syslog',
+       'tabnanny', 'tarfile', 'telnetlib', 'tempfile', 'termios', 'test', 'textwrap',
+       'threading', 'time', 'timeit', 'tkinter', 'token', 'tokenize', 'trace',
+       'traceback', 'tracemalloc', 'tty', 'turtle', 'turtledemo', 'types', 'typing',
+       'unicodedata', 'unittest', 'urllib', 'uu', 'uuid', 'venv', 'warnings',
+       'wave', 'weakref', 'webbrowser', 'winreg', 'winsound', 'wsgiref', 'xdrlib',
+       'xml', 'xmlrpc', 'zipapp', 'zipfile', 'zipimport', 'zlib'
     }
 
     def __init__(self) -> None:
@@ -137,7 +140,9 @@ class Plugin:
                     "message": f"Erro de sintaxe impede análise de dependências: {e}",
                     "line": e.lineno if hasattr(e, 'lineno') else 0,
                     "col": e.offset if hasattr(e, 'offset') else 0,
-                    "hint": "Corrija os erros de sintaxe antes de analisar dependências.",
+                    "hint": (
+                        "Corrija os erros de sintaxe antes de analisar dependências."
+                    ),
                 }],
                 "summary": {
                     "issues_found": 1,
@@ -211,7 +216,11 @@ class Plugin:
             elif module and '.' in module:
                 categorized["local"].append(imp)
             # Heurística: nomes começados por minúscula são provavelmente locais
-            elif base_module and base_module[0].islower() and base_module not in self.STDLIB_MODULES:
+            elif (
+                    base_module
+                    and base_module[0].islower()
+                    and base_module not in self.STDLIB_MODULES
+                ):
                 categorized["local"].append(imp)
             # Resto é third-party
             else:
@@ -270,8 +279,9 @@ class Plugin:
             hints.append("Evite wildcard imports; importe apenas o necessário")
         
         if imp["level"] > 2:
-            hints.append("Considere refatorar para reduzir profundidade de imports relativos")
-        
+            hints.append(
+                "Considere refatorar para reduzir profundidade de imports relativos"
+            )        
         if imp["alias"]:
             hints.append(f"Alias: {imp['alias']}")
         
@@ -300,7 +310,9 @@ class Plugin:
             "dependency_graph": self._build_graph_data(imports, categorized),
         }
 
-    def _build_graph_data(self, imports: list[dict], categorized: dict) -> dict[str, Any]:
+    def _build_graph_data(
+        self, imports: list[dict], categorized: dict
+    ) -> dict[str, Any]:
         """Constrói dados estruturados para visualização de grafos."""
         nodes = set(imp["module"] for imp in imports if imp["module"])
         

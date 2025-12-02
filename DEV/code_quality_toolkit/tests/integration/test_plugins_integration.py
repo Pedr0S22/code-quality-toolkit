@@ -209,7 +209,9 @@ def test_dependency_graph_integration(tmp_path: Path):
 
     # Check results for main.py
     main_report = next(f for f in data["details"] if "main.py" in f["file"])
-    main_plugin = next(p for p in main_report["plugins"] if p["plugin"] == "DependencyGraph")
+    main_plugin = next(
+        p for p in main_report["plugins"] if p["plugin"] == "DependencyGraph"
+    )
     
     # Should find 'os' and 'utils'
     messages = [r["message"] for r in main_plugin["results"]]
@@ -218,7 +220,9 @@ def test_dependency_graph_integration(tmp_path: Path):
 
     # Check results for utils.py
     utils_report = next(f for f in data["details"] if "utils.py" in f["file"])
-    utils_plugin = next(p for p in utils_report["plugins"] if p["plugin"] == "DependencyGraph")
+    utils_plugin = next(
+        p for p in utils_report["plugins"] if p["plugin"] == "DependencyGraph"
+    )
     
     # Should find 'json'
     messages = [r["message"] for r in utils_plugin["results"]]
