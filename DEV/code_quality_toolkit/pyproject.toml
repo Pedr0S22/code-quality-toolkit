@@ -57,8 +57,8 @@ allow_subclassing_any = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 addopts = "-q"
-
 filterwarnings = [
     'ignore:.*ast\..* is deprecated:DeprecationWarning',
     'ignore:Attribute .* is deprecated:DeprecationWarning',
