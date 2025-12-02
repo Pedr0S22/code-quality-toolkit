@@ -203,6 +203,7 @@ def test_linterwrapper_fail_on_severity_high(tmp_path):
         "--fail-on-severity=high",
     ]
 
-    result = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, check=False, env=env)
+    result = subprocess.run(cmd, cwd=ROOT, 
+                            capture_output=True, text=True, check=False, env=env)
 
     assert result.returncode == 3
