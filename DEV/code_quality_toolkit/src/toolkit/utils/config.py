@@ -18,52 +18,27 @@ class SimpleNamespace:
 
 
 # This block of code implements a version check for TOML parsing capability
-# (introduced in Python 3.11 as part of the standard library)
-# → try to use the modern, built-in tomllib. If that fails
-# (because the Python version is too old), stop the program immediately and tell
-# the user they need to upgrade to Python 3.11+."
 try:
     import tomllib
 except ModuleNotFoundError as exc:  # pragma: no cover - Python <3.11 fallback
     raise ConfigurationError("tomllib not available; requires Python 3.11+") from exc
 
 
-# @dataclass is a decorator that automatically generates special methods for the
-# class, such as:
-#    __init__ (constructor)
-#    __repr__ (string representation)
-#    __eq__ (equality comparison)
-#
-# This reduces the need for boilerplate code, making AnalyzeConfig a simpler,
-# efficient container for data.
-# 'slots=True' is an optimization setting for data classes. It tells Python to
-# use a __slots__ attribute instead of a standard __dict__ to store instance
-# attributes, which makes instances of AnalyzeConfig take up less memory.
 @dataclass(slots=True)
 class AnalyzeConfig:
-    # Defines the attribute name (include) and its type hint (a list of strings);
-    # these strings specify files to be included in the analysis.
-    # field(..): is used to specify per-field metadata, particularly for
-    # providing mutable default values.
-    # default_factory=lambda: provides a no-argument function (here, a lambda)
-    # that is called to create a new default value every time a new 'AnalyzeConfig'
-    # object is created without specifying an include value.
-    # ["**/*.py"] is a common glob pattern that means: "recursively include all
-    # files ending with .py."
     include: list[str] = field(default_factory=lambda: ["**/*.py"])
-
-    # Similarly defines the list of glob patterns for files/directories to be
-    # *excluded* from the analysis.
-    # default_factory=lambda: ["venv/**"]: Again, this ensures each instance
-    # gets its own list.
-    # "venv/**" means: recursively exclude everything inside any directory named
-    # venv (the virtual environments.
     exclude: list[str] = field(default_factory=lambda: ["venv/**"])
 
-    # Whit the statements abovos, when the analysis tool initializes, it can create
-    # a configuration object simply by calling:  "config = AnalyzeConfig()""
-    # config.include will be ['**/*.py']
-    # config.exclude will be ['venv/**']
+
+@dataclass(slots=True)
+class LinterWrapperConfig:
+    enabled: bool = True
+    linters: list[str] = field(default_factory=lambda: ["pylint"])
+    timeout_seconds: int = 60
+    max_issues: int = 500
+    pylint_args: list[str] = field(default_factory=list)
+    # "none", "low", "medium", "high"
+    fail_on_severity: str = "high"
 
 
 @dataclass(slots=True)
@@ -81,12 +56,23 @@ class PluginsConfig:
         )
     )
 
+    # NEW: Specific implementation for LinterWrapper matching dead_code style
+    linter_wrapper: LinterWrapperConfig = field(
+        default_factory=lambda: LinterWrapperConfig(
+            enabled=True,
+            linters=["pylint"],
+            timeout_seconds=60,
+            max_issues=500,
+            pylint_args=[],
+            fail_on_severity="high",
+        )
+    )
+
 
 @dataclass(slots=True)
 class RulesConfig:
     # This class acts as the reference source for the code quality toolkit's
-    # default rules. These values can then be overridden if a configuration file
-    # specifies different limits.
+    # default rules.
     check_naming: bool = False
 
     max_line_length: int = 88
@@ -95,12 +81,15 @@ class RulesConfig:
     indent_style: str = "spaces"
     indent_size: int = 4
     allow_mixed_indentation: bool = False
-    check_naming = False
+    
     max_function_length: int = 50
     max_arguments: int = 5
+    
+    # FIX: Renamed from min_comment_density to min_density to match existing tests
     min_density: float = 0.1
     max_density: float = 0.5
 
+    # FIX: Restored missing attributes required by DependencyGraph tests
     warn_wildcard_imports: bool = True
     max_relative_import_level: int = 1
     track_stdlib_modules: bool = True
@@ -109,108 +98,127 @@ class RulesConfig:
 # -------------ToolkitConfig -----------------------
 @dataclass(slots=True)
 class ToolkitConfig:
-    # This field defines which specific code analysis plugins the toolkit should
-    # load and run.
-    # "StyleChecker" and "CyclomaticComplexity" are predefined defaults.
-    # 'default_factory' ensures that every new ToolkitConfig instance gets its
-    # own independent list object.
     strict: bool = False
 
     enabled_plugins: list[str] = field(
         default_factory=lambda: ["StyleChecker", "CyclomaticComplexity"]
     )
 
-    # 'rules' the numerical thresholds and specific parameters for the code
-    # quality checks (e.g., maximum line length, maximum complexity score).
-    # 'default_factory=RulesConfig' ensures that the default RulesConfig object
-    # is instantiated only when a new ToolkitConfig object is created, thus
-    # maintaining encapsulation.
     rules: RulesConfig = field(default_factory=RulesConfig)
 
-    # This field controls the scope of the analysis,
-    # specifying which files and directories to include or exclude during the scan.
     analyze: AnalyzeConfig = field(default_factory=AnalyzeConfig)
 
-    # therefore, 'ToolkitConfig' provides a structured way to manage
-    # the application's entire configuration, with clear separation between
-    # different concerns (plugins, rules, and analysis scope).
-
+    # 'plugins' now holds the LinterWrapper config inside it
     plugins: PluginsConfig = field(default_factory=PluginsConfig)
 
 
 # ------------------------------------
 
-# EXTENSION-POINT HERE: adicionar campos de configuração específicos de plugins aqui.
+def _apply_linter_wrapper_config(
+    config: ToolkitConfig,
+    plugins_section: dict[str, Any],
+) -> None:
+    """Apply [plugins.linter_wrapper] configuration to ToolkitConfig."""
+    linter_data = plugins_section.get("linter_wrapper")
+    if not isinstance(linter_data, dict):
+        return
+
+    # Update: Target the config inside 'plugins'
+    target_config = config.plugins.linter_wrapper
+
+    # enabled
+    if "enabled" in linter_data:
+        value = linter_data["enabled"]
+        if not isinstance(value, bool):
+            raise ConfigurationError(
+                "Invalid type for '[plugins.linter_wrapper].enabled'. Expected bool."
+            )
+        target_config.enabled = value
+
+    # linters
+    linters = linter_data.get("linters")
+    if isinstance(linters, list) and linters:
+        target_config.linters = [str(item) for item in linters]
+
+    # timeout_seconds
+    if "timeout_seconds" in linter_data:
+        try:
+            target_config.timeout_seconds = int(
+                linter_data["timeout_seconds"]
+            )
+        except (ValueError, TypeError) as ex:
+            raise ConfigurationError(
+                "Invalid type for '[plugins.linter_wrapper].timeout_seconds'. "
+                "Expected int."
+            ) from ex
+
+    # max_issues
+    if "max_issues" in linter_data:
+        try:
+            target_config.max_issues = int(linter_data["max_issues"])
+        except (ValueError, TypeError) as ex:
+            raise ConfigurationError(
+                "Invalid type for '[plugins.linter_wrapper].max_issues'. "
+                "Expected int."
+            ) from ex
+
+    # pylint_args
+    pylint_args = linter_data.get("pylint_args")
+    if isinstance(pylint_args, list):
+        target_config.pylint_args = [str(item) for item in pylint_args]
+
+    # fail_on_severity
+    if "fail_on_severity" in linter_data:
+        value = str(linter_data["fail_on_severity"])
+        allowed = {"none", "low", "medium", "high"}
+        if value not in allowed:
+            raise ConfigurationError(
+                "Invalid value for '[plugins.linter_wrapper].fail_on_severity'. "
+                f"Expected one of {sorted(allowed)}, got '{value}'."
+            )
+        target_config.fail_on_severity = value
 
 
 def load_config(path: str | Path | None) -> ToolkitConfig:
-    """Load configuration from a TOML file or return defaults.
-
-    Its primary goal is to merge default settings with user-defined settings
-    from a TOML file.
-    It ensures that the final configuration object is always valid by starting
-    with defaults and then applying overrides from the file.
-    """
-    config = (
-        ToolkitConfig()
-    )  # creates a configuration object populated with all the default values.
-    # If the user didn't specify a configuration file, the function
+    """Load configuration from a TOML file or return defaults."""
+    config = ToolkitConfig()
+    
     if path is None:
-        return config  # immediately returns the default config object.
+        return config
 
-    # == File Validation and Loading ==
-    config_path = Path(path)  # 'path' is converted to a 'pathlib.Path' object for easy
-    # file system interaction.
-    if not config_path.exists():  # a mandatory check
+    config_path = Path(path)
+    if not config_path.exists():
         raise ConfigurationError(f"Configuration file not found: {config_path}")
 
-    # == TOML configuration file loading ==
-    # file is opened in binary read mode ("rb"), as required by the tomllib module.
     with config_path.open("rb") as handle:
-        data = tomllib.load(
-            handle
-        )  # parses the contents of the TOML file into a dictionary (data).
+        data = tomllib.load(handle)
 
     # == Applying Overrides from TOML Data ==
 
-    # Load top-level settings (e.g., strict mode)
+    # Load top-level settings
     strict_value = data.get("strict", config.strict)
     if isinstance(strict_value, bool):
         config.strict = strict_value
 
     # === Plugins sections ===
-    plugins = data.get(
-        "plugins", {}
-    )  # retrieves the [plugins] section, defaulting to an empty
-    # dictionary if not found.
-    enabled = plugins.get(
-        "enabled"
-    )  # checks for the 'enabled' key within that section.
-    if (
-        isinstance(enabled, list) and enabled
-    ):  # checks whether enabled is a non-empty list before proceeding
-        config.enabled_plugins = [
-            str(item) for item in enabled
-        ]  # overwrites the default config.enabled_plugins list
-        # with the new values,
-        # ensuring all list items are converted to strings.
+    plugins = data.get("plugins", {})
+    
+    enabled = plugins.get("enabled")
+    if isinstance(enabled, list) and enabled:
+        config.enabled_plugins = [str(item) for item in enabled]
+        
+    if isinstance(plugins, dict):
+        _apply_linter_wrapper_config(config, plugins)
 
     # === Rules Section ===
-    rules_data = data.get("rules", {})  # ensures this section is a dictionary
-    # attempts to get the value from the file. If the key is not present,
-    # it uses the existing default value (config.rules.max_line_length)
-    # as the fallback, guaranteeing that only explicitly set values are changed.
-    # The values are explicitly converted to int() to ensure type correctness
+    rules_data = data.get("rules", {})
     if isinstance(rules_data, dict):
-        # Dynamically loop over all fields defined in the RulesConfig class
         type_hints = get_type_hints(config.rules)
 
-        # Loop over the resolved {field_name: type} pairs
         for field_name, expected_type in type_hints.items():
             if field_name in rules_data:
                 try:
                     new_value = rules_data[field_name]
-                    # Now expected_type is a class (int) and can be called
                     setattr(config.rules, field_name, expected_type(new_value))
                 except (ValueError, TypeError) as ex:
                     raise ConfigurationError(
@@ -223,18 +231,9 @@ def load_config(path: str | Path | None) -> ToolkitConfig:
     if isinstance(analyze, dict):
         include = analyze.get("include")
         exclude = analyze.get("exclude")
-        # Overrides only the specific sub-fields (include and exclude) that are
-        # present and valid in the TOML data.
         if isinstance(include, list) and include:
             config.analyze.include = [str(item) for item in include]
         if isinstance(exclude, list) and exclude:
             config.analyze.exclude = [str(item) for item in exclude]
 
-    # the final 'config' object is now a combination of the original safe defaults
-    # and any valid overrides found in the (optional) command-line specified
-    # TOML file.
     return config
-
-
-# TODO(alunos): adicionar validação de tipos avançada e suporte a múltiplos
-# ambientes.

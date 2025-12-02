@@ -33,6 +33,7 @@ dev = [
     "PyQt6-WebEngine",
     "markdownify>=1.2.2",
     "requests>=2.31.0"
+    "pylint>=4.0.4"
 ]
 
 [tool.setuptools.packages.find]

@@ -1,10 +1,20 @@
 [plugins]
-enabled = ["StyleChecker","CyclomaticComplexity", "SecurityChecker", "DuplicationChecker","CommentDensity", "DeadCodeDetector","DependencyGraph"]
+enabled = ["StyleChecker","CyclomaticComplexity", "SecurityChecker", "DuplicationChecker","CommentDensity", "DeadCodeDetector","DependencyGraph", "LinterWrapper"]
 
 [plugins.dead_code]
 ignore_patterns = ["^__", "^test_"]
 min_name_length = 2
 severity = "low"
+
+[plugins.linter_wrapper]
+enabled = true
+linters = ["pylint"]
+timeout_seconds = 60
+max_issues = 500
+pylint_args = [
+  "--disable=C0114,C0115,C0116",
+]
+fail_on_severity = "high"
 
 [rules]
 max_line_length = 88
