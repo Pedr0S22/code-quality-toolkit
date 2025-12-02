@@ -4,6 +4,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Use relative path to find the root, but do not write to it
 ROOT = Path(__file__).resolve().parents[3]
 
 def write_file(path: Path, content: str):
@@ -27,7 +28,11 @@ def create_fake_pylint_module(tmp_path: Path, python_code: str) -> dict:
     return env
 
 def test_engine_runs_linterwrapper_successfully(tmp_path):
-    project_dir = ROOT / "_tmp_project"
+    """
+    Integration Test A: Engine + LinterWrapper (Pylint) integration.
+    """
+    # FIX: Use tmp_path instead of ROOT to prevent creating files in the repo
+    project_dir = tmp_path / "project_A"
     project_dir.mkdir(exist_ok=True)
     
     sample_file = project_dir / "example.py"
@@ -53,6 +58,7 @@ def test_engine_runs_linterwrapper_successfully(tmp_path):
         "--plugins", "LinterWrapper",
     ]
 
+    # We run from ROOT so python can find toolkit.core, but the project is in tmp_path
     subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, check=True, env=env)
 
     report = json.loads(report_path.read_text())
@@ -72,12 +78,12 @@ def test_linterwrapper_handles_missing_pylint(tmp_path):
     """If pylint is not installed, LinterWrapper must return LINTER_NOT_FOUND."""
     project = tmp_path / "projB1"
     project.mkdir()
+    
     write_file(project / "a.py", "x = 1\n")
     write_file(project / "toolkit.toml", "[plugins.linter_wrapper]\nenabled = true\n")
     report_path = project / "report.json"
 
     # Mock: A pylint module that behaves as if it's missing (standard python error)
-    # We simulate the exact error message python -m gives when a module is missing
     fake_code = (
         "import sys\n"
         "sys.stderr.write(f'{sys.executable}: No module named pylint\\n')\n"
@@ -136,8 +142,6 @@ def test_linterwrapper_timeout(tmp_path):
         if p["plugin"] == "LinterWrapper"
     ]
 
-    # Depending on how fast the timeout handler is, we expect results (Timeout error)
-    # or a failed summary.
     if issues and issues[0]["results"]:
         assert issues[0]["results"][0]["code"] in ["LINTER_TIMEOUT", "LINTER_NOT_FOUND"]
     else:
@@ -199,12 +203,6 @@ def test_linterwrapper_fail_on_severity_high(tmp_path):
         "--fail-on-severity=high",
     ]
 
-    result = subprocess.run(
-        cmd, 
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        check=False,
-        env=env)
+    result = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, check=False, env=env)
 
     assert result.returncode == 3

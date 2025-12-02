@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess  # nosec B404 - usamos subprocess apenas para invocar 'pylint' localmente com argumentos controlados
+import subprocess  # nosec B404
 import sys
 import tempfile
 from typing import Any
@@ -58,11 +58,7 @@ class Plugin:
         }
 
     def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
-        """Analisa um único ficheiro com os linters configurados.
-
-        Se não houver file_path, o código fonte é escrito para um ficheiro
-        temporário .py para que o pylint possa ser executado.
-        """
+        """Analisa um único ficheiro com os linters configurados."""
         try:
             if not self.enabled:
                 return {
@@ -111,7 +107,6 @@ class Plugin:
             }
 
         except Exception as exc:
-            # Igual que StyleChecker: nunca crash, siempre responde algo
             return {
                 "results": [],
                 "summary": {
@@ -171,7 +166,7 @@ class Plugin:
         timeout_seconds = self.timeout_seconds
         extra_args = list(self.pylint_args)
 
-        # Usamos sys.executable -m para garantir o ambiente correto
+        # Using sys.executable ensures we run in the correct venv
         cmd: list[str] = [
             sys.executable,
             "-m",
@@ -182,16 +177,15 @@ class Plugin:
         ]
 
         try:
-            # nosec B603: Validamos que cmd é uma lista e usamos shell=False (padrão).
-            # O executável é o próprio interpretador Python (confiável).
-            proc = subprocess.run( 
+            # We use nosec here because we are using sys.executable (trusted) 
+            # and a list of args (no shell injection)
+            proc = subprocess.run(  # nosec B603
                 cmd,
                 capture_output=True,
                 text=True,
                 timeout=timeout_seconds,
-            ) 
+            )
         except FileNotFoundError:
-            # rare when using sys.executable, but good to keep
             return [
                 {
                     "severity": "high",
@@ -207,18 +201,22 @@ class Plugin:
                 {
                     "severity": "high",
                     "code": "LINTER_TIMEOUT",
-                    "message": f"'pylint' não terminou "
-                    f"dentro de {timeout_seconds} segundos.",
+                    "message": (
+                        f"'pylint' não terminou dentro de {timeout_seconds} segundos."
+                    ),
                     "line": 1,
                     "col": 1,
-                    "hint": "Simplifique o ficheiro ou aumente o timeout.",
+                    "hint": (
+                        "Simplifique o ficheiro ou aumente o timeout "
+                        "em [plugins.linter_wrapper]."
+                    ),
                 }
             ]
 
         stdout = proc.stdout.strip()
         stderr = proc.stderr.strip()
 
-        # Handle the case where python runs but module is missing
+        # Handle "No module named pylint"
         if proc.returncode != 0 and "No module named" in stderr and "pylint" in stderr:
              return [
                 {
@@ -239,8 +237,9 @@ class Plugin:
                     {
                         "severity": "high",
                         "code": "LINTER_ERROR",
-                        "message": "pylint terminou com "
-                        "erro e não produziu saída JSON.",
+                        "message": (
+                            "pylint terminou com erro e não produziu saída JSON."
+                        ),
                         "line": 1,
                         "col": 1,
                         "hint": f"Verifique a saída de erro: {stderr or 'sem stderr'}.",
