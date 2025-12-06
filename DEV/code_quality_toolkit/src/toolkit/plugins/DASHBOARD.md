@@ -55,9 +55,9 @@ To create a useful dashboard, your plugin must pass the following data dictionar
 
 - Plugin-specific metrics
 
-### 3. Recommended Helper Function
+### 3. Helper Function
 
-It is strongly suggested to implement a helper function generate_dashboard() within your plugin class to handle the file writing and HTML generation.
+It is mandatory to implement a helper function `generate_dashboard()` within your plugin class to handle the file writing and HTML generation. See more in [README.md](./README.md).
 
 ```python
 def generate_dashboard(self, results, output_dir):
