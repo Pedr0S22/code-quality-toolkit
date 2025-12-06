@@ -9,10 +9,16 @@ from typing import Any
 
 from ...utils.config import ToolkitConfig
 
+from jinja2 import Environment, PackageLoader, select_autoescape
+JINJA_ENV = Environment(
+    loader=PackageLoader("toolkit.plugins.basic_metrics"),
+    autoescape=select_autoescape()
+)
 
 class Plugin:
     def __init__(self) -> None:
         self.max_complexity = 10
+        self.name:str = "plugin_duplicate_code_checker"
 
     def configure(self, config: ToolkitConfig) -> None:
         self.max_line_length = config.rules.max_line_length
@@ -23,6 +29,28 @@ class Plugin:
             "version": "0.1.0",
             "description": "Detects duplicated code using pylint R0801",
         }
+
+    # ------------------------------------------------------------------
+    # Dashboard
+    # ------------------------------------------------------------------
+
+    def render_html(self, results) -> str:
+        template = JINJA_ENV.get_template("dashboard.html")
+        return template.render(results=results)
+
+    def generate_dashboard(self, results, output_dir):
+        """
+        Generates the D3.js dashboard HTML file.
+        """
+        dashboard_file = output_dir + '/' + f"{self.name}_dashboard.html"
+        html_content = self.render_html(results)
+
+        with open(dashboard_file, "w", encoding="utf-8") as f:
+            f.write(html_content)
+
+    # ------------------------------------------------------------------
+    # Analyze
+    # ------------------------------------------------------------------
 
     def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
         if not file_path:
@@ -92,8 +120,11 @@ class Plugin:
 
         summary = {"issues_found": len(results), "status": "completed"}
 
-        return {
+        results = {
             "plugin": self.get_metadata()["name"],
             "results": results,
             "summary": summary,
         }
+
+        self.generate_dashboard(results, "out")
+        return results
