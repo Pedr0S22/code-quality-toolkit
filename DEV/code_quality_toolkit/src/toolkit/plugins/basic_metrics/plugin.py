@@ -82,14 +82,16 @@ class Plugin:
     # Dashboard
     # ------------------------------------------------------------------
 
+    def render_html(self, results) -> str:
+        template = JINJA_ENV.get_template("dashboard.html")
+        return template.render(results=results)
+
     def generate_dashboard(self, results, output_dir):
         """
         Generates the D3.js dashboard HTML file.
         """
         dashboard_file = output_dir + '/' + f"{self.name}_dashboard.html"
-        
-        template = JINJA_ENV.get_template("dashboard.html")
-        html_content = template.render(results=results)
+        html_content = self.render_html(results)
 
         with open(dashboard_file, "w", encoding="utf-8") as f:
             f.write(html_content)
@@ -326,6 +328,7 @@ class Plugin:
             - lista de issues em "results"
             - métricas numéricas em "summary['metrics']"
         """
+        results = {}
         try:
             metrics = self._compute_basic_metrics(source_code)
             total = int(metrics.get("total_lines", 0))
@@ -336,7 +339,7 @@ class Plugin:
                 if issue_obj is not None:
                     issues.append(issue_obj)
 
-            return {
+            results = {
                 "results": issues,
                 "summary": {
                     "issues_found": len(issues),
@@ -346,7 +349,7 @@ class Plugin:
             }
         except Exception as exc:
             # Defesa: o plugin nunca deve mandar o engine abaixo.
-            return {
+            results = {
                 "results": [],
                 "summary": {
                     "issues_found": 0,
@@ -356,4 +359,5 @@ class Plugin:
             }
 
         # Generate the dashboard at the end of analysis
-        self.generate_dashboard(results, output_dir)
+        self.generate_dashboard(results, "out")
+        return results
