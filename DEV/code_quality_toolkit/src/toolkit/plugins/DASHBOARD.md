@@ -12,7 +12,7 @@ Each plugin must generate its own dashboard using the D3.js framework. This ensu
 
 - **Framework**: D3.js (Version 7+ recommended)
 
-- **Dimensions**: Strictly max `1066 x 628` px
+- **Dimensions**: Strictly `1066 x 628` px
 
 - **Filename Format**: `<plugin_name>_dashboard.html` (**NOTE that plugin_name must be in snake_case**)
 
