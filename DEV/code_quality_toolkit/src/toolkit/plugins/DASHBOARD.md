@@ -116,7 +116,7 @@ Below is the standard boilerplate for the dashboard. It includes the D3.js libra
 
 ### 5. UML-Based Dashboard Example
 
-Below are some dashboard examples. It's recommended to read the documentation from SPEC.md as a complement to this document.
+Below are some dashboard examples. It's recommended to read the documentation from [SPEC.md](../../../web/SPEC.md) and [README.md](./README.md) as complements to this document.
 
 ```txt
 +-----------------------------------------------------------+
