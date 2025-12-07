@@ -13,6 +13,7 @@ from toolkit.plugins.linter_wrapper.plugin import Plugin
 
 # --- Mocks de Configuração ---
 
+
 class MockLinterConfig:
     """Simula a configuração específica do [plugins.linter_wrapper]."""
 
@@ -36,6 +37,7 @@ class MockToolkitConfig:
 # ==============================================================================
 # Test Group A: Command construction & configuration
 # ==============================================================================
+
 
 @patch("subprocess.run")
 def test_a_command_construction_with_args(mock_run):
@@ -263,9 +265,7 @@ def test_j_invalid_json_output(mock_run):
     plugin = Plugin()
 
     # Simular output corrompido (não JSON)
-    mock_run.return_value = MagicMock(
-        stdout="I am not JSON", stderr="", returncode=0
-    )
+    mock_run.return_value = MagicMock(stdout="I am not JSON", stderr="", returncode=0)
 
     report = plugin.analyze("code...", "file.py")
 
@@ -282,9 +282,7 @@ def test_k_crash_no_stdout(mock_run):
     plugin = Plugin()
 
     # Simular crash do pylint (stderr tem msg, stdout vazio)
-    mock_run.return_value = MagicMock(
-        stdout="", stderr="Fatal crash", returncode=1
-    )
+    mock_run.return_value = MagicMock(stdout="", stderr="Fatal crash", returncode=1)
 
     report = plugin.analyze("code...", "file.py")
 

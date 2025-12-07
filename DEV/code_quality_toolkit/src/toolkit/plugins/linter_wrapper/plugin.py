@@ -20,6 +20,7 @@ _PYLINT_TYPE_TO_SEVERITY = {
     "fatal": "high",
 }
 
+
 class Plugin:
     """Plugin que envuelve linters externos (inicialmente pylint)."""
 
@@ -134,8 +135,7 @@ class Plugin:
                         "severity": "medium",
                         "code": "LINTER_UNSUPPORTED",
                         "message": (
-                            f"Linter '{linter}' não é suportado pelo "
-                            "LinterWrapper."
+                            f"Linter '{linter}' não é suportado pelo " "LinterWrapper."
                         ),
                         "line": 1,
                         "col": 1,
@@ -177,7 +177,7 @@ class Plugin:
         ]
 
         try:
-            # We use nosec here because we are using sys.executable (trusted) 
+            # We use nosec here because we are using sys.executable (trusted)
             # and a list of args (no shell injection)
             proc = subprocess.run(  # nosec B603
                 cmd,
@@ -218,7 +218,7 @@ class Plugin:
 
         # Handle "No module named pylint"
         if proc.returncode != 0 and "No module named" in stderr and "pylint" in stderr:
-             return [
+            return [
                 {
                     "severity": "high",
                     "code": "LINTER_NOT_FOUND",
@@ -276,9 +276,7 @@ class Plugin:
             line = int(msg.get("line", 0) or 0)
             col = int(msg.get("column", 0) or 0)
             msg_id = (
-                str(msg.get("message-id", ""))
-                or str(msg.get("symbol", ""))
-                or "PYLINT"
+                str(msg.get("message-id", "")) or str(msg.get("symbol", "")) or "PYLINT"
             )
             text = str(msg.get("message", "")) or ""
 

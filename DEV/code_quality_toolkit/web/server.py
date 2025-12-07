@@ -22,7 +22,7 @@ from toolkit.core.exporters import generate_html
 from toolkit.core.loader import load_plugins, discover_plugins
 from toolkit.utils.config import load_config, ToolkitConfig
 
-TOOLKIT_ROOT = Path("/es2025-pl8/DEV/code_quality_toolkit")
+TOOLKIT_ROOT = Path(__file__).resolve().parent.parent
 
 app = FastAPI(title="Code Quality Toolkit API", version="0.3.0")
 
