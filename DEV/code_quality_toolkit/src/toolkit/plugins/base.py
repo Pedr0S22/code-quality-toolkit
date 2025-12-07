@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Protocol
+from typing import Any, Protocol
 
 from ..core.contracts import IssueResult, PluginMetadata
 
@@ -16,5 +16,5 @@ class BasePlugin(Protocol):
     def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
         """Execute the analysis and return a plugin report."""
 
-    def generate_dashboard(self, results: List[IssueResult]) -> None:
+    def generate_dashboard(self, results: list[IssueResult]) -> None:
         """Generates the dashboard of analysis and stores in <./plugin_name> folder."""
