@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import ast
-from typing import Any
+import pathlib
+from typing import Any, List
 
 from ...core.contracts import IssueResult
 from ...utils.config import ToolkitConfig
@@ -52,7 +53,7 @@ class _ComplexityVisitor(ast.NodeVisitor):
         super().generic_visit(node)
 
 
-class Plugin:
+class Plugin():
     """Calcula complexidade ciclomática aproximada por função."""
 
     def __init__(self) -> None:
@@ -71,6 +72,18 @@ class Plugin:
             "version": "0.1.0",
             "description": "Conta decisões em funções para estimar complexidade.",
         }
+    
+    def generate_dashboard(self, results: List[IssueResult]):
+        """
+        Generates the D3.js CyclomaticComplexity dashboard HTML file.
+        """
+        plugin_folder = pathlib.Path(__file__).parent
+        dashboard_file = plugin_folder / f"{plugin_folder.name}_dashboard.html"
+        
+        # Dashboard generation logic
+        #html_content = f"<html><body><h1>Dashboard Example</h1><p>Issues found: {len(results)}</p></body></html>"
+
+        #dashboard_file.write_text(html_content, encoding="utf-8")
 
     def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
         """
