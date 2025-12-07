@@ -41,7 +41,7 @@ class Plugin:
 
     def get_metadata(self) -> dict[str, str]:
         return {
-            "name": "style_checker",
+            "name": "StyleChecker",
             "version": "0.1.3",
             "description": "Valida comprimento de linhas, convenções simples"
             " de nomes, trailingwhitespace, identation e naming convention.",
