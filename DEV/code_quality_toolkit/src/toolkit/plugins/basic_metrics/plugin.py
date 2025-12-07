@@ -358,6 +358,4 @@ class Plugin:
                 },
             }
 
-        # Generate the dashboard at the end of analysis
-        self.generate_dashboard(results, "out")
         return results
