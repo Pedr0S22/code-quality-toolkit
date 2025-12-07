@@ -126,5 +126,4 @@ class Plugin:
             "summary": summary,
         }
 
-        self.generate_dashboard(results, "out")
         return results
