@@ -81,10 +81,10 @@ class RulesConfig:
     indent_style: str = "spaces"
     indent_size: int = 4
     allow_mixed_indentation: bool = False
-    
+
     max_function_length: int = 50
     max_arguments: int = 5
-    
+
     # FIX: Renamed from min_comment_density to min_density to match existing tests
     min_density: float = 0.1
     max_density: float = 0.5
@@ -113,6 +113,7 @@ class ToolkitConfig:
 
 
 # ------------------------------------
+
 
 def _apply_linter_wrapper_config(
     config: ToolkitConfig,
@@ -143,9 +144,7 @@ def _apply_linter_wrapper_config(
     # timeout_seconds
     if "timeout_seconds" in linter_data:
         try:
-            target_config.timeout_seconds = int(
-                linter_data["timeout_seconds"]
-            )
+            target_config.timeout_seconds = int(linter_data["timeout_seconds"])
         except (ValueError, TypeError) as ex:
             raise ConfigurationError(
                 "Invalid type for '[plugins.linter_wrapper].timeout_seconds'. "
@@ -182,7 +181,7 @@ def _apply_linter_wrapper_config(
 def load_config(path: str | Path | None) -> ToolkitConfig:
     """Load configuration from a TOML file or return defaults."""
     config = ToolkitConfig()
-    
+
     if path is None:
         return config
 
@@ -202,11 +201,11 @@ def load_config(path: str | Path | None) -> ToolkitConfig:
 
     # === Plugins sections ===
     plugins = data.get("plugins", {})
-    
+
     enabled = plugins.get("enabled")
     if isinstance(enabled, list) and enabled:
         config.enabled_plugins = [str(item) for item in enabled]
-        
+
     if isinstance(plugins, dict):
         _apply_linter_wrapper_config(config, plugins)
 

@@ -12,7 +12,7 @@ Each plugin must generate its own dashboard using the D3.js framework. This ensu
 
 - **Framework**: D3.js (Version 7+ recommended)
 
-- **Dimensions**: Strictly max `1066 x 628` px
+- **Dimensions**: Strictly `1066 x 628` px
 
 - **Filename Format**: `<plugin_name>_dashboard.html` (**NOTE that plugin_name must be in snake_case**)
 
@@ -22,26 +22,17 @@ Each plugin must generate its own dashboard using the D3.js framework. This ensu
 
 ### Description
 
-The dashboard generation process must occur during the plugin's analysis phase. The plugin is responsible for compiling its results and injecting them into a structured HTML file.
+The dashboard generation process occurs after the plugin's analysis phase is complete inside `engine.py`. The plugin is responsible for grabbing its results and injecting them into a structured HTML file.
 
 ### 1. Integration Workflow
 
-The generation logic should be triggered inside the main `analyze()` method of your plugin class.
+The generation logic is triggered inside the `engine.py` after all plugins results are aggregated. Then, before the `run_analysis()` method returns the file results and their status, it iterates for all enabled plugins and calls the `generate_dashboard` to generate the respective dashboard with all data retrieved from the files analyzed.
 
 **Analyze**: Perform the static analysis of the source code.
 
-**Collect Data**: Gather results (issues, metrics).
+**Collect Data**: Gather results (issues, metrics) in `run_analysis()` method in `engine.py`.
 
-**Generate**: Call the helper function to create the HTML file.
-
-```python
-def analyze(self, source_code, file_path):
-    # ... analysis logic ...
-    
-    # Generate the dashboard at the end of analysis
-    self.generate_dashboard(results, output_dir)
-```
-
+**Generate**: before retrieving the results, the `run analysis` calls the helper function to create the HTML file.
 
 ### 2. Required Data
 
@@ -55,21 +46,22 @@ To create a useful dashboard, your plugin must pass the following data dictionar
 
 - Plugin-specific metrics
 
-### 3. Recommended Helper Function
+### 3. Helper Function
 
-It is strongly suggested to implement a helper function generate_dashboard() within your plugin class to handle the file writing and HTML generation.
+It is mandatory to implement a helper function `generate_dashboard()` within your plugin class to handle the file writing and HTML generation. See more in [README.md](./README.md).
 
 ```python
-def generate_dashboard(self, results, output_dir):
-    """
-    Generates the D3.js dashboard HTML file.
-    """
-    dashboard_file = output_dir / f"{self.name}_dashboard.html"
-    
-    # In a real scenario, use a template engine or formatted string
-    html_content = self.build_html(results)
-    
-    dashboard_file.write_text(html_content, encoding="utf-8")
+def generate_dashboard(self, results: List[IssueResult]):
+      """
+      Generates the D3.js dashboard HTML file.
+      """
+      plugin_folder = pathlib.Path(__file__).parent
+      dashboard_file = plugin_folder / f"{self.get_metadata()['name']}_dashboard.html"
+      
+      # Dashboard generation logic
+      html_content = None # fix with the d3.js content
+
+      dashboard_file.write_text(html_content, encoding="utf-8")
 ```
 
 ### 4. HTML & D3.js Structure
@@ -124,7 +116,7 @@ Below is the standard boilerplate for the dashboard. It includes the D3.js libra
 
 ### 5. UML-Based Dashboard Example
 
-Below are some dashboard examples. It's recommended to read the documentation from SPEC.md as a complement to this document.
+Below are some dashboard examples. It's recommended to read the documentation from [SPEC.md](../../../web/SPEC.md) and [README.md](./README.md) as complements to this document.
 
 ```txt
 +-----------------------------------------------------------+
