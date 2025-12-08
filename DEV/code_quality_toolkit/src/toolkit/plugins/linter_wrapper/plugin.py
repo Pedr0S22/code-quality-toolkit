@@ -99,7 +99,8 @@ class Plugin:
             # ---------------------------
             # NEW: Generate dashboard here
             # ---------------------------
-            output_dir = os.path.dirname(file_path) if file_path else os.getcwd()
+            from pathlib import Path
+            plugin_dir = Path(__file__).parent
 
             self.generate_dashboard(
                 {
@@ -111,7 +112,7 @@ class Plugin:
                     },
                     "files": [file_path] if file_path else [],
                 },
-                output_dir,
+                plugin_dir,
             )
             # ---------------------------
 
