@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any
 
 from ...core.contracts import IssueResult
-from ...utils.config import ToolkitConfig
 
 _SNAKE_CASE_RE = re.compile(r"^[a-z0-9_]+\.py$")
 _TRAILING_WS_RE = re.compile(r"[ \t]+$")
@@ -30,7 +29,10 @@ class Plugin:
 
     def configure(self, config):
         # Compatibilidad con test antiguos que usan MockToolkitConfig
-        if not hasattr(config, "plugins") or not hasattr(config.plugins, "style_checker"):
+        if  (
+            not hasattr(config, "plugins") 
+            or not hasattr(config.plugins, "style_checker")
+        ):
             self.max_line_length = config.rules.max_line_length
             self.check_whitespace = config.rules.check_whitespace
             self.indent_style = config.rules.indent_style
