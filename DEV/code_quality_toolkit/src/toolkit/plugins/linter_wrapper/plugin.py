@@ -96,6 +96,25 @@ class Plugin:
 
             fail_build = self._should_fail_build(highest_severity)
 
+            # ---------------------------
+            # NEW: Generate dashboard here
+            # ---------------------------
+            output_dir = os.path.dirname(file_path) if file_path else os.getcwd()
+
+            self.generate_dashboard(
+                {
+                    "results": results,
+                    "summary": {
+                        "issues_found": len(results),
+                        "highest_severity": highest_severity,
+                        "issues_by_severity": issues_by_severity,
+                    },
+                    "files": [file_path] if file_path else [],
+                },
+                output_dir,
+            )
+            # ---------------------------
+
             return {
                 "results": results,
                 "summary": {
@@ -166,7 +185,6 @@ class Plugin:
         timeout_seconds = self.timeout_seconds
         extra_args = list(self.pylint_args)
 
-        # Using sys.executable ensures we run in the correct venv
         cmd: list[str] = [
             sys.executable,
             "-m",
@@ -177,8 +195,6 @@ class Plugin:
         ]
 
         try:
-            # We use nosec here because we are using sys.executable (trusted)
-            # and a list of args (no shell injection)
             proc = subprocess.run(  # nosec B603
                 cmd,
                 capture_output=True,
@@ -216,7 +232,6 @@ class Plugin:
         stdout = proc.stdout.strip()
         stderr = proc.stderr.strip()
 
-        # Handle "No module named pylint"
         if proc.returncode != 0 and "No module named" in stderr and "pylint" in stderr:
             return [
                 {
@@ -309,3 +324,47 @@ class Plugin:
         threshold = order.get(self.fail_on_severity, 2)
         max_seen = order.get(highest_severity, -1)
         return max_seen >= threshold
+
+    # ------------------------------------------------
+    # NEW METHOD — D3.js Dashboard generator
+    # ------------------------------------------------
+    def generate_dashboard(self, results, output_dir):
+        filename = "linterwrapper_dashboard.html"
+        dashboard_file = os.path.join(output_dir, filename)
+
+        data_json = json.dumps(results)
+
+        html = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>LinterWrapper Dashboard</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+    body {{ font-family: sans-serif; margin: 0; padding: 20px; }}
+    .chart-container {{
+        width: 1066px;
+        height: 628px;
+        border: 1px solid #ddd;
+    }}
+</style>
+</head>
+<body>
+<h1>LinterWrapper Dashboard</h1>
+
+<div class="chart-container" id="chart"></div>
+
+<script>
+const data = {{DATA_JSON}};
+console.log("Dashboard data:", data);
+
+// TODO: Add D3 visualization here
+</script>
+
+</body>
+</html>
+""".replace("{{DATA_JSON}}", data_json)
+
+        with open(dashboard_file, "w", encoding="utf-8") as f:
+            f.write(html)
