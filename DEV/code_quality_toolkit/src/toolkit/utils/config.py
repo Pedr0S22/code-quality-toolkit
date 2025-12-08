@@ -187,6 +187,14 @@ def _apply_linter_wrapper_config(
         target_config.fail_on_severity = value
 
 
+def _apply_analyze_section(config: ToolkitConfig, analyze: dict[str, Any]) -> None:
+    include = analyze.get("include")
+    exclude = analyze.get("exclude")
+    if isinstance(include, list) and include:
+        config.analyze.include = [str(item) for item in include]
+    if isinstance(exclude, list) and exclude:
+        config.analyze.exclude = [str(item) for item in exclude]
+
 def load_config(path: str | Path | None) -> ToolkitConfig:  # noqa: C901
     """Load configuration from a TOML file or return defaults."""
     config = ToolkitConfig()
@@ -244,11 +252,7 @@ def load_config(path: str | Path | None) -> ToolkitConfig:  # noqa: C901
     # === Analyze Section ===
     analyze = data.get("analyze", {})
     if isinstance(analyze, dict):
-        include = analyze.get("include")
-        exclude = analyze.get("exclude")
-        if isinstance(include, list) and include:
-            config.analyze.include = [str(item) for item in include]
-        if isinstance(exclude, list) and exclude:
-            config.analyze.exclude = [str(item) for item in exclude]
+        _apply_analyze_section(config, analyze)
+
 
     return config
