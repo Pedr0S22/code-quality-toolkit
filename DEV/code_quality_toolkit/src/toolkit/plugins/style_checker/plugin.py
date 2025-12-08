@@ -28,11 +28,9 @@ class Plugin:
         self.allow_mixed_indentation = False
         self.check_naming = False
 
-    def configure(self, config: ToolkitConfig) -> None:
-        sc = getattr(config.plugins, "style_checker", None)
-
-        # Si no existe (caso Mock), usar config.rules como siempre
-        if sc is None:
+    def configure(self, config):
+        # Compatibilidad con test antiguos que usan MockToolkitConfig
+        if not hasattr(config, "plugins") or not hasattr(config.plugins, "style_checker"):
             self.max_line_length = config.rules.max_line_length
             self.check_whitespace = config.rules.check_whitespace
             self.indent_style = config.rules.indent_style
@@ -40,6 +38,16 @@ class Plugin:
             self.allow_mixed_indentation = config.rules.allow_mixed_indentation
             self.check_naming = config.rules.check_naming
             return
+
+        # Configuración nueva vía [plugins.style_checker]
+        sc = config.plugins.style_checker
+        self.max_line_length = sc.max_line_length
+        self.check_whitespace = sc.check_whitespace
+        self.indent_style = sc.indent_style
+        self.indent_size = sc.indent_size
+        self.allow_mixed_indentation = sc.allow_mixed_indentation
+        self.check_naming = sc.check_naming
+
         
 
     def get_metadata(self) -> dict[str, str]:
