@@ -40,6 +40,14 @@ class LinterWrapperConfig:
     # "none", "low", "medium", "high"
     fail_on_severity: str = "high"
 
+@dataclass(slots=True)
+class StyleCheckerConfig:
+    max_line_length: int = 88
+    check_whitespace: bool = True
+    indent_style: str = "spaces"
+    indent_size: int = 4
+    allow_mixed_indentation: bool = False
+    check_naming: bool = False
 
 @dataclass(slots=True)
 class PluginsConfig:
@@ -68,6 +76,7 @@ class PluginsConfig:
         )
     )
 
+    style_checker: StyleCheckerConfig = field(default_factory=StyleCheckerConfig)
 
 @dataclass(slots=True)
 class RulesConfig:
@@ -208,6 +217,13 @@ def load_config(path: str | Path | None) -> ToolkitConfig:
 
     if isinstance(plugins, dict):
         _apply_linter_wrapper_config(config, plugins)
+
+        style_data = plugins.get("style_checker")
+        if isinstance(style_data, dict):
+            target = config.plugins.style_checker
+            for key, value in style_data.items():
+                if hasattr(target, key):
+                    setattr(target, key, value)
 
     # === Rules Section ===
     rules_data = data.get("rules", {})
