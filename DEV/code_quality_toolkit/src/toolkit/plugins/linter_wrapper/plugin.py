@@ -334,7 +334,7 @@ class Plugin:
 
         data_json = json.dumps(results)
 
-        html = f"""
+        html = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
