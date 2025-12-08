@@ -187,7 +187,7 @@ def _apply_linter_wrapper_config(
         target_config.fail_on_severity = value
 
 
-def load_config(path: str | Path | None) -> ToolkitConfig:
+def load_config(path: str | Path | None) -> ToolkitConfig:  # noqa: C901
     """Load configuration from a TOML file or return defaults."""
     config = ToolkitConfig()
 
