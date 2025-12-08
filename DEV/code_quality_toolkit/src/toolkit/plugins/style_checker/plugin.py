@@ -29,15 +29,18 @@ class Plugin:
         self.check_naming = False
 
     def configure(self, config: ToolkitConfig) -> None:
-        sc = config.plugins.style_checker
+        sc = getattr(config.plugins, "style_checker", None)
 
-        self.max_line_length = sc.max_line_length
-        self.check_whitespace = sc.check_whitespace
-        self.indent_style = sc.indent_style
-        self.indent_size = sc.indent_size
-        self.allow_mixed_indentation = sc.allow_mixed_indentation
-        self.check_naming = sc.check_naming
-
+        # Si no existe (caso Mock), usar config.rules como siempre
+        if sc is None:
+            self.max_line_length = config.rules.max_line_length
+            self.check_whitespace = config.rules.check_whitespace
+            self.indent_style = config.rules.indent_style
+            self.indent_size = config.rules.indent_size
+            self.allow_mixed_indentation = config.rules.allow_mixed_indentation
+            self.check_naming = config.rules.check_naming
+            return
+        
 
     def get_metadata(self) -> dict[str, str]:
         return {
