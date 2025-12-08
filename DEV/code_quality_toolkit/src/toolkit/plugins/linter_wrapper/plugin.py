@@ -155,7 +155,7 @@ class Plugin:
                         "severity": "medium",
                         "code": "LINTER_UNSUPPORTED",
                         "message": (
-                            f"Linter '{linter}' não é suportado pelo " "LinterWrapper."
+                            f"Linter '{linter}' não é suportado pelo LinterWrapper."
                         ),
                         "line": 1,
                         "col": 1,
@@ -238,9 +238,7 @@ class Plugin:
                 {
                     "severity": "high",
                     "code": "LINTER_NOT_FOUND",
-                    "message": (
-                        "O módulo 'pylint' não foi encontrado no ambiente Python atual."
-                    ),
+                    "message": "O módulo 'pylint' não foi encontrado.",
                     "line": 1,
                     "col": 1,
                     "hint": "Instale pylint (pip install pylint).",
@@ -258,7 +256,7 @@ class Plugin:
                         ),
                         "line": 1,
                         "col": 1,
-                        "hint": f"Verifique a saída de erro: {stderr or 'sem stderr'}.",
+                        "hint": f"Verifique stderr: {stderr or 'sem stderr'}.",
                     }
                 ]
             return []
@@ -270,16 +268,10 @@ class Plugin:
                 {
                     "severity": "high",
                     "code": "LINTER_OUTPUT_INVALID",
-                    "message": (
-                        "pylint produziu uma saída que não pôde ser interpretada "
-                        "como JSON."
-                    ),
+                    "message": "Saída do pylint não é JSON válido.",
                     "line": 1,
                     "col": 1,
-                    "hint": (
-                        "Verifique se existem plugins/customizações de pylint que "
-                        "alterem a saída."
-                    ),
+                    "hint": "Verifique plugins/customizações do pylint.",
                 }
             ]
 
@@ -303,10 +295,7 @@ class Plugin:
                     "message": text,
                     "line": line,
                     "col": col,
-                    "hint": (
-                        f"Reveja a regra do pylint '{msg_id}' e ajuste o código "
-                        "ou a configuração."
-                    ),
+                    "hint": f"Reveja a regra '{msg_id}'.",
                 }
             )
 
@@ -329,9 +318,14 @@ class Plugin:
     # ------------------------------------------------
     # NEW METHOD — D3.js Dashboard generator
     # ------------------------------------------------
-    def generate_dashboard(self, results, output_dir):
+    def generate_dashboard(self, results, output_dir=None):
+        from pathlib import Path
+
+        if output_dir is None:
+            output_dir = Path(__file__).parent
+
         filename = "linterwrapper_dashboard.html"
-        dashboard_file = os.path.join(output_dir, filename)
+        dashboard_file = Path(output_dir) / filename
 
         data_json = json.dumps(results)
 
@@ -343,12 +337,12 @@ class Plugin:
 <title>LinterWrapper Dashboard</title>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <style>
-    body {{ font-family: sans-serif; margin: 0; padding: 20px; }}
-    .chart-container {{
+    body { font-family: sans-serif; margin: 0; padding: 20px; }
+    .chart-container {
         width: 1066px;
         height: 628px;
         border: 1px solid #ddd;
-    }}
+    }
 </style>
 </head>
 <body>
@@ -359,13 +353,10 @@ class Plugin:
 <script>
 const data = {{DATA_JSON}};
 console.log("Dashboard data:", data);
-
-// TODO: Add D3 visualization here
 </script>
 
 </body>
 </html>
 """.replace("{{DATA_JSON}}", data_json)
 
-        with open(dashboard_file, "w", encoding="utf-8") as f:
-            f.write(html)
+        dashboard_file.write_text(html, encoding="utf-8")
