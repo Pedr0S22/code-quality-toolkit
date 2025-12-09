@@ -175,3 +175,14 @@ def test_style_checker_ignores_naming_if_disabled():
 
     assert class_issue is None
     assert func_issue is None
+
+def test_style_checker_handles_empty_file():
+    """Verifica comportamento com ficheiro vazio."""
+    plugin = Plugin()
+    config = MockToolkitConfig()
+    plugin.configure(config)
+    
+    report = plugin.analyze("", "empty.py")
+    
+    assert report["summary"]["status"] == "completed"
+    assert report["summary"]["issues_found"] == 0
