@@ -33,3 +33,6 @@ report.md
 
 # Environment variables
 .env
+
+# web assets
+web/assets/
