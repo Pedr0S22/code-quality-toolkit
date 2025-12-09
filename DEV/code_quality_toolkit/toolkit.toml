@@ -1,7 +1,7 @@
 [plugins]
 enabled = ["StyleChecker","CyclomaticComplexity", "SecurityChecker", "DuplicationChecker","CommentDensity", "DeadCodeDetector","DependencyGraph", "LinterWrapper"]
 
-[plugins.dead_code]
+[plugins.dead_code_detector]
 ignore_patterns = ["^__", "^test_"]
 min_name_length = 2
 severity = "low"

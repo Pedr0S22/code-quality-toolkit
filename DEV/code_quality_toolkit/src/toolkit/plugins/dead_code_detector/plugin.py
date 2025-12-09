@@ -71,8 +71,9 @@ class Plugin:
         self.min_name_length: int = 1
 
     def configure(self, config: ToolkitConfig) -> None:
-        """Recebe parâmetros de [plugins.dead_code] do toolkit.toml."""
-        sect = getattr(getattr(config, "plugins", None), "dead_code", None)
+        """Recebe parâmetros de [plugins.dead_code_detector] do toolkit.toml."""
+        # ---  Update section name to 'dead_code_detector' ---
+        sect = getattr(getattr(config, "plugins", None), "dead_code_detector", None)
         if not sect:
             return
         pats = getattr(sect, "ignore_patterns", [])
@@ -86,12 +87,94 @@ class Plugin:
         )
 
     def get_metadata(self) -> dict[str, str]:
+        # ---  Update plugin version ---
         return {
             "name": "DeadCodeDetector",
-            "version": "0.1.0",
+            "version": "0.2.0",
             "description": "Deteta funções, classes e variáveis definidas e "
             + "nunca usadas no mesmo ficheiro.",
         }
+
+    # ... (_ignored and analyze methods remain the same) ...
+
+    # ---  Implement generate_dashboard() ---
+    def generate_dashboard(self, context: dict[str, Any]) -> str:
+        """
+        Gera o conteúdo do dashboard (Markdown) para o plugin.
+        O 'context' contém os resultados de todas as análises.
+        """
+        # Obter os resultados consolidados para este plugin
+        plugin_name = self.get_metadata()["name"]
+
+        if not isinstance(context, dict):
+            print(f"{self.get_metadata().get('name')} is a {type(context).__name__}, ")
+            print("expected a dict. WARNING")
+            context = {}  # Reset to an empty dict to prevent AttributeError
+
+        # Acessa os resultados de todas as análises de ficheiros
+        file_results = context.get("files", {})
+
+        total_issues = 0
+        all_findings = []
+
+        # 1. Agrega todos os resultados de todos os ficheiros
+        for file_path, analysis_data in file_results.items():
+            results = analysis_data.get(plugin_name, {}).get("results", [])
+            for issue in results:
+                # Filtra apenas os issues de dead code
+                if issue.get("code") == "DEAD_CODE":
+                    total_issues += 1
+                    all_findings.append(
+                        {
+                            "file": file_path,
+                            "line": issue.get("line", 1),
+                            "message": issue.get(
+                                "message", "Item definido e não usado."
+                            ),
+                            "severity": issue.get("severity", "low"),
+                        }
+                    )
+
+        # 2. Gera o conteúdo Markdown
+
+        dashboard_content = (
+            f"## Dead Code Detector Report (v{self.get_metadata()['version']})\n\n"
+        )
+        dashboard_content += "---\n\n"
+
+        if total_issues == 0:
+            dashboard_content += " **No dead code detected!** Your project is clean.\n"
+        else:
+            dashboard_content += (
+                f"### Summary: **{total_issues}** potential dead code items found.\n\n"
+            )
+            # Ordenar por gravidade e depois por ficheiro
+            SEVERITY_ORDER = {"high": 3, "medium": 2, "low": 1}
+            
+            # Sort findings: Prioritize by severity (using the map) then by file path.
+            # We use reverse=True higher mapped value (3 for 'high') appears 1st.
+            all_findings.sort(
+                key=lambda x: (SEVERITY_ORDER.get(x["severity"], 0), x["file"]),
+                reverse=True
+            )
+
+            # Agrupar por ficheiro para melhor legibilidade
+            findings_by_file = {}
+            for f in all_findings:
+                findings_by_file.setdefault(f["file"], []).append(f)
+
+            dashboard_content += "### Detailed Findings\n\n"
+
+            for file, findings in findings_by_file.items():
+                dashboard_content += f"#### `{file}` ({len(findings)} findings)\n"
+                for f in findings:
+                    dashboard_content += (
+                        f"* **Line {f['line']}:** {f['message']} "
+                        f"(Severity: *{f['severity']}*)\n"
+                    )
+                dashboard_content += "\n"  # Blank line for spacing
+
+        return dashboard_content
 
     # helpers
     def _ignored(self, name: str) -> bool:
