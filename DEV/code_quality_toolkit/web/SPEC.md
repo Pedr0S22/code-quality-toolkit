@@ -24,10 +24,13 @@ The application adheres to a three-tiered architecture. The `client.py` componen
 The three main components are:
 
 ### CLIENT (client.py GUI)
-
 - **Role**: Presentation & I/O
 
-- **Description**: Handles user input (directory selection, configuration), manages file packaging/unpacking, and renders the final report. Communicates with the server via HTTP (`http://127.0.0.1:8000`)
+- **Description**: Handles user input (directory selection, configuration), manages file packaging/unpacking, and renders the final report.
+
+Asset Injection: The client is responsible for reading local JavaScript libraries (e.g., D3.js) from the web/assets/ directory and injecting them directly into the HTML dashboards before rendering. This ensures the application works offline and bypasses QWebEngineView CORS restrictions.
+
+Communicates with the server via HTTP (`http://127.0.0.1:8000`).
 
 ### SERVER (server.py FastAPI Server)
 
@@ -40,6 +43,15 @@ The three main components are:
 - **Role**: Business Logic & Processing
 
 - **Description**: Loads configurations, executes analysis on the source code, and produces analysis artifacts (issues.json, dashboards, report.html).
+
+2.2 Asset Management & Offline Support
+To ensure the application functions without an internet connection and adheres to strict browser security policies (CORS), the system uses a Bundled Asset strategy rather than relying on CDNs.
+
+Fetching: The script web/scripts/fetch_assets.py downloads required dependencies (e.g., d3.v7.min.js) from official sources during the project setup phase.
+
+Storage: Assets are stored locally in web/assets/.
+
+Runtime Injection: When the Client renders a dashboard, it intercepts the HTML content, reads the local asset file, and replaces the remote CDN <script> tags with inline JavaScript.
 
 ## 3. Endpoints
 
@@ -90,8 +102,9 @@ sequenceDiagram
     S->>S: Create Results ZIP
     S->>C: Return Results ZIP
     C->>C: Extract Results ZIP
-    C->>C: Auto-open report.html
-    C->>C: Possibilty to visualize each plugins dashboard
+    C->>C: Load local assets (d3.js) from web/assets
+    C->>C: Inject Assets & Auto-open report.html
+    C->>C: Possibility to visualize each plugins dashboard
 ```
 
 ## 5. Asynchronous Communication (Signal/Slot Equivalent)
@@ -122,6 +135,9 @@ The Web UI components are logically separated from the core toolkit components:
 DEV/
  └─ code_quality_toolkit/
      ├─ web/
+     │   ├─ assets/                 # Stores downloaded JS libraries (e.g., D3.js)
+     │   ├─ scripts/
+     │   │   └─ fetch_assets.py     # Script to download external dependencies
      │   ├─ server.py
      │   ├─ client.py
      │   └─ SPEC.md (DEV Docs)
@@ -134,16 +150,23 @@ DEV/
 ```
 
 ## 7. Running the App
+To run the Code Quality Toolkit App, you must follow these steps:
 
-To run the Code Quality Toolkit App, you must follow this steps:
+1. Setup Environment & Assets: Run the setup command to install dependencies and download necessary static assets (D3.js).
 
-1. Run server.py in `http://127.0.0.1:8000` using the command:
+```
+make setup
+```
+
+(Or manually run python web/scripts/fetch_assets.py if not using Make)
+
+2. Start the Server: Run server.py on `http://127.0.0.1:8000`:
 
 ```
 make run_server
 ```
 
-2. Run client.py using the command:
+3. Start the Client: Run client.py in a separate terminal:
 
 ```
 make run_client
@@ -161,6 +184,8 @@ Rabia Saygin, 2024187186, @rferyals
 Isaque Capra, 2023221892, @Isaque_capra
 
 Tiago Alves, 2023207875, @tiagoalves.21
+
+Mathias Welz, 2025167903,@mathiasgwelz
 
 #### Disclaimer: This web application component was build using AI.
 
