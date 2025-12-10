@@ -88,8 +88,8 @@ class Plugin:
         }
 
 
-    # --- 1) ler valores de [rules] (já existia) ---
-    if hasattr(self.config, "rules")::
+    # --- 1) ler valores de [rules]  ---
+    if hasattr(self.config, "rules"):
         if getattr(config.rules, "max_complexity", None) is not None:
             self.max_complexity = config.rules.max_complexity
 
