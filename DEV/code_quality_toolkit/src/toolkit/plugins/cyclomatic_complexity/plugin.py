@@ -96,11 +96,12 @@ class Plugin:
 
 
     def get_metadata(self) -> dict[str, str]:
-        return {
-            "name": "CyclomaticComplexity",
-            "version": "0.1.0",
-            "description": "Conta decisões em funções para estimar complexidade.",
-        }
+    return {
+        "name": "CyclomaticComplexity",
+        "version": "0.2.0",  # <-- VERSÃO ATUALIZADA
+        "description": "Conta decisões em funções para estimar complexidade.",
+    }
+
 
     def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
         """
