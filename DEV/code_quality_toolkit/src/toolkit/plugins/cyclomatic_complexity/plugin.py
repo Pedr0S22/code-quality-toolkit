@@ -61,9 +61,39 @@ class Plugin:
         self.max_arguments = 5
 
     def configure(self, config: ToolkitConfig) -> None:
-        self.max_complexity = config.rules.max_complexity
-        self.max_function_length = config.rules.max_function_length
-        self.max_arguments = config.rules.max_arguments
+    """
+    Lê configurações tanto de [rules] como de [plugins.cyclomatic_complexity].
+    Caso um valor exista nas duas secções, o valor de plugins.cyclomatic_complexity
+    tem prioridade.
+    """
+    # Valores padrão definidos no init
+    self.max_complexity = self.max_complexity
+    self.max_function_length = self.max_function_length
+    self.max_arguments = self.max_arguments
+
+    # --- 1) ler valores de [rules] (já existia) ---
+    if hasattr(config, "rules"):
+        if getattr(config.rules, "max_complexity", None) is not None:
+            self.max_complexity = config.rules.max_complexity
+
+        if getattr(config.rules, "max_function_length", None) is not None:
+            self.max_function_length = config.rules.max_function_length
+
+        if getattr(config.rules, "max_arguments", None) is not None:
+            self.max_arguments = config.rules.max_arguments
+
+    # --- 2) ler valores de [plugins.cyclomatic_complexity] ---
+    plugin_cfg = config.plugins.get("cyclomatic_complexity", {})
+
+    if "max_complexity" in plugin_cfg:
+        self.max_complexity = plugin_cfg["max_complexity"]
+
+    if "max_function_length" in plugin_cfg:
+        self.max_function_length = plugin_cfg["max_function_length"]
+
+    if "max_arguments" in plugin_cfg:
+        self.max_arguments = plugin_cfg["max_arguments"]
+
 
     def get_metadata(self) -> dict[str, str]:
         return {
