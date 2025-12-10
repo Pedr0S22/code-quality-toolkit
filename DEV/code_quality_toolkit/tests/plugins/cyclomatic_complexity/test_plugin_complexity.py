@@ -27,7 +27,7 @@ def test_metadata():
     m = plugin.get_metadata()
 
     assert m["name"] == "CyclomaticComplexity"
-    assert m["version"] == "0.3.0"
+    assert plugin.get_metadata()["version"] == "0.3.0"
     assert "complexidade" in m["description"].lower()
 
 

@@ -63,21 +63,21 @@ class Plugin:
     def configure(self, config: ToolkitConfig) -> None:
         """
         Lê as configurações da nova secção específica [plugins.cyclomatic_complexity].
-        Isto cumpre o requisito de estruturar melhor as regras.
         """
-        # 1. Obter a configuração específica deste plugin
-        # Agora procuramos explicitamente por 'cyclomatic_complexity'
-        plugin_config = config.plugins.get("cyclomatic_complexity", {})
+        # 1. Obter a configuração específica deste plugin (acesso seguro a objeto)
+        # Usamos getattr porque config.plugins é um objeto, não um dicionário
+        plugin_config = getattr(config.plugins, "cyclomatic_complexity", None)
 
-        # 2. Atualizar os limites se estiverem definidos no TOML
-        if "max_complexity" in plugin_config:
-            self.max_complexity = plugin_config["max_complexity"]
+        if plugin_config:
+            # 2. Atualizar os limites se estiverem definidos no objeto de configuração
+            if hasattr(plugin_config, "max_complexity"):
+                self.max_complexity = plugin_config.max_complexity
 
-        if "max_function_length" in plugin_config:
-            self.max_function_length = plugin_config["max_function_length"]
+            if hasattr(plugin_config, "max_function_length"):
+                self.max_function_length = plugin_config.max_function_length
 
-        if "max_arguments" in plugin_config:
-            self.max_arguments = plugin_config["max_arguments"]
+            if hasattr(plugin_config, "max_arguments"):
+                self.max_arguments = plugin_config.max_arguments
 
     def get_metadata(self) -> dict[str, str]:
         return {
