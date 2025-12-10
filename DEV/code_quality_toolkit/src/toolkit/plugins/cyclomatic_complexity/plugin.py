@@ -61,15 +61,32 @@ class Plugin:
         self.max_arguments = 5
 
     def configure(self, config: ToolkitConfig) -> None:
-    """
-    Lê configurações tanto de [rules] como de [plugins.cyclomatic_complexity].
-    Caso um valor exista nas duas secções, o valor de plugins.cyclomatic_complexity
-    tem prioridade.
-    """
-    # Valores padrão definidos no init
-    self.max_complexity = self.max_complexity
-    self.max_function_length = self.max_function_length
-    self.max_arguments = self.max_arguments
+        """
+        Lê as configurações da nova secção específica [plugins.cyclomatic_complexity].
+        Isto cumpre o requisito de estruturar melhor as regras.
+        """
+        # 1. Obter a configuração específica deste plugin
+        # Agora procuramos explicitamente por 'cyclomatic_complexity'
+        plugin_config = config.plugins.get("cyclomatic_complexity", {})
+
+        # 2. Atualizar os limites se estiverem definidos no TOML
+        if "max_complexity" in plugin_config:
+            self.max_complexity = plugin_config["max_complexity"]
+
+        if "max_function_length" in plugin_config:
+            self.max_function_length = plugin_config["max_function_length"]
+
+        if "max_arguments" in plugin_config:
+            self.max_arguments = plugin_config["max_arguments"]
+
+    def get_metadata(self) -> dict[str, str]:
+        return {
+            "name": "CyclomaticComplexity",
+            # A imagem mostrava 0.2.0, por isso subimos para 0.3.0 conforme pedido
+            "version": "0.3.0", 
+            "description": "Cyclomatic complexity plugin with a lightweight heuristic.",
+        }
+        
 
     # --- 1) ler valores de [rules] (já existia) ---
     if hasattr(config, "rules"):
@@ -95,12 +112,7 @@ class Plugin:
         self.max_arguments = plugin_cfg["max_arguments"]
 
 
-    def get_metadata(self) -> dict[str, str]:
-    return {
-        "name": "CyclomaticComplexity",
-        "version": "0.2.0",  # <-- VERSÃO ATUALIZADA
-        "description": "Conta decisões em funções para estimar complexidade.",
-    }
+    
 
 
     def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:

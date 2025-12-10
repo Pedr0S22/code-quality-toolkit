@@ -1,28 +1,39 @@
 [plugins]
-enabled = ["StyleChecker","CyclomaticComplexity", "SecurityChecker", "DuplicationChecker","CommentDensity", "DeadCodeDetector"]
+enabled = ["StyleChecker", "CyclomaticComplexity", "SecurityChecker", "DuplicationChecker", "CommentDensity", "DeadCodeDetector"]
 
+# Configuração de Código Morto
 [plugins.dead_code]
 ignore_patterns = ["^__", "^test_"]
 min_name_length = 2
 severity = "low"
 
+# Configuração de Complexidade Ciclomática
 [plugins.cyclomatic_complexity]
 max_complexity = 10
 
+# --- CORREÇÕES DO PASSO 3 (Parâmetros reorganizados) ---
+
+# Configuração de Densidade de Comentários (Movido de [rules])
+[plugins.comment_density]
+min_density = 0.1
+max_density = 0.5
+
+# Configuração de Segurança (Movido de [rules])
+[plugins.security_checker]
+security_report_level = "LOW"
+
+# Regras Gerais de Estilo
 [rules]
 max_line_length = 88
 max_function_length = 50
 max_arguments = 5
-check_whitespace = true 
-indent_style = "spaces" 
+check_whitespace = true
+indent_style = "spaces"
 indent_size = 4
 allow_mixed_indentation = false
 check_naming = true
 
-security_report_level="LOW"
-
-min_density = 0.1  
-max_density = 0.5  
+# -------------------------------------------------------
 
 [analyze]
 include = ["**/*.py"]
