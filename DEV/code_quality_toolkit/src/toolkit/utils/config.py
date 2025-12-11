@@ -210,27 +210,8 @@ def load_config(path: str | Path | None) -> ToolkitConfig:
         config.strict = strict_value
 
     # === Plugins sections ===
-    plugins = data.get("plugins", {})
 
-    enabled = plugins.get("enabled")
-    if isinstance(enabled, list) and enabled:
-        config.enabled_plugins = [str(item) for item in enabled]
-
-    if isinstance(plugins, dict):
-        # 1. Apply specific LinterWrapper logic (existing)
-        _apply_linter_wrapper_config(config, plugins)
-
-        for key, section_data in plugins.items():
-            if key in ["enabled", "linter_wrapper"]:
-                continue # Handled separately
-
-            # Check if PluginsConfig has this field (e.g. cyclomatic_complexity)
-            if hasattr(config.plugins, key) and isinstance(section_data, dict):
-                target_obj = getattr(config.plugins, key)
-                
-                # Update the SimpleNamespace with values from TOML
-                if hasattr(target_obj, "__dict__"):
-                    target_obj.__dict__.update(section_data)
+    plugins_configs(data, config)
 
     # === Rules Section ===
     rules_data = data.get("rules", {})
@@ -259,3 +240,26 @@ def load_config(path: str | Path | None) -> ToolkitConfig:
             config.analyze.exclude = [str(item) for item in exclude]
 
     return config
+
+def plugins_configs(data, config):
+    plugins = data.get("plugins", {})
+
+    enabled = plugins.get("enabled")
+    if isinstance(enabled, list) and enabled:
+        config.enabled_plugins = [str(item) for item in enabled]
+
+    if isinstance(plugins, dict):
+        # 1. Apply specific LinterWrapper logic (existing)
+        _apply_linter_wrapper_config(config, plugins)
+
+        for key, section_data in plugins.items():
+            if key in ["enabled", "linter_wrapper"]:
+                continue # Handled separately
+
+            # Check if PluginsConfig has this field (e.g. cyclomatic_complexity)
+            if hasattr(config.plugins, key) and isinstance(section_data, dict):
+                target_obj = getattr(config.plugins, key)
+                
+                # Update the SimpleNamespace with values from TOML
+                if hasattr(target_obj, "__dict__"):
+                    target_obj.__dict__.update(section_data)

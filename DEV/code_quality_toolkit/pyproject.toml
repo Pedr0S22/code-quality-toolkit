@@ -63,6 +63,7 @@ addopts = "-q"
 filterwarnings = [
     'ignore:.*ast\..* is deprecated:DeprecationWarning',
     'ignore:Attribute .* is deprecated:DeprecationWarning',
+    'ignore:The verify_requirements argument is now a no-op:DeprecationWarning'
 ]
 
 [tool.coverage.run]
