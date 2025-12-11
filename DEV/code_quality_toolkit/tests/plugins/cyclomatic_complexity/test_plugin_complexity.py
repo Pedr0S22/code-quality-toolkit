@@ -5,7 +5,6 @@ from types import SimpleNamespace  # Standard library utility for simple objects
 from toolkit.plugins.cyclomatic_complexity.plugin import Plugin
 from toolkit.utils.config import ToolkitConfig
 
-
 # ------------------------------
 # Helpers para criar configuração
 # ------------------------------
