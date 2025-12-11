@@ -46,12 +46,22 @@ class PluginsConfig:
     """Container for plugin-specific configurations."""
 
     # We use Any/dict to allow dynamic loading of plugin settings
-    dead_code: Any = field(
+    dead_code_detector: Any = field(
         default_factory=lambda: SimpleNamespace(
             **{
                 "ignore_patterns": ["^__", "^test_"],
                 "min_name_length": 2,
                 "severity": "low",
+            }
+        )
+    )
+
+    cyclomatic_complexity: Any = field(
+        default_factory=lambda: SimpleNamespace(
+            **{
+                "max_complexity": 10,
+                "max_function_length": 50,
+                "max_arguments": 5,
             }
         )
     )
@@ -207,7 +217,20 @@ def load_config(path: str | Path | None) -> ToolkitConfig:
         config.enabled_plugins = [str(item) for item in enabled]
 
     if isinstance(plugins, dict):
+        # 1. Apply specific LinterWrapper logic (existing)
         _apply_linter_wrapper_config(config, plugins)
+
+        for key, section_data in plugins.items():
+            if key in ["enabled", "linter_wrapper"]:
+                continue # Handled separately
+
+            # Check if PluginsConfig has this field (e.g. cyclomatic_complexity)
+            if hasattr(config.plugins, key) and isinstance(section_data, dict):
+                target_obj = getattr(config.plugins, key)
+                
+                # Update the SimpleNamespace with values from TOML
+                if hasattr(target_obj, "__dict__"):
+                    target_obj.__dict__.update(section_data)
 
     # === Rules Section ===
     rules_data = data.get("rules", {})
