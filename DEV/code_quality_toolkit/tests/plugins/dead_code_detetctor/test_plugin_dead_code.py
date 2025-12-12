@@ -87,7 +87,7 @@ def test_plugin_metadata() -> None:
     plugin = Plugin()
     metadata = plugin.get_metadata()
     assert metadata["name"] == "DeadCodeDetector"
-    assert metadata["version"] == "0.3.0"
+    assert metadata["version"] == "0.2.0"
 
 
 def test_plugin_configuration_defaults() -> None:
