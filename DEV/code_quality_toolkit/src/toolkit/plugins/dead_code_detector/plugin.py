@@ -88,7 +88,7 @@ class Plugin:
     def get_metadata(self) -> dict[str, str]:
         return {
             "name": "DeadCodeDetector",
-            "version": "0.1.0",
+            "version": "0.2.0",
             "description": "Deteta funções, classes e variáveis definidas e "
             + "nunca usadas no mesmo ficheiro.",
         }
