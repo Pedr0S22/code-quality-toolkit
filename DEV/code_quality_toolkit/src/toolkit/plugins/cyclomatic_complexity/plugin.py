@@ -61,14 +61,32 @@ class Plugin:
         self.max_arguments = 5
 
     def configure(self, config: ToolkitConfig) -> None:
-        self.max_complexity = config.rules.max_complexity
-        self.max_function_length = config.rules.max_function_length
-        self.max_arguments = config.rules.max_arguments
+        """Update plugin thresholds from new [plugins.cyclomatic_complexity] section."""
+
+        # Access the new configuration section [plugins.cyclomatic_complexity]
+        sect = getattr(
+            getattr(config, "plugins", None), 
+            "cyclomatic_complexity", 
+            None
+        )
+
+        # Use the section if found, otherwise stick to defaults
+        if sect:
+            # All rules are now defined under the plugin section
+            self.max_complexity = getattr(
+                sect, "max_complexity", self.max_complexity
+            )
+            self.max_function_length = getattr(
+                sect, "max_function_length", self.max_function_length
+            )
+            self.max_arguments = getattr(
+                sect, "max_arguments", self.max_arguments
+            )
 
     def get_metadata(self) -> dict[str, str]:
         return {
             "name": "CyclomaticComplexity",
-            "version": "0.1.0",
+            "version": "0.2.0",
             "description": "Conta decisões em funções para estimar complexidade.",
         }
 
