@@ -33,7 +33,7 @@ typecheck:
 	$(BIN)/mypy src/toolkit
 
 test:
-	$(BIN)/pytest tests $(DIR) -rs --ignore=DEV/code_quality_toolkit/tests/integration
+	$(BIN)/pytest tests $(DIR) -rs
 
 run:
 	$(BIN)/python -m toolkit.core.cli analyze examples/sample_project --out report.json --config toolkit.toml $(arg)
