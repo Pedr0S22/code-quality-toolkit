@@ -1,36 +1,18 @@
 [plugins]
 enabled = ["StyleChecker", "CyclomaticComplexity", "SecurityChecker", "DuplicationChecker", "CommentDensity", "DeadCodeDetector"]
 
-<<<<<<< HEAD
 # Configuração de Código Morto
-[plugins.dead_code]
-=======
 [plugins.dead_code_detector]
->>>>>>> 58972ca933d2a0bba9d3b5f4c72ee5095e933ae4
 ignore_patterns = ["^__", "^test_"]
 min_name_length = 2
 severity = "low"
 
-<<<<<<< HEAD
 # Configuração de Complexidade Ciclomática
-=======
-[plugins.linter_wrapper]
-enabled = true
-linters = ["pylint"]
-timeout_seconds = 60
-max_issues = 500
-pylint_args = [
-  "--disable=C0114,C0115,C0116",
-]
-fail_on_severity = "high"
-
->>>>>>> 58972ca933d2a0bba9d3b5f4c72ee5095e933ae4
 [plugins.cyclomatic_complexity]
 max_complexity = 10
 max_function_length = 50
 max_arguments = 5
 
-<<<<<<< HEAD
 # --- CORREÇÕES DO PASSO 3 (Parâmetros reorganizados) ---
 
 # Configuração de Densidade de Comentários (Movido de [rules])
@@ -45,12 +27,6 @@ security_report_level = "LOW"
 # Regras Gerais de Estilo
 [rules]
 max_line_length = 88
-=======
-[rules]
-max_line_length = 88
-max_complexity = 10
-
->>>>>>> 58972ca933d2a0bba9d3b5f4c72ee5095e933ae4
 check_whitespace = true
 indent_style = "spaces"
 indent_size = 4
