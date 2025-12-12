@@ -92,6 +92,8 @@ class RulesConfig:
     indent_size: int = 4
     allow_mixed_indentation: bool = False
 
+    security_report_level="LOW"
+
     max_function_length: int = 50
     max_arguments: int = 5
 

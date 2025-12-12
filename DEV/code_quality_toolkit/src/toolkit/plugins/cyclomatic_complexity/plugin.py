@@ -65,8 +65,8 @@ class Plugin:
 
         # Access the new configuration section [plugins.cyclomatic_complexity]
         sect = getattr(
-            getattr(config, "plugins", None), 
-            "cyclomatic_complexity", 
+            getattr(config, "plugins", None),
+            "cyclomatic_complexity",
             None
         )
 
