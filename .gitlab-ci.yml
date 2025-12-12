@@ -37,6 +37,7 @@ unit_coverage:
   before_script:
     - cd $CI_PROJECT_DIR/DEV/code_quality_toolkit
     - pip install pytest pytest-cov bandit
+    - ls -R tests
     - pip install -e .
   script:
   - echo "Assessing test coverage... "
@@ -94,6 +95,7 @@ integration_coverage:
   - echo "Assessing integration test coverage... "
   - echo $CI_COMMIT_BRANCH
   - export PYTHONPATH="$CI_PROJECT_DIR/DEV/code_quality_toolkit/src:$PYTHONPATH" # report goes to terminal and htmlcov → open 'index.html' in a browser
+  - ls -R tests
   - python -m pytest --cov=toolkit --cov-report=term --cov-report=html:htmlcov_integration tests/integration --cov-fail-under=30 --ignore=$CI_PROJECT_DIR/DEV/calculator
   #artifacts:
   #  paths:
