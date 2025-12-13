@@ -1,4 +1,4 @@
-# .gitlab_ci.yml (version 5 -- add security checks)
+# .gitlab_ci.yml
 
 image: python:3.12
 
@@ -7,12 +7,14 @@ variables:
     BUILD_TYPE: draft # you can change e.g. to release when the time comes
 
 before_script:
+    - - apt-get update && apt-get install -y libgl1 libglx-mesa0 libxkbcommon-x11-0 libegl1 libdbus-1-3 libxcb-cursor0 libnss3 libasound2 libxcomposite1 libxcursor1 libxdamage1 libxi6 libxtst6 libxrandr2 libfontconfig1 libpci3 libasound2-plugins libxkbfile1 libx11-xcb1 libxrender1
     - python --version
     - echo "Hello, $GITLAB_USER_LOGIN!"
     - echo $REPO_NAME
     - echo $CI_COMMIT_BRANCH
     - echo $CI_PROJECT_DIR
     - cd $CI_PROJECT_DIR/DEV/code_quality_toolkit
+    - pip install -e ".[dev]"
     - make setup
     - pwd
 
@@ -27,21 +29,18 @@ stages: # List of stages for jobs, and their order of execution
 
 unit_tests:
   stage: unit_tests
-  script:
-    - echo "Running unit tests ... "
-    - echo $CI_COMMIT_BRANCH
-    - .venv/bin/python -m pytest --ignore=tests/integration
-
-unit_coverage:
-  stage: unit_tests
   before_script:
+    - - apt-get update && apt-get install -y libgl1 libglx-mesa0 libxkbcommon-x11-0 libegl1 libdbus-1-3 libxcb-cursor0 libnss3 libasound2 libxcomposite1 libxcursor1 libxdamage1 libxi6 libxtst6 libxrandr2 libfontconfig1 libpci3 libasound2-plugins libxkbfile1 libx11-xcb1 libxrender1
     - cd $CI_PROJECT_DIR/DEV/code_quality_toolkit
+    - make setup
     - pip install pytest pytest-cov bandit
-    - pip install -e .
+    - ls -R tests
+    - pip install -e ".[dev]"
   script:
   - echo "Assessing test coverage... "
   - echo $CI_COMMIT_BRANCH
   - export PYTHONPATH="$CI_PROJECT_DIR/DEV/code_quality_toolkit/src:$PYTHONPATH" # report goes to terminal and htmlcov → open 'index.html' in a browser
+  - export QT_QPA_PLATFORM=offscreen
   - python -m pytest --cov=toolkit --cov-report=term --cov-report=html:htmlcov_unit tests --cov-fail-under=70 --ignore=$CI_PROJECT_DIR/DEV/calculator --ignore=tests/integration
 
   #artifacts:
@@ -79,21 +78,18 @@ code_complexity:
 
 integration_tests:
   stage: integration
-  script:
-    - echo "Running integration tests ... "
-    - echo $CI_COMMIT_BRANCH
-    - .venv/bin/python -m pytest tests/integration
-
-integration_coverage:
-  stage: integration
   before_script:
+    - - apt-get update && apt-get install -y libgl1 libglx-mesa0 libxkbcommon-x11-0 libegl1 libdbus-1-3 libxcb-cursor0 libnss3 libasound2 libxcomposite1 libxcursor1 libxdamage1 libxi6 libxtst6 libxrandr2 libfontconfig1 libpci3 libasound2-plugins libxkbfile1 libx11-xcb1 libxrender1
     - cd $CI_PROJECT_DIR/DEV/code_quality_toolkit
+    - make setup
     - pip install pytest pytest-cov bandit
-    - pip install -e .
+    - pip install -e ".[dev]"
   script:
   - echo "Assessing integration test coverage... "
   - echo $CI_COMMIT_BRANCH
   - export PYTHONPATH="$CI_PROJECT_DIR/DEV/code_quality_toolkit/src:$PYTHONPATH" # report goes to terminal and htmlcov → open 'index.html' in a browser
+  - export QT_QPA_PLATFORM=offscreen
+  - ls -R tests
   - python -m pytest --cov=toolkit --cov-report=term --cov-report=html:htmlcov_integration tests/integration --cov-fail-under=30 --ignore=$CI_PROJECT_DIR/DEV/calculator
   #artifacts:
   #  paths:

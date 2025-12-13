@@ -653,7 +653,35 @@ class MainWindow(QMainWindow):
         if dashboard_file:
             # LOAD REAL FILE
             print(f"Loading file: {dashboard_file}")
-            self.web_view.setUrl(QUrl.fromLocalFile(str(dashboard_file.resolve())))
+            
+            try:
+                # 1. Read the raw HTML dashboard
+                html_content = dashboard_file.read_text(encoding="utf-8")
+                
+                # 2. Define Asset Paths
+                d3_local_path = Path("web/assets/d3.v7.min.js")                
+                cdn_tag = '<script src="https://d3js.org/d3.v7.min.js"></script>'
+                                
+                # 3. Inject Local D3 if available
+                if d3_local_path.exists():
+                    d3_content = d3_local_path.read_text(encoding="utf-8")
+                    inline_script = f"<script>\n/* Local D3 Injection */\n{d3_content}\n</script>"
+                    if cdn_tag in html_content:
+                            html_content = html_content.replace(cdn_tag, inline_script)
+                            print("Local D3.js injected successfully.")
+                    else:
+                        print("Error: CDN tag not found in HTML. Skipping injection.")
+                else:
+                    print(f"Error: Local asset not found at {d3_local_path}. Falling back to CDN (requires internet).")
+
+                # 4. Render with Base URL (Crucial for relative links to work)
+                # We use the parent directory of the dashboard file as the base
+                base_url = QUrl.fromLocalFile(str(dashboard_file.parent) + "/")
+                self.web_view.setHtml(html_content, base_url)
+            except Exception as e:
+                print(f"Error loading dashboard: {e}")
+                self.web_view.setHtml(f"<h3 style='color:red'>Error loading dashboard: {e}</h3>")
+            # --- END: Bundled Asset Injection Logic ---
         else:
             # FALLBACK MOCK
             print(f"Dashboard file {dashboard_file} not found. Loading mock.")
