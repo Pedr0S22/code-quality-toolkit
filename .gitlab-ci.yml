@@ -27,13 +27,6 @@ stages: # List of stages for jobs, and their order of execution
 
 # **************** UNIT TESTING stage ****************************
 
-unit_tests:
-  stage: unit_tests
-  script:
-    - echo "Running unit tests ... "
-    - echo $CI_COMMIT_BRANCH
-    - .venv/bin/python -m pytest --ignore=tests/integration
-
 unit_coverage:
   stage: unit_tests
   before_script:
@@ -82,13 +75,6 @@ code_complexity:
 
 
 # # **************** INTEGRATION stage ****************************
-
-integration_tests:
-  stage: integration
-  script:
-    - echo "Running integration tests ... "
-    - echo $CI_COMMIT_BRANCH
-    - .venv/bin/python -m pytest tests/integration
 
 integration_coverage:
   stage: integration
