@@ -11,6 +11,9 @@ from typing import Any
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
+from ...core.contracts import IssueResult
+from ...utils.config import ToolkitConfig
+
 JINJA_ENV = Environment(
     loader=PackageLoader("toolkit.plugins.basic_metrics"),
     autoescape=select_autoescape(["html", "xml"]),
@@ -33,9 +36,6 @@ except Exception:  # pragma: no cover - ambiente sem radon
 # import tempfile
 # from radon.raw import analyze as raw_analyze
 # from radon.metrics import h_visit, HalsteadReport
-
-from ...core.contracts import IssueResult
-from ...utils.config import ToolkitConfig
 
 
 def issue() -> None:
