@@ -2,18 +2,20 @@
 
 from __future__ import annotations
 
-import subprocess  # nosec B404 - uso controlado do módulo subprocess para chamar pylint
+import subprocess  # nosec B404 - uso controlado
 import sys
 from pathlib import Path
 from typing import Any
 
+from jinja2 import Environment, PackageLoader, select_autoescape
+
 from ...utils.config import ToolkitConfig
 
-from jinja2 import Environment, PackageLoader, select_autoescape
 JINJA_ENV = Environment(
-    loader=PackageLoader("toolkit.plugins.basic_metrics"),
-    autoescape=select_autoescape()
+    loader=PackageLoader("toolkit.plugins.duplicate_code_checker"),
+    autoescape=select_autoescape(["html", "xml"]),
 )
+
 
 class Plugin:
     def __init__(self) -> None:
