@@ -11,9 +11,6 @@ from typing import Any
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
-from ...core.contracts import IssueResult
-from ...utils.config import ToolkitConfig
-
 JINJA_ENV = Environment(
     loader=PackageLoader("toolkit.plugins.basic_metrics"),
     autoescape=select_autoescape(["html", "xml"]),
