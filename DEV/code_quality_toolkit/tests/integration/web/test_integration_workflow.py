@@ -5,8 +5,8 @@ import zipfile
 from unittest.mock import Mock
 
 import pytest
-from PyQt6.QtWidgets import QApplication, QFileDialog
 
+from PyQt6.QtWidgets import QApplication, QFileDialog
 from web import client
 from web.client import MainWindow
 
