@@ -6,19 +6,9 @@ from unittest.mock import Mock
 
 import pytest
 
-# --- BLOCO DE PROTEÇÃO CI ---
-# Tenta importar as bibliotecas PyQt6.
-try:
-    from PyQt6.QtWidgets import QApplication, QFileDialog
-
-    # AQUI: Importamos 'client' explicitamente para permitir monkeypatching
-    from web import client
-    from web.client import MainWindow
-except ImportError:
-    # Este bloco é ativado se as libs de UI não estiverem disponíveis
-    # (e.g., em um container CI)
-    pytest.skip("UI libraries missing (Running in CI?)")
-# -----------------------------
+from PyQt6.QtWidgets import QApplication, QFileDialog
+from web import client
+from web.client import MainWindow
 
 
 @pytest.fixture(scope="session")

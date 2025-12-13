@@ -7,7 +7,7 @@ variables:
     BUILD_TYPE: draft # you can change e.g. to release when the time comes
 
 before_script:
-    - apt-get update && apt-get install -y libgl1 libglx-mesa0 libxkbcommon-x11-0 libegl1 libdbus-1-3
+    - apt-get update && apt-get install -y libgl1 libglx-mesa0 libxkbcommon-x11-0 libegl1 libdbus-1-3 libxcb-cursor0
     - python --version
     - echo "Hello, $GITLAB_USER_LOGIN!"
     - echo $REPO_NAME
@@ -36,7 +36,7 @@ unit_tests:
 unit_coverage:
   stage: unit_tests
   before_script:
-    - apt-get update && apt-get install -y libgl1 libglx-mesa0 libxkbcommon-x11-0 libegl1 libdbus-1-3
+    - apt-get update && apt-get install -y libgl1 libglx-mesa0 libxkbcommon-x11-0 libegl1 libdbus-1-3 libxcb-cursor0
     - cd $CI_PROJECT_DIR/DEV/code_quality_toolkit
     - make setup
     - pip install pytest pytest-cov bandit
@@ -92,7 +92,7 @@ integration_tests:
 integration_coverage:
   stage: integration
   before_script:
-    - apt-get update && apt-get install -y libgl1 libglx-mesa0 libxkbcommon-x11-0 libegl1 libdbus-1-3
+    - apt-get update && apt-get install -y libgl1 libglx-mesa0 libxkbcommon-x11-0 libegl1 libdbus-1-3 libxcb-cursor0
     - cd $CI_PROJECT_DIR/DEV/code_quality_toolkit
     - make setup
     - pip install pytest pytest-cov bandit
