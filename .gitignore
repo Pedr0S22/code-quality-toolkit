@@ -26,6 +26,7 @@ report.json
 toolkit.log
 report.html
 report.md
+*.html
 
 # IDE settings
 .vscode/
@@ -33,3 +34,6 @@ report.md
 
 # Environment variables
 .env
+
+# web assets
+web/assets/

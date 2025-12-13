@@ -17,6 +17,8 @@ setup:
 	$(PYTHON) -m venv $(VENV)
 	$(BIN)/python -m pip install --upgrade pip
 	$(BIN)/python -m pip install -e .[dev]
+	@echo "Fetching static assets..."
+	$(BIN)/python web/scripts/fetch_assets.py
 
 lint:
 	$(BIN)/ruff check src tests
@@ -45,4 +47,4 @@ run_client:
 report: run
 
 clean:
-	rm -rf $(VENV) report.json .mypy_cache .pytest_cache
+	rm -rf $(VENV) report.json .mypy_cache .pytest_cache web/assets
