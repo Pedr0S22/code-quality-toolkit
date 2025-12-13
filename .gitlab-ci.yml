@@ -14,6 +14,7 @@ before_script:
     - echo $CI_COMMIT_BRANCH
     - echo $CI_PROJECT_DIR
     - cd $CI_PROJECT_DIR/DEV/code_quality_toolkit
+    - pip install -e ".[dev]"
     - make setup
     - pwd
 
@@ -41,7 +42,7 @@ unit_coverage:
     - make setup
     - pip install pytest pytest-cov bandit
     - ls -R tests
-    - pip install -e .
+    - pip install -e ".[dev]"
   script:
   - echo "Assessing test coverage... "
   - echo $CI_COMMIT_BRANCH
@@ -96,7 +97,7 @@ integration_coverage:
     - cd $CI_PROJECT_DIR/DEV/code_quality_toolkit
     - make setup
     - pip install pytest pytest-cov bandit
-    - pip install -e .
+    - pip install -e ".[dev]"
   script:
   - echo "Assessing integration test coverage... "
   - echo $CI_COMMIT_BRANCH
