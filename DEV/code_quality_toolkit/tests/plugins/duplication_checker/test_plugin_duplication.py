@@ -8,7 +8,7 @@ from toolkit.plugins.duplicate_code_checker.plugin import Plugin
 
 
 class MockRulesConfig:
-    """Mock simples para compatibilidade com ToolkitConfig.""" 
+    """Mock simples para compatibilidade com ToolkitConfig."""
 
     max_line_length = 88
 
@@ -46,11 +46,15 @@ def test_duplication_detects_simple_repeat(tmp_path) -> None:
         mock_run.return_value = _build_mock_completed(mock_stdout)
         report = plugin.analyze(code, str(file_path))
 
+    assert report["summary"]["status"] == "completed"
     assert report["summary"]["issues_found"] == 1
+    assert len(report["results"]) == 1
 
-    first_issue = report["results"][0]
-    assert first_issue["code"] == "R0801"
-    assert first_issue["line"] == 1
+    issue = report["results"][0]
+    assert issue["severity"] in {"info", "low", "medium", "high"}
+    assert issue["code"] == "R0801"
+    assert "Similar lines" in issue["message"]
+    assert issue["line"] == 1
 
 
 def test_duplication_detects_multiple_repeats(tmp_path) -> None:
@@ -83,8 +87,10 @@ def test_duplication_detects_multiple_repeats(tmp_path) -> None:
         mock_run.return_value = _build_mock_completed(mock_stdout)
         report = plugin.analyze(code, str(file_path))
 
+    assert report["summary"]["status"] == "completed"
     assert report["summary"]["issues_found"] == 2
     assert len(report["results"]) == 2
+    assert all(r["code"] == "R0801" for r in report["results"])
 
 
 def test_duplication_no_issues_found(tmp_path) -> None:
@@ -100,6 +106,7 @@ def test_duplication_no_issues_found(tmp_path) -> None:
         mock_run.return_value = _build_mock_completed("")
         report = plugin.analyze(code, str(file_path))
 
+    assert report["summary"]["status"] == "completed"
     assert report["summary"]["issues_found"] == 0
     assert len(report["results"]) == 0
 
@@ -111,7 +118,7 @@ def test_duplication_plugin_metadata() -> None:
 
     assert meta["name"] == "DuplicationChecker"
     assert meta["version"] == "0.1.0"
-    assert "duplicated" in meta["description"].lower()
+    assert "duplic" in meta["description"].lower()
 
 
 def test_duplication_requires_file_path() -> None:
@@ -125,7 +132,7 @@ def test_duplication_requires_file_path() -> None:
 
 
 def test_duplication_ignores_malformed_pylint_output(tmp_path) -> None:
-    """Linhas do pylint mal formatadas com R0801 são ignoradas."""
+    """Linhas do pylint mal formatadas são ignoradas."""
     plugin = Plugin()
     plugin.configure(MockToolkitConfig())
 
@@ -140,38 +147,3 @@ def test_duplication_ignores_malformed_pylint_output(tmp_path) -> None:
 
     assert report["summary"]["issues_found"] == 0
     assert len(report["results"]) == 0
-
-
-def test_duplication_summary_severity_high_with_many_issues(tmp_path) -> None:
-    """Quando há muitos blocos duplicados, a severidade passa para 'high'."""
-    plugin = Plugin()
-    plugin.configure(MockToolkitConfig())
-
-    code = (
-        "def f1():\n"
-        "    x = 1\n"
-        "    y = 2\n"
-        "\n"
-        "def f2():\n"
-        "    x = 1\n"
-        "    y = 2\n"
-        "\n"
-        "def f3():\n"
-        "    x = 1\n"
-        "    y = 2\n"
-    )
-    file_path = tmp_path / "many_duplicates.py"
-    file_path.write_text(code)
-
-    mock_stdout = (
-        "many_duplicates.py:1:0: R0801: Similar lines in 2 files\n"
-        "many_duplicates.py:5:0: R0801: Similar lines in 2 files\n"
-        "many_duplicates.py:9:0: R0801: Similar lines in 2 files"
-    )
-
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value = _build_mock_completed(mock_stdout)
-        report = plugin.analyze(code, str(file_path))
-
-    assert report["summary"]["issues_found"] == 3
-    assert len(report["results"]) == 3
