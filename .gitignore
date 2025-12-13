@@ -26,6 +26,7 @@ report.json
 toolkit.log
 report.html
 report.md
+*.html
 
 # IDE settings
 .vscode/
