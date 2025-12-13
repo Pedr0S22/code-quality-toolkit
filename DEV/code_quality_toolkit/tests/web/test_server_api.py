@@ -21,7 +21,7 @@ try:
 
     from web.server import app
 except ImportError:
-    pytest.skip("FastAPI not installed in CI")
+    pytest.skip("FastAPI not installed in CI", allow_module_level=True)
 # -----------------------------
 
 # Use TestClient for synchronous testing (se importado com sucesso)
