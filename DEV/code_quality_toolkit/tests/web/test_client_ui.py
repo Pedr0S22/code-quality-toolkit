@@ -15,9 +15,7 @@ try:
     from web import client
     from web.client import MainWindow
 except ImportError:
-    pytest.skip(
-        "UI libraries or application code not installed", allow_module_level=True
-    )
+    pytest.skip("UI libraries or application code not installed")
 # -----------------------------
 
 

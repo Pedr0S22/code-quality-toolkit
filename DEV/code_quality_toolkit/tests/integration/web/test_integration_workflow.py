@@ -17,7 +17,7 @@ try:
 except ImportError:
     # Este bloco é ativado se as libs de UI não estiverem disponíveis
     # (e.g., em um container CI)
-    pytest.skip("UI libraries missing (Running in CI?)", allow_module_level=True)
+    pytest.skip("UI libraries missing (Running in CI?)")
 # -----------------------------
 
 
