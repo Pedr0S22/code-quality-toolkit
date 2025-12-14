@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import re
-import ast
 from pathlib import Path
 from typing import Any
 
@@ -98,7 +98,8 @@ class Plugin:
                 affected_files = sorted(list(self._stats["affected_files"]))  # type: ignore
 
                 # 2) Plugin-specific metrics (extract from messages when possible)
-                # Issue codes in this plugin: HIGH_COMPLEXITY, LONG_FUNCTION, TOO_MANY_ARGUMENTS, SYNTAX_ERROR
+                # Issue codes in this plugin:
+                #HIGH_COMPLEXITY, LONG_FUNCTION, TOO_MANY_ARGUMENTS, SYNTAX_ERROR
                 code_counts: dict[str, int] = {}
                 complexities: list[int] = []
                 lengths: list[int] = []
@@ -344,7 +345,11 @@ class Plugin:
     const sevColors = { low: "#4caf50", medium: "#ffb74d", high: "#f44336" };
 
     const severityData = sevOrder.map(function (s) {
-        return { key: s, label: sevLabels[s], value: dashboardData.severityCounts[s] || 0 };
+        return { 
+            key: s,
+            label: sevLabels[s],
+            value: dashboardData.severityCounts[s] || 0 
+        };
     });
 
     const svg = d3.select("#severity-chart");
