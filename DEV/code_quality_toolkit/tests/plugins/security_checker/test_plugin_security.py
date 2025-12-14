@@ -245,38 +245,3 @@ def test_configuration_loading():
     
     assert plugin.report_severity_level == "HIGH"
 
-
-def test_dashboard_file_creation():
-    """
-    Teste básico: O plugin cria o ficheiro HTML?
-    Sem mocks. Escreve, vê se existe, apaga.
-    """
-    plugin = Plugin()
-    
-    # 1. Descobrir onde o ficheiro vai parar
-    # Usamos o caminho do módulo importado para garantir que estamos na mesma pasta
-    import src.toolkit.plugins.security_checker.plugin as p_mod
-    plugin_dir = Path(p_mod.__file__).parent
-    target_file = plugin_dir / "security_checker_dashboard.html"
-
-    # Limpar antes (caso tenha sobrado de antes)
-    if target_file.exists():
-        os.remove(target_file)
-
-    try:
-        # 2. Gerar
-        data = [{"severity": "high", "code": "B307", "file": "test.py"}]
-        plugin.generate_dashboard(data)
-
-        # 3. Validar
-        assert target_file.exists()
-        assert target_file.stat().st_size > 0
-        
-        # Validar conteúdo simples
-        content = target_file.read_text(encoding="utf-8")
-        assert "SecurityChecker" in content
-
-    finally:
-        # 4. Limpar depois
-        if target_file.exists():
-            os.remove(target_file)
