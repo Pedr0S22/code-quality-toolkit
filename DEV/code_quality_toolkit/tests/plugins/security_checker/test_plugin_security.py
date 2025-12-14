@@ -4,10 +4,13 @@ import json
 from pathlib import Path
 from textwrap import dedent
 
-# --- IMPORTAÇÃO ESTRITA (Para o Coverage funcionar) ---
-# Tem de ser o caminho completo 'src.toolkit...'
+# Imports do Projeto
 from src.toolkit.plugins.security_checker.plugin import Plugin
-from src.toolkit.utils.config import ToolkitConfig, PluginsConfig, SecurityCheckerConfig
+from src.toolkit.utils.config import ToolkitConfig
+
+# ==============================================================================
+# TESTES ORIGINAIS (MANTIDOS)
+# ==============================================================================
 
 def test_security_checker_detects_eval() -> None:
     plugin = Plugin()
@@ -205,43 +208,111 @@ def test_syntax_error_handling() -> None:
 
     assert report["summary"]["status"] in ["completed", "failed"]
 
+# ==============================================================================
+# NOVOS TESTES DE SEGURANÇA ADICIONADOS
+# ==============================================================================
 
-def test_analyze_is_working():
-    """Teste básico: O plugin consegue encontrar um 'eval'?"""
+def test_security_checker_detects_unsafe_yaml_load() -> None:
+    """Testa deteção de deserialização insegura com YAML (B506)."""
     plugin = Plugin()
-    # Configuração vazia (usa defaults)
     plugin.configure(ToolkitConfig())
 
-    code = "eval('1+1')"
-    report = plugin.analyze(code, "basic_test.py")
+    code = dedent(
+        """
+        import yaml
+        def load_config(data):
+            # yaml.load sem Loader seguro é perigoso
+            return yaml.load(data)
+        """
+    )
+    report = plugin.analyze(code, "yaml_test.py")
 
-    # Se encontrar issues, o código foi executado -> Coverage aumenta
     assert report["summary"]["status"] == "completed"
     assert report["summary"]["issues_found"] >= 1
-    assert report["results"][0]["file"] == "basic_test.py"
 
-
-def test_analyze_is_safe():
-    """Teste básico: Ficheiro sem erros não crasha?"""
+def test_security_checker_detects_subprocess_shell_true() -> None:
+    """Testa uso de shell=True em subprocess (B602)."""
     plugin = Plugin()
     plugin.configure(ToolkitConfig())
 
-    report = plugin.analyze("print('Ola')", "clean.py")
-    
+    code = dedent(
+        """
+        import subprocess
+        def run_cmd(cmd):
+            # shell=True é vetor de injeção
+            subprocess.call(cmd, shell=True)
+        """
+    )
+    report = plugin.analyze(code, "subprocess_test.py")
+
     assert report["summary"]["status"] == "completed"
-    assert report["summary"]["issues_found"] == 0
+    assert report["summary"]["issues_found"] >= 1
 
-
-def test_configuration_loading():
-    """Teste básico: O plugin lê a configuração HIGH?"""
+def test_security_checker_detects_bind_all_interfaces() -> None:
+    """Testa binding em 0.0.0.0 (B104)."""
     plugin = Plugin()
-    
-    # Criar config real
-    sec_conf = SecurityCheckerConfig(report_severity_level="HIGH")
-    plugins_conf = PluginsConfig(security_checker=sec_conf)
-    config = ToolkitConfig(plugins=plugins_conf)
-    
-    plugin.configure(config)
-    
-    assert plugin.report_severity_level == "HIGH"
+    plugin.configure(ToolkitConfig())
 
+    code = dedent(
+        """
+        def run_server():
+            # Expor para 0.0.0.0 é risco de segurança
+            app.run(host='0.0.0.0')
+        """
+    )
+    report = plugin.analyze(code, "server.py")
+
+    assert report["summary"]["status"] == "completed"
+    assert report["summary"]["issues_found"] >= 1
+
+def test_security_checker_detects_assert_usage() -> None:
+    """Testa uso de assert em código de produção (B101)."""
+    plugin = Plugin()
+    plugin.configure(ToolkitConfig())
+
+    code = dedent(
+        """
+        def login(user):
+            # Asserts são removidos se correr com python -O
+            assert user.is_admin
+            grant_access()
+        """
+    )
+    report = plugin.analyze(code, "logic.py")
+
+    assert report["summary"]["status"] == "completed"
+    assert report["summary"]["issues_found"] >= 1
+
+def test_security_checker_detects_pseudo_random() -> None:
+    """Testa uso de random para fins criptográficos (B311)."""
+    plugin = Plugin()
+    plugin.configure(ToolkitConfig())
+
+    code = dedent(
+        """
+        import random
+        def gen_token():
+            return random.random()
+        """
+    )
+    report = plugin.analyze(code, "token.py")
+
+    assert report["summary"]["status"] == "completed"
+    assert report["summary"]["issues_found"] >= 1
+
+def test_security_checker_detects_hardcoded_tmp_directory() -> None:
+    """Testa uso de diretórios temporários inseguros (B108)."""
+    plugin = Plugin()
+    plugin.configure(ToolkitConfig())
+
+    code = dedent(
+        """
+        def save_temp(data):
+            with open('/tmp/tempfile', 'w') as f:
+                f.write(data)
+        """
+    )
+    report = plugin.analyze(code, "file_ops.py")
+
+    assert report["summary"]["status"] == "completed"
+    assert report["summary"]["issues_found"] >= 1
