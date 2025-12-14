@@ -1,29 +1,26 @@
+"""Plugin para analizar la calidad de la documentación."""
+
 import ast
+from typing import Any
 
 from core.plugin_base import CodeQualityPlugin
 
 
 class DocumentationPlugin(CodeQualityPlugin):
-    def get_metadata(self):
+    """Analiza densidad de comentarios y docstrings."""
+
+    def get_metadata(self) -> dict[str, str]:
+        """Retorna los metadatos del plugin."""
         return {
             "name": "DocumentationQuality",
             "version": "1.0.0",
-            "author": "@Chege39226912",
-            "description": "Analiza densidad de comentarios y docstrings"
+            "author": "@Gastonfdez",
+            "description": "Analiza densidad de comentarios y docstrings",
         }
 
-    def analyze(self, source_code: str, file_path: str = None) -> dict:
-        issues = []
-        lines = source_code.split('\n')
-        total_lines = len(lines)
-        comment_lines = sum(1 for line in lines if line.strip().startswith('#'))
+    def _count_docstrings(self, lines: list[str]) -> int:
+        """Cuenta las líneas que forman parte de docstrings."""
         docstring_lines = 0
-        functions = 0
-        classes = 0
-        functions_with_doc = 0
-        classes_with_doc = 0
-
-        # Contar docstrings multi-línea
         in_docstring = False
         for line in lines:
             stripped = line.strip()
@@ -35,8 +32,15 @@ class DocumentationPlugin(CodeQualityPlugin):
                 docstring_lines += 1
             elif in_docstring:
                 docstring_lines += 1
+        return docstring_lines
 
-        # Analizar AST para funciones y clases
+    def _analyze_ast(self, source_code: str) -> tuple[int, int, int, int]:
+        """Analiza el AST para contar funciones y clases documentadas."""
+        functions = 0
+        classes = 0
+        functions_with_doc = 0
+        classes_with_doc = 0
+
         try:
             tree = ast.parse(source_code)
             for node in ast.walk(tree):
@@ -48,25 +52,56 @@ class DocumentationPlugin(CodeQualityPlugin):
                     classes += 1
                     if ast.get_docstring(node):
                         classes_with_doc += 1
-        except Exception as e:
-    # Ignorar errores de parseo sin romper la ejecución
-    # (Bandit no se quejará porque ya no hay un except vacío)
-            print(f"Warning: AST parse failed in {file_path}: {e}")
+        except Exception:  # nosec
+            pass  # Si falla el parseo, seguimos sin crashear
+
+        return functions, classes, functions_with_doc, classes_with_doc
+
+    def analyze(self, source_code: str, file_path: str = None) -> dict[str, Any]:
+        """Ejecuta el análisis sobre el código fuente."""
+        issues = []
+        lines = source_code.split('\n')
+        total_lines = len(lines)
+        # Fix line length for list comprehension
+        comment_lines = sum(
+            1 for line in lines if line.strip().startswith('#')
+        )
+
+        docstring_lines = self._count_docstrings(lines)
+        stats = self._analyze_ast(source_code)
+        functions, _, functions_with_doc, _ = stats
 
         # Métricas
-        comment_density = (comment_lines + docstring_lines) / total_lines * 100 if total_lines > 0 else 0
-        func_doc_ratio = (functions_with_doc / functions * 100) if functions > 0 else 100
+        comment_density = 0
+        if total_lines > 0:
+            comment_density = (
+                (comment_lines + docstring_lines) / total_lines * 100
+            )
+
+        func_doc_ratio = 100
+        if functions > 0:
+            func_doc_ratio = (functions_with_doc / functions * 100)
 
         # Issues
         if comment_density < 15:
+            severity = "low"
+            if comment_density < 8:
+                severity = "high"
+            elif comment_density < 15:
+                severity = "medium"
+
             issues.append({
                 "file": file_path or "unknown.py",
                 "entity": "file",
                 "line": 1,
                 "metric": "comment_density_percent",
                 "value": round(comment_density, 2),
-                "severity": "high" if comment_density < 8 else "medium" if comment_density < 15 else "low",
-                "message": f"Densidad de comentarios muy baja: {comment_density:.1f}% (mínimo recomendado 15%)"
+                "severity": severity,
+                "code": "DOC001",
+                "message": (
+                    f"Densidad comentarios baja: {comment_density:.1f}% "
+                    "(min 15%)"
+                ),
             })
 
         if functions > 0 and func_doc_ratio < 80:
@@ -77,7 +112,11 @@ class DocumentationPlugin(CodeQualityPlugin):
                 "metric": "functions_with_docstring_percent",
                 "value": round(func_doc_ratio, 1),
                 "severity": "high",
-                "message": f"Solo {functions_with_doc}/{functions} funciones tienen docstring ({func_doc_ratio:.1f}%). ¡Documenta más, crack!"
+                "code": "DOC002",
+                "message": (
+                    f"Solo {functions_with_doc}/{functions} funcs doc "
+                    f"({func_doc_ratio:.1f}%)."
+                ),
             })
 
         return {
@@ -85,6 +124,6 @@ class DocumentationPlugin(CodeQualityPlugin):
             "results": issues,
             "summary": {
                 "issues_found": len(issues),
-                "status": "completed"
-            }
+                "status": "completed",
+            },
         }
