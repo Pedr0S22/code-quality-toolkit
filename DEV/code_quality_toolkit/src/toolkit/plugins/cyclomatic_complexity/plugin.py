@@ -184,7 +184,7 @@ class Plugin:
     </html>
     """
 
-        dashboard_file.write_text(html_content, encoding="utf-8")
+        return html_content
 
 
     def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
