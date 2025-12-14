@@ -49,9 +49,18 @@ class Plugin:
         }
 
     def configure(self, config: ToolkitConfig) -> None:
-        """Configura o plugin a partir do ficheiro TOML global."""
-        if hasattr(config.rules, "security_report_level"):
-            self.report_severity_level = config.rules.security_report_level
+        """Lê a configuração."""
+        # 1. Tenta ler da nova estrutura
+        plugins_conf = getattr(config, "plugins", None)
+        sec_conf = getattr(plugins_conf, "security_checker", None)
+
+        if sec_conf:
+            # --- CORREÇÃO AQUI ---
+            # Tens de ter a certeza que está escrito 'report_severity_level'
+            self.report_severity_level = getattr(sec_conf, "report_severity_level", "LOW")
+        
+        elif hasattr(config.rules, "security_report_level"):
+             self.report_severity_level = config.rules.security_report_level
 
     def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
         """
