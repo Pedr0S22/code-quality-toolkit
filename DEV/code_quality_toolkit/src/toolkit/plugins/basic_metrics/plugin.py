@@ -88,7 +88,7 @@ class Plugin:
         template = JINJA_ENV.get_template("dashboard.html")
         return template.render(results=results)
 
-    def generate_dashboard(self, results, output_dir):
+    def generate_dashboard(self, results, output_dir="out"):
         """
         Generates the D3.js dashboard HTML file.
         """
