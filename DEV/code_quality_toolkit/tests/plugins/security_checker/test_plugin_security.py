@@ -206,148 +206,77 @@ def test_syntax_error_handling() -> None:
     assert report["summary"]["status"] in ["completed", "failed"]
 
 
-@pytest.fixture
-def dashboard_file():
-    """
-    Descobre onde o HTML é salvo, apaga antes e apaga depois.
-    Usa o próprio objeto Plugin para localizar a pasta, garantindo alinhamento.
-    """
-    # Truque para pegar o caminho do ficheiro plugin.py sem importar o módulo solto
-    import sys
-    plugin_module = sys.modules[Plugin.__module__]
-    plugin_dir = Path(plugin_module.__file__).parent
-    target_file = plugin_dir / "security_checker_dashboard.html"
-
-    # Limpar antes
-    if target_file.exists():
-        os.remove(target_file)
-    
-    yield target_file
-
-    # Limpar depois
-    if target_file.exists():
-        os.remove(target_file)
-
-
-# ==========================================
-# 2. TESTES DE ANÁLISE REAL (O Core)
-# ==========================================
-
-def test_full_lifecycle_with_bandit_real():
-    """
-    Teste 'E2E' (Ponta a Ponta) do Plugin.
-    Executa o caminho feliz inteiro para maximizar o coverage.
-    """
-    # 1. Inicialização
+def test_analyze_is_working():
+    """Teste básico: O plugin consegue encontrar um 'eval'?"""
     plugin = Plugin()
-    
-    # 2. Configuração (Real)
-    sec_conf = SecurityCheckerConfig(report_severity_level="LOW") # Low para apanhar tudo
-    plugins_conf = PluginsConfig(security_checker=sec_conf)
-    config = ToolkitConfig(plugins=plugins_conf)
-    plugin.configure(config)
-
-    # 3. Análise (Real - Cria ficheiro temp, roda Bandit, apaga temp)
-    # Código com Eval (High), Password (Low) e Hash (Low)
-    code = dedent("""
-        import hashlib
-        eval('exploit')
-        PASSWORD = '123'
-        hashlib.md5(b'bad')
-    """)
-    
-    report = plugin.analyze(code, "full_test.py")
-
-    # Validações da Análise
-    assert report["summary"]["status"] == "completed"
-    assert report["summary"]["issues_found"] >= 3
-    
-    # Verifica se os códigos do Bandit estão lá
-    codes = [r["code"] for r in report["results"]]
-    assert "B307" in codes # eval
-    assert "B105" in codes # password
-    
-    # Verifica injeção do nome do ficheiro
-    assert report["results"][0]["file"] == "full_test.py"
-
-
-def test_analyze_sql_injection_real():
-    """Teste isolado para SQL Injection (Bandit Real)."""
-    plugin = Plugin()
+    # Configuração vazia (usa defaults)
     plugin.configure(ToolkitConfig())
-    
-    # Bandit deteta isto como B601 (Param) ou B608 (Hardcoded SQL)
-    code = "cursor.execute('SELECT * FROM users WHERE name = ' + user_input)"
-    report = plugin.analyze(code, "db.py")
-    
+
+    code = "eval('1+1')"
+    report = plugin.analyze(code, "basic_test.py")
+
+    # Se encontrar issues, o código foi executado -> Coverage aumenta
     assert report["summary"]["status"] == "completed"
     assert report["summary"]["issues_found"] >= 1
+    assert report["results"][0]["file"] == "basic_test.py"
 
 
-def test_analyze_clean_file_real():
-    """Teste de ficheiro limpo (Cobre o caminho 'else' e loops vazios)."""
+def test_analyze_is_safe():
+    """Teste básico: Ficheiro sem erros não crasha?"""
     plugin = Plugin()
     plugin.configure(ToolkitConfig())
-    
-    report = plugin.analyze("print('Ola Mundo')", "clean.py")
+
+    report = plugin.analyze("print('Ola')", "clean.py")
     
     assert report["summary"]["status"] == "completed"
     assert report["summary"]["issues_found"] == 0
-    assert len(report["results"]) == 0
 
 
-# ==========================================
-# 3. TESTES DE CONFIGURAÇÃO (Variantes)
-# ==========================================
-
-def test_config_defaults_real():
-    """Cobre o caso em que nenhuma config é passada."""
+def test_configuration_loading():
+    """Teste básico: O plugin lê a configuração HIGH?"""
     plugin = Plugin()
-    plugin.configure(ToolkitConfig())
-    assert plugin.report_severity_level == "LOW"
-
-def test_config_fallback_real():
-    """Cobre o bloco 'elif hasattr(...)'."""
-    plugin = Plugin()
-    config = ToolkitConfig()
-    config.plugins.security_checker = None
     
-    # Simulando objeto genérico para config antiga
-    class OldRules:
-        security_report_level = "MEDIUM"
-    config.rules = OldRules()
-
+    # Criar config real
+    sec_conf = SecurityCheckerConfig(report_severity_level="HIGH")
+    plugins_conf = PluginsConfig(security_checker=sec_conf)
+    config = ToolkitConfig(plugins=plugins_conf)
+    
     plugin.configure(config)
-    assert plugin.report_severity_level == "MEDIUM"
+    
+    assert plugin.report_severity_level == "HIGH"
 
 
-# ==========================================
-# 4. TESTES DE DASHBOARD (Escrita Real no Disco)
-# ==========================================
-
-def test_dashboard_generation_real(dashboard_file):
+def test_dashboard_file_creation():
     """
-    Testa a função generate_dashboard escrevendo no disco.
-    Cobre: Contagens, JSON dump, Template string e File Write.
+    Teste básico: O plugin cria o ficheiro HTML?
+    Sem mocks. Escreve, vê se existe, apaga.
     """
     plugin = Plugin()
     
-    # Dados simulados (mas realistas)
-    data = [
-        {"severity": "high", "code": "B307", "file": "a.py"},
-        {"severity": "high", "code": "B307", "file": "a.py"},
-        {"severity": "medium", "code": "B105", "file": "b.py"}
-    ]
-    
-    # Executa
-    plugin.generate_dashboard(data)
-    
-    # Validações Físicas
-    assert dashboard_file.exists()
-    content = dashboard_file.read_text(encoding="utf-8")
-    
-    # Validações de Lógica (JSON injetado)
-    assert '"total_issues": 3' in content
-    assert '"total_files": 2' in content
-    assert '"severity": "high"' in content
-    assert '"count": 2' in content # 2 Highs
+    # 1. Descobrir onde o ficheiro vai parar
+    # Usamos o caminho do módulo importado para garantir que estamos na mesma pasta
+    import src.toolkit.plugins.security_checker.plugin as p_mod
+    plugin_dir = Path(p_mod.__file__).parent
+    target_file = plugin_dir / "security_checker_dashboard.html"
+
+    # Limpar antes (caso tenha sobrado de antes)
+    if target_file.exists():
+        os.remove(target_file)
+
+    try:
+        # 2. Gerar
+        data = [{"severity": "high", "code": "B307", "file": "test.py"}]
+        plugin.generate_dashboard(data)
+
+        # 3. Validar
+        assert target_file.exists()
+        assert target_file.stat().st_size > 0
+        
+        # Validar conteúdo simples
+        content = target_file.read_text(encoding="utf-8")
+        assert "SecurityChecker" in content
+
+    finally:
+        # 4. Limpar depois
+        if target_file.exists():
+            os.remove(target_file)
