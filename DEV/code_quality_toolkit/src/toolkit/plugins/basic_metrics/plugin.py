@@ -10,9 +10,10 @@ import tokenize
 from typing import Any
 
 from jinja2 import Environment, PackageLoader, select_autoescape
+
 JINJA_ENV = Environment(
     loader=PackageLoader("toolkit.plugins.basic_metrics"),
-    autoescape=select_autoescape()
+    autoescape=select_autoescape(),
 )
 
 # Import opcional do radon: se não estiver instalado, o plugin continua a funcionar.
@@ -61,7 +62,7 @@ class Plugin:
     def __init__(self) -> None:
         # Nível de detalhe configurável via ToolkitConfig.rules.metrics_report_level
         self.report_level: str = "LOW"
-        self.name:str = "plugin_basic_metrics"
+        self.name: str = "plugin_basic_metrics"
 
     def get_metadata(self) -> dict[str, str]:
         return {
@@ -86,11 +87,11 @@ class Plugin:
         template = JINJA_ENV.get_template("dashboard.html")
         return template.render(results=results)
 
-    def generate_dashboard(self, results, output_dir):
+    def generate_dashboard(self, results):
         """
         Generates the D3.js dashboard HTML file.
         """
-        dashboard_file = output_dir + '/' + f"{self.name}_dashboard.html"
+        dashboard_file = f"{self.name}_dashboard.html"
         html_content = self.render_html(results)
 
         with open(dashboard_file, "w", encoding="utf-8") as f:
