@@ -507,8 +507,8 @@ class Plugin:
                             }
                         )
 
-        if results and file_path:
-            self._stats["affected_files"].add(str(file_path))
+            if results and file_path:
+                self._stats["affected_files"].add(str(file_path))
 
             # Return a standard Success Response
             return {
