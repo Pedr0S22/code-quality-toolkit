@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from unittest.mock import patch
 
 from toolkit.plugins.duplicate_code_checker.plugin import Plugin
@@ -147,3 +148,50 @@ def test_duplication_ignores_malformed_pylint_output(tmp_path) -> None:
 
     assert report["summary"]["issues_found"] == 0
     assert len(report["results"]) == 0
+
+
+def test_duplication_render_html() -> None:
+    plugin = Plugin()
+
+    results = {
+        "results": [],
+        "summary": {
+            "issues_found": 0,
+            "status": "completed",
+        },
+    }
+
+    html = plugin.render_html(results)
+
+    assert isinstance(html, str)
+    assert "completed" in html or "issues" in html
+
+
+def test_duplication_generate_dashboard(tmp_path) -> None:
+    plugin = Plugin()
+
+    results = {
+        "results": [],
+        "summary": {
+            "issues_found": 0,
+            "status": "completed",
+        },
+    }
+
+    # Create expected directory
+    assets_dir = tmp_path / "web" / "assets"
+    assets_dir.mkdir(parents=True)
+
+    # Run from tmp_path so relative path resolves
+    cwd = os.getcwd()
+    try:
+        os.chdir(tmp_path)
+        plugin.generate_dashboard(results)
+    finally:
+        os.chdir(cwd)
+
+    dashboard_file = assets_dir / "plugin_duplicate_code_checker_dashboard.html"
+    assert dashboard_file.exists()
+
+    content = dashboard_file.read_text()
+    assert "completed" in content
