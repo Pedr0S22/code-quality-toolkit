@@ -20,7 +20,7 @@ JINJA_ENV = Environment(
 )
 
 
-# Import opcional do radon: se não estiver instalado, o plugin continua a funcionar.
+# Import opcional do radon: se não estiver instalado, o plugin continua a funcionar .
 try:
     from radon.metrics import h_visit
     from radon.raw import analyze as raw_analyze
