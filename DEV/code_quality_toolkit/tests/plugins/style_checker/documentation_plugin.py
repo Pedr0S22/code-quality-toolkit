@@ -1,6 +1,7 @@
-import re
 import ast
+
 from core.plugin_base import CodeQualityPlugin
+
 
 class DocumentationPlugin(CodeQualityPlugin):
     def get_metadata(self):

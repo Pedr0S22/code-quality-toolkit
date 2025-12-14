@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+import ast
 import re
-import ast 
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from ...core.contracts import IssueResult
 from ...utils.config import ToolkitConfig
@@ -37,7 +37,7 @@ class Plugin:
         self.allow_mixed_indentation = config.rules.allow_mixed_indentation
         self.check_naming = config.rules.check_naming
 
-    def get_metadata(self) -> Dict[str, str]:
+    def get_metadata(self) -> dict[str, str]:
         return {
             "name": "StyleChecker",
             "version": "0.1.3",
@@ -133,8 +133,8 @@ class Plugin:
     
     def _check_naming_conventions(
         self, source_code: str, file_path: str | None
-    ) -> List[IssueResult]:
-        results: List[IssueResult] = []
+    ) -> list[IssueResult]:
+        results: list[IssueResult] = []
 
         try:
             tree = ast.parse(source_code, filename=file_path or "<unknown>")

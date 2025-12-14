@@ -1,7 +1,7 @@
 """Plugin para analizar la calidad de la documentación."""
 
 import ast
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from core.plugin_base import CodeQualityPlugin
 
@@ -9,16 +9,16 @@ from core.plugin_base import CodeQualityPlugin
 class DocumentationPlugin(CodeQualityPlugin):
     """Analiza densidad de comentarios y docstrings."""
 
-    def get_metadata(self) -> Dict[str, str]:
+    def get_metadata(self) -> dict[str, str]:
         """Retorna los metadatos del plugin."""
         return {
             "name": "DocumentationQuality",
             "version": "1.0.0",
-            "author": "@Chege39226912",
+            "author": "@Gastonfdez",
             "description": "Analiza densidad de comentarios y docstrings",
         }
 
-    def _count_docstrings(self, lines: List[str]) -> int:
+    def _count_docstrings(self, lines: list[str]) -> int:
         """Cuenta las líneas que forman parte de docstrings."""
         docstring_lines = 0
         in_docstring = False
@@ -34,7 +34,7 @@ class DocumentationPlugin(CodeQualityPlugin):
                 docstring_lines += 1
         return docstring_lines
 
-    def _analyze_ast(self, source_code: str) -> Tuple[int, int, int, int]:
+    def _analyze_ast(self, source_code: str) -> tuple[int, int, int, int]:
         """Analiza el AST para contar funciones y clases documentadas."""
         functions = 0
         classes = 0
@@ -57,12 +57,15 @@ class DocumentationPlugin(CodeQualityPlugin):
 
         return functions, classes, functions_with_doc, classes_with_doc
 
-    def analyze(self, source_code: str, file_path: str = None) -> Dict[str, Any]:
+    def analyze(self, source_code: str, file_path: str = None) -> dict[str, Any]:
         """Ejecuta el análisis sobre el código fuente."""
         issues = []
         lines = source_code.split('\n')
         total_lines = len(lines)
-        comment_lines = sum(1 for line in lines if line.strip().startswith('#'))
+        # Fix line length for list comprehension
+        comment_lines = sum(
+            1 for line in lines if line.strip().startswith('#')
+        )
 
         docstring_lines = self._count_docstrings(lines)
         stats = self._analyze_ast(source_code)
@@ -71,7 +74,9 @@ class DocumentationPlugin(CodeQualityPlugin):
         # Métricas
         comment_density = 0
         if total_lines > 0:
-            comment_density = (comment_lines + docstring_lines) / total_lines * 100
+            comment_density = (
+                (comment_lines + docstring_lines) / total_lines * 100
+            )
 
         func_doc_ratio = 100
         if functions > 0:
@@ -94,7 +99,7 @@ class DocumentationPlugin(CodeQualityPlugin):
                 "severity": severity,
                 "code": "DOC001",
                 "message": (
-                    f"Densidad de comentarios baja: {comment_density:.1f}% "
+                    f"Densidad comentarios baja: {comment_density:.1f}% "
                     "(min 15%)"
                 ),
             })
@@ -109,7 +114,7 @@ class DocumentationPlugin(CodeQualityPlugin):
                 "severity": "high",
                 "code": "DOC002",
                 "message": (
-                    f"Solo {functions_with_doc}/{functions} funcs tienen doc "
+                    f"Solo {functions_with_doc}/{functions} funcs doc "
                     f"({func_doc_ratio:.1f}%)."
                 ),
             })

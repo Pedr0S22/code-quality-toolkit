@@ -2,6 +2,7 @@
 
 # Importar o plugin (nome da classe 'Plugin')
 from toolkit.plugins.style_checker.plugin import Plugin
+
 # REMOVA: from toolkit.utils.config import ToolkitConfig
 
 # --- Mocks para resolver o erro 'AttributeError: 'RulesConfig' object attribute 'indent_style' is read-only' ---
