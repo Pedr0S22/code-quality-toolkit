@@ -2,6 +2,7 @@ import json
 import time
 import unittest
 
+# IMPORTAÇÃO DO PLUGIN:
 from toolkit.plugins.dependency_graph.plugin import Plugin
 from toolkit.utils.config import ToolkitConfig
 
@@ -18,6 +19,10 @@ class UnitTestsDependencyGraph(unittest.TestCase):
         self.config = ToolkitConfig() 
         self.plugin.configure(self.config)
         
+
+    # ====================================================================
+    # Testes de Contrato e Configuração (Feature B & Test G)
+    # ====================================================================
 
     def test_g1_plugin_contract_name(self):
         """Test G.1: Verifica se o Plugin retorna os metadados corretos."""
@@ -146,6 +151,7 @@ class UnitTestsDependencyGraph(unittest.TestCase):
         self.assertEqual(len(result["results"]), 1)
         
         # Verifica a severidade e a mensagem de aviso
+        # (Requisito: Must ensure it is treated as a dependency)
         self.assertEqual(result["results"][0]["severity"], "medium")
         self.assertIn(
             "[AVISO: wildcard import desencorajado]",
@@ -171,6 +177,10 @@ class UnitTestsDependencyGraph(unittest.TestCase):
         self.assertIn("node_count", graph_data)
         self.assertIn("categories", graph_data)
         self.assertIsInstance(graph_data["nodes"], list)
+
+    # ====================================================================
+    # TESTES ADICIONAIS (H-V) - VALIDAÇÃO FINAL
+    # ====================================================================
 
     def test_h_multiple_imports_same_line(self):
         """Test H: Verifica múltiplos imports na mesma linha."""
@@ -311,7 +321,9 @@ from ..parent import helper
         
         # Contar tipos
         summary = result["summary"]
-        self.assertEqual(summary["total_imports"], 6)
+        # CORREÇÃO: from typing import List, Dict, Optional = 3 imports (não 1!)
+        # Total: os(1) + argv(1) + pathlib(1) + List(1) + Dict(1) + Optional(1) + local_module(1) + helper(1) = 8
+        self.assertEqual(summary["total_imports"], 8)
         self.assertEqual(summary["relative_imports"], 2)
         self.assertGreater(summary["stdlib_count"], 0)
 
@@ -386,6 +398,7 @@ from my_project.utils import helper
             self.assertIn(category, graph_data["categories"])
             self.assertIsInstance(graph_data["categories"][category], list)
 
+# EXECUÇÃO DOS TESTES
 if __name__ == "__main__":
     # Executar testes com verbosidade
     unittest.main(verbosity=2)
