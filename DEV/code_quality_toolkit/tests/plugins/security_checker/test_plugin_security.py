@@ -199,3 +199,58 @@ def test_syntax_error_handling() -> None:
     report = plugin.analyze(code, "broken.py")
 
     assert report["summary"]["status"] in ["completed", "failed"]
+
+
+
+def test_security_checker_detects_subprocess_shell_true() -> None:
+    """Deteta shell=True em subprocess (B602)."""
+    plugin = Plugin()
+    plugin.configure(ToolkitConfig())
+    code = dedent("""
+        import subprocess
+        def run(cmd):
+            # shell=True permite injeção de comandos
+            subprocess.call(cmd, shell=True)
+    """)
+    report = plugin.analyze(code, "shell_test.py")
+    assert report["summary"]["issues_found"] >= 1
+
+def test_security_checker_detects_bind_all_interfaces() -> None:
+    """Deteta binding para 0.0.0.0 (B104)."""
+    plugin = Plugin()
+    plugin.configure(ToolkitConfig())
+    code = dedent("""
+        def start_server():
+            # Expor para a web inteira é mau
+            s.bind('0.0.0.0')
+    """)
+    report = plugin.analyze(code, "network_test.py")
+    assert report["summary"]["issues_found"] >= 1
+
+def test_security_checker_detects_assert_in_code() -> None:
+    """Deteta uso de assert em lógica de negócio (B101)."""
+    plugin = Plugin()
+    plugin.configure(ToolkitConfig())
+    code = "assert user.is_admin, 'User must be admin'"
+    report = plugin.analyze(code, "logic_test.py")
+    assert report["summary"]["issues_found"] >= 1
+
+def test_security_checker_detects_random_usage() -> None:
+    """Deteta uso de random para segurança (B311)."""
+    plugin = Plugin()
+    plugin.configure(ToolkitConfig())
+    code = dedent("""
+        import random
+        def generate_token():
+            return random.random()
+    """)
+    report = plugin.analyze(code, "token_test.py")
+    assert report["summary"]["issues_found"] >= 1
+
+def test_security_checker_detects_insecure_temp_file() -> None:
+    """Deteta criação de ficheiros em /tmp (B108)."""
+    plugin = Plugin()
+    plugin.configure(ToolkitConfig())
+    code = "f = open('/tmp/tempfile', 'w')"
+    report = plugin.analyze(code, "file_test.py")
+    assert report["summary"]["issues_found"] >= 1
