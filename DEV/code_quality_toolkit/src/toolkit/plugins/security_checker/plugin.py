@@ -32,12 +32,12 @@ class Plugin:
 
     def __init__(self) -> None:
         """Inicializa o plugin."""
+        self.report_severity_level = "LOW"  # Default
         if BanditManager is None:
             print(
-                "AVISO: Dependência 'bandit' não instalada. "
-                "O SecurityChecker não vai funcionar. Usando verificação fallback."
+                "CRÍTICO: Dependência 'bandit' não instalada. "
+                "O SecurityChecker não funcionará."
             )
-        self.report_severity_level = "LOW"  # Default
 
     def get_metadata(self) -> dict[str, str]:
         return {
@@ -55,8 +55,7 @@ class Plugin:
         sec_conf = getattr(plugins_conf, "security_checker", None)
 
         if sec_conf:
-            # --- CORREÇÃO AQUI ---
-            # Tens de ter a certeza que está escrito 'report_severity_level'
+            # Lê a configuração específica
             self.report_severity_level = getattr(sec_conf, "report_severity_level", "LOW")
         
         elif hasattr(config.rules, "security_report_level"):
@@ -64,117 +63,62 @@ class Plugin:
 
     def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
         """
-        Corre a análise no ficheiro e devolve um Relatório JSON.
+        Corre a análise no ficheiro usando o BANDIT.
         """
+        # Se o Bandit não estiver instalado, aborta imediatamente.
+        if BanditManager is None:
+            return {
+                "results": [],
+                "summary": {
+                    "issues_found": 0,
+                    "status": "failed",
+                    "error": "Bandit dependency is missing."
+                }
+            }
+
         try:
             results: list[IssueResult] = []
 
-            # --- Fallback scanner se Bandit não estiver disponível ---
-            if BanditManager is None:
-                src = source_code or ""
-                lines = src.splitlines()
+            # --- Scanner Principal (Bandit) ---
+            with tempfile.NamedTemporaryFile(
+                suffix=".py", delete=False, mode="w", encoding="utf-8"
+            ) as temp_file:
+                temp_file.write(source_code)
+                temp_file_path = temp_file.name
 
-                def find_lineno(substr: str) -> int:
-                    for idx, line in enumerate(lines, start=1):
-                        if substr in line:
-                            return idx
-                    return 1
+            try:
+                config = BanditConfig()
+                manager = BanditManager(config=config, agg_type="vuln")
+                manager.discover_files([temp_file_path])
+                manager.run_tests()
 
-                # Heurísticas simples
-                if "eval(" in src:
+                severity_map = {"LOW": LOW, "MEDIUM": MEDIUM, "HIGH": HIGH}
+                report_level = severity_map.get(self.report_severity_level, LOW)
+
+                bandit_issues = manager.get_issue_list(
+                    sev_level=report_level, conf_level=LOW
+                )
+
+                for issue in bandit_issues:
+                    severity_translation = {"LOW": "low", "MEDIUM": "medium", "HIGH": "high"}
                     results.append({
-                        "severity": "high", "code": "B307",
-                        "message": "Uso de eval() detectado.",
-                        "line": find_lineno("eval("), "col": 1,
-                        "hint": "Evite usar eval() em código não confiável.",
-                    })
-                if "exec(" in src:
-                    results.append({
-                        "severity": "high", "code": "B307",
-                        "message": "Uso de exec() detectado.",
-                        "line": find_lineno("exec("), "col": 1,
-                        "hint": "Evite usar exec() em código não confiável.",
-                    })
-                if "import pickle" in src or "pickle.load" in src:
-                    results.append({
-                        "severity": "medium", "code": "B301",
-                        "message": "Uso de pickle detectado.",
-                        "line": find_lineno("pickle"), "col": 1,
-                        "hint": "Evite usar pickle para dados não confiáveis.",
-                    })
-                if "hashlib.md5" in src or ".md5(" in src:
-                    results.append({
-                        "severity": "low", "code": "B303",
-                        "message": "Uso de hash MD5 detectado.",
-                        "line": find_lineno("md5"), "col": 1,
-                        "hint": "Use hashes seguros como sha256 para segurança.",
-                    })
-                if "os.system" in src and "+" in src:
-                    results.append({
-                        "severity": "medium", "code": "B601",
-                        "message": "Chamadas ao sistema com concatenação de strings detectadas.",
-                        "line": find_lineno("os.system"), "col": 1,
-                        "hint": "Use chamadas seguras sem concatenar input do utilizador.",
-                    })
-                if "%s" in src and "cursor.execute" in src:
-                    results.append({
-                        "severity": "high", "code": "B606",
-                        "message": "Possível injeção SQL detectada.",
-                        "line": find_lineno("cursor.execute"), "col": 1,
-                        "hint": "Use queries parametrizadas em vez de formatação direta.",
-                    })
-                if "PASSWORD" in src and "=" in src and ('"' in src or "'" in src):
-                    results.append({
-                        "severity": "low", "code": "B105",
-                        "message": "Senha hardcoded detectada.",
-                        "line": find_lineno("PASSWORD"), "col": 1,
-                        "hint": "Nunca guarde segredos em código fonte.",
+                        "severity": severity_translation.get(issue.severity, "low"),
+                        "code": issue.test_id,
+                        "message": issue.text,
+                        "line": issue.lineno,
+                        "col": issue.col_offset + 1,
+                        "hint": f"Bandit Test ID: {issue.test_id}",
                     })
 
-            else:
-                # --- Scanner Principal (Bandit) ---
-                with tempfile.NamedTemporaryFile(
-                    suffix=".py", delete=False, mode="w", encoding="utf-8",
-                ) as temp_file:
-                    temp_file.write(source_code)
-                    temp_file_path = temp_file.name
+            finally:
+                if os.path.exists(temp_file_path):
+                    os.remove(temp_file_path)
 
-                try:
-                    config = BanditConfig()
-                    manager = BanditManager(config=config, agg_type="vuln")
-                    manager.discover_files([temp_file_path])
-                    manager.run_tests()
-
-                    severity_map = {"LOW": LOW, "MEDIUM": MEDIUM, "HIGH": HIGH}
-                    report_level = severity_map.get(self.report_severity_level, LOW)
-
-                    bandit_issues = manager.get_issue_list(
-                        sev_level=report_level, conf_level=LOW
-                    )
-
-                    for issue in bandit_issues:
-                        severity_translation = {"LOW": "low", "MEDIUM": "medium", "HIGH": "high"}
-                        results.append({
-                            "severity": severity_translation.get(issue.severity, "low"),
-                            "code": issue.test_id,
-                            "message": issue.text,
-                            "line": issue.lineno,
-                            "col": issue.col_offset + 1,
-                            "hint": f"Bandit Test ID: {issue.test_id}",
-                        })
-
-                finally:
-                    if os.path.exists(temp_file_path):
-                        os.remove(temp_file_path)
-
-            # --- CORREÇÃO IMPORTANTE PARA O DASHBOARD ---
-            # Injetamos o nome do ficheiro dentro de cada erro.
-            # Isto garante que o nome chega ao Dashboard mesmo que o Engine
-            # misture tudo numa lista plana.
+            # --- INJEÇÃO DO NOME DO FICHEIRO ---
             filename_to_save = str(file_path) if file_path else "unknown"
             for r in results:
                 r["file"] = filename_to_save
-            # --------------------------------------------
+            # -----------------------------------
 
             return {
                 "results": results,
@@ -218,7 +162,7 @@ class Plugin:
             code = issue.get("code", "UNKNOWN")
             rule_counts[code] = rule_counts.get(code, 0) + 1
 
-            # Ficheiro (Agora temos a chave 'file' graças ao fix no analyze!)
+            # Ficheiro
             fname = issue.get("file", "unknown")
             files_counter[fname] = files_counter.get(fname, 0) + 1
 
