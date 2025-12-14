@@ -2,41 +2,76 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <script src="[https://d3js.org/d3.v7.min.js](https://d3js.org/d3.v7.min.js)"></script>
-    <title>Plugin Dashboard</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <title>Basic Metrics Dashboard</title>
     <style>
         body { font-family: sans-serif; margin: 0; padding: 20px; }
         .chart-container { width: 1066px; height: 628px; border: 1px solid #ddd; }
+        .metric { font-size: 14px; margin-bottom: 4px; }
     </style>
 </head>
 <body>
 
-<!-- Main App Container -->
 <div id="app" class="chart-container"></div>
 
 <script>
-    // Data injected from Python
-    const data = {{DATA_JSON}};
+    // Results dict injected by Plugin.render_html
+    const results = {{ results | tojson }};
 
-    // Initialize SVG with mandatory dimensions
+    const metrics = results.summary?.metrics || {};
+    const issues = results.results || [];
+
     const svg = d3.select("#app")
         .append("svg")
         .attr("width", 1066)
         .attr("height", 628);
 
-    // Example: Simple Bar Chart for Severities
-    // This is just a placeholder logic
-    if (data.severity_counts) {
-        svg.selectAll("rect")
-            .data(data.severity_counts)
-            .enter()
-            .append("rect")
-            .attr("x", (d, i) => i * 100 + 50)
-            .attr("y", d => 600 - d.count * 10)
-            .attr("width", 80)
-            .attr("height", d => d.count * 10)
-            .attr("fill", "steelblue");
-    }
+    // ---- Metrics table (left) ----
+    const metricEntries = Object.entries(metrics);
+
+    svg.selectAll("text.metric")
+        .data(metricEntries)
+        .enter()
+        .append("text")
+        .attr("class", "metric")
+        .attr("x", 20)
+        .attr("y", (d, i) => 30 + i * 20)
+        .text(d => `${d[0]}: ${d[1]}`);
+
+    // ---- Issues by severity (right bar chart) ----
+    const severityCounts = d3.rollups(
+        issues,
+        v => v.length,
+        d => d.severity
+    ).map(([severity, count]) => ({ severity, count }));
+
+    const x = d3.scaleBand()
+        .domain(severityCounts.map(d => d.severity))
+        .range([500, 1000])
+        .padding(0.2);
+
+    const y = d3.scaleLinear()
+        .domain([0, d3.max(severityCounts, d => d.count) || 0])
+        .range([580, 100]);
+
+    svg.selectAll("rect.bar")
+        .data(severityCounts)
+        .enter()
+        .append("rect")
+        .attr("class", "bar")
+        .attr("x", d => x(d.severity))
+        .attr("y", d => y(d.count))
+        .attr("width", x.bandwidth())
+        .attr("height", d => 580 - y(d.count));
+
+    svg.selectAll("text.bar-label")
+        .data(severityCounts)
+        .enter()
+        .append("text")
+        .attr("x", d => x(d.severity) + x.bandwidth() / 2)
+        .attr("y", d => y(d.count) - 5)
+        .attr("text-anchor", "middle")
+        .text(d => d.count);
 </script>
 
 </body>

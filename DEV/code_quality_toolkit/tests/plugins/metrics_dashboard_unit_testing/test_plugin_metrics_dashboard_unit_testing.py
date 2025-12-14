@@ -1,5 +1,3 @@
-import pytest
-from pathlib import Path
 from toolkit.plugins.metrics_dashboard_unit_testing.plugin import Plugin
 
 

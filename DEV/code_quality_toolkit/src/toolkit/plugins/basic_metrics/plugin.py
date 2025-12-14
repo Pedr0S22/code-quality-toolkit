@@ -2,6 +2,12 @@
 #   Basic metrics plugin   #
 # ------------------------ #
 
+# Imports antigos mantidos como comentário para histórico (pedido do enunciado):
+# import os
+# import tempfile
+# from radon.raw import analyze as raw_analyze
+# from radon.metrics import h_visit, HalsteadReport
+
 from __future__ import annotations
 
 import ast
@@ -10,6 +16,9 @@ import tokenize
 from typing import Any
 
 from jinja2 import Environment, PackageLoader, select_autoescape
+
+from ...core.contracts import IssueResult
+from ...utils.config import ToolkitConfig
 
 JINJA_ENV = Environment(
     loader=PackageLoader("toolkit.plugins.basic_metrics"),
@@ -26,15 +35,6 @@ except Exception:  # pragma: no cover - ambiente sem radon
     raw_analyze = None
     h_visit = None
     RADON_AVAILABLE = False
-
-# Imports antigos mantidos como comentário para histórico (pedido do enunciado):
-# import os
-# import tempfile
-# from radon.raw import analyze as raw_analyze
-# from radon.metrics import h_visit, HalsteadReport
-
-from ...core.contracts import IssueResult
-from ...utils.config import ToolkitConfig
 
 
 def issue() -> None:
@@ -91,7 +91,7 @@ class Plugin:
         """
         Generates the D3.js dashboard HTML file.
         """
-        dashboard_file = f"{self.name}_dashboard.html"
+        dashboard_file = "web/assets/" + f"{self.name}_dashboard.html"
         html_content = self.render_html(results)
 
         with open(dashboard_file, "w", encoding="utf-8") as f:
