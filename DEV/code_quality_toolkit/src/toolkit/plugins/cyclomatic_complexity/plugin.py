@@ -1,11 +1,9 @@
 """Cyclomatic complexity plugin with a lightweight heuristic."""
+from __future__ import annotations
 import json
 import re
-from pathlib import Path
-
-from __future__ import annotations
-
 import ast
+from pathlib import Path
 from typing import Any
 
 from ...core.contracts import IssueResult
