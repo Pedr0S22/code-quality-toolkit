@@ -1,13 +1,14 @@
-import pytest
 import os
-from unittest.mock import MagicMock
-from textwrap import dedent
 from pathlib import Path
+from textwrap import dedent
+
+import pytest
 
 # --- IMPORTS ---
 import src.toolkit.plugins.security_checker.plugin as plugin_module
 from src.toolkit.plugins.security_checker.plugin import Plugin
-from src.toolkit.utils.config import ToolkitConfig, PluginsConfig, SecurityCheckerConfig
+from src.toolkit.utils.config import ToolkitConfig
+
 
 # ==============================================================================
 # PEÇA QUE FALTAVA: O Setup do Caminho Real (Sem isso os testes de baixo falham)
