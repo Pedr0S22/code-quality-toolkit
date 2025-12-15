@@ -63,6 +63,57 @@ def test_dead_code_detector_integration(tmp_path: Path):
     issue = plugin_report["results"][0]
     assert "unused_function" in issue["message"]
     assert issue["severity"] in ["low", "medium", "high"]
+    
+def test_cyclomatic_complexity_integration(tmp_path: Path):
+    """
+    Integration test for CyclomaticComplexity plugin.
+    Ensures high-complexity functions are reported.
+    """
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+
+    code = """
+def complex_function(x):
+    if x > 0:
+        for i in range(x):
+            if i % 2 == 0:
+                print(i)
+            else:
+                if i > 10:
+                    print("big")
+    return x
+"""
+    (project_dir / "complex.py").write_text(code, encoding="utf-8")
+
+    output_file = tmp_path / "report.json"
+
+    exit_code = main(
+        [
+            "analyze",
+            str(project_dir),
+            "--out",
+            str(output_file),
+            "--plugins",
+            "CyclomaticComplexity",
+        ]
+    )
+
+    assert exit_code == EXIT_SUCCESS
+    assert output_file.exists()
+
+    report = json.loads(output_file.read_text(encoding="utf-8"))
+
+    file_report = next(f for f in report["details"] if "complex.py" in f["file"])
+    plugin = next(
+        p for p in file_report["plugins"]
+        if p["plugin"] == "CyclomaticComplexity"
+    )
+
+    assert plugin["summary"]["issues_found"] >= 1
+
+    issue = plugin["results"][0]
+    assert "complexity" in issue["message"].lower()
+    assert issue["severity"] in ["medium", "high"]
 
 
 def test_security_checker_integration(tmp_path: Path):
