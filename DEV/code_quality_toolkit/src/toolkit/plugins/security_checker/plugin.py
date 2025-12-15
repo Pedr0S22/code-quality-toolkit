@@ -48,7 +48,9 @@ class Plugin:
             self.report_severity_level = config.rules.security_report_level
 
     # NOVO MÉTODO AUXILIAR PARA REDUZIR COMPLEXIDADE DO ANALYZE
-    def _run_fallback_scan(self, source_code: str, file_path: str | None) -> list[IssueResult]:
+    def _run_fallback_scan(
+        self, source_code: str, file_path: str | None
+    ) -> list[IssueResult]:
         """
         Contém toda a lógica de varredura de fallback para reduzir
         a complexidade do método analyze().
@@ -213,6 +215,7 @@ class Plugin:
                     "error": f"Erro SecurityChecker: {str(e)}",
                 },
             }
+        
     # ==========================================================================
     # DASHBOARD GENERATION
     # ==========================================================================
