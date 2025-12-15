@@ -229,15 +229,7 @@ def load_config(path: str | Path | None) -> ToolkitConfig:  # noqa: C901
         config.strict = strict_value
 
     # === Plugins sections ===
-
     plugins_configs(data, config)
-
-        style_data = plugins.get("style_checker")
-        if isinstance(style_data, dict):
-            target = config.plugins.style_checker
-            for key, value in style_data.items():
-                if hasattr(target, key):
-                    setattr(target, key, value)
 
     # === Rules Section ===
     rules_data = data.get("rules", {})
@@ -285,3 +277,10 @@ def plugins_configs(data, config):
                 # Update the SimpleNamespace with values from TOML
                 if hasattr(target_obj, "__dict__"):
                     target_obj.__dict__.update(section_data)
+
+    # style_data = plugins.get("style_checker")
+    # if isinstance(style_data, dict):
+    #     target = config.plugins.style_checker
+    #     for key, value in style_data.items():
+    #         if hasattr(target, key):
+    #             setattr(target, key, value)
