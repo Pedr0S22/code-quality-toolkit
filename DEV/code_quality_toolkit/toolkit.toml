@@ -49,6 +49,12 @@ warn_wildcard_imports = true
 max_relative_import_level = 1
 track_stdlib_modules = true
 
+[plugins.basic_metrics]
+report_level = "low"
+
+[plugins.duplicate_code_checker]
+min_name_length = 3
+
 [analyze]
 include = ["**/*.py"]
 exclude = ["venv/**", "tests/**"]

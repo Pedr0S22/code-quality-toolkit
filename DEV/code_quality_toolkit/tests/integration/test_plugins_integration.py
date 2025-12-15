@@ -889,8 +889,6 @@ def test_integration_linter_wrapper_plugin(tmp_path: Path):
     Verifies that the LinterWrapper plugin (wrapping pylint) finds issues
     when run via the CLI against a real file.
     """
-    # 1. Setup: Create a file with standard Pylint violations.
-    # Violations: Unused import (W0611) and Missing module docstring (C0114)
     project_dir = tmp_path / "project"
     project_dir.mkdir()
     code_file = project_dir / "bad_lint.py"
@@ -903,7 +901,6 @@ def test_integration_linter_wrapper_plugin(tmp_path: Path):
     )
     output_file = tmp_path / "report.json"
 
-    # 2. Execution: Run CLI with LinterWrapper enabled
     exit_code = main(
         [
             "analyze",
@@ -915,14 +912,12 @@ def test_integration_linter_wrapper_plugin(tmp_path: Path):
         ]
     )
 
-    # 3. Verification
     assert exit_code == EXIT_SUCCESS
     assert output_file.exists()
 
     with open(output_file, encoding="utf-8") as f:
         data = json.load(f)
 
-    # Locate the report for our specific file
     file_report = next(f for f in data["details"] if "bad_lint.py" in f["file"])
     plugin_report = next(
         p for p in file_report["plugins"] if p["plugin"] == "LinterWrapper"
@@ -931,27 +926,118 @@ def test_integration_linter_wrapper_plugin(tmp_path: Path):
     results = plugin_report["results"]
     assert len(results) >= 1
 
-    # Extract codes to verify we caught the expected issues.
-    # Pylint output depends on version/config, but usually:
-    # - W0611: unused-import
-    # - C0114: missing-module-docstring
-    # - C0116: missing-function-docstring
-    # Or, if pylint is not installed in the test 
-    # env, the plugin returns LINTER_NOT_FOUND.
-    
     found_codes = {r.get("code") for r in results}
-    
-    # We verify that we either found a valid lint error OR the specific error 
-    # indicating pylint is missing (which is also a valid plugin behavior test).
-    expected_lint_codes = {"W0611", "unused-import", "C0114", 
-                           "missing-module-docstring", "C0116"}
-    
+    expected_lint_codes = {
+        "W0611",
+        "unused-import",
+        "C0114",
+        "missing-module-docstring",
+        "C0116",
+    }
+
     assert (
-        bool(found_codes & expected_lint_codes) 
+        bool(found_codes & expected_lint_codes)
         or "LINTER_NOT_FOUND" in found_codes
     ), f"Expected Pylint issues or LINTER_NOT_FOUND, but got: {found_codes}"
 
-    # Verify severity mapping (convention/refactor -> low, warning -> medium, etc.)
-    # If we found an issue, check if severity key exists and is valid
     if results:
         assert results[0]["severity"] in ["low", "medium", "high"]
+
+
+def test_all_plugins_integration(tmp_path: Path):
+    """
+    Integration test that runs all enabled plugins together with the core system.
+    """
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+
+    (project_dir / "main.py").write_text(
+        '"""Module docstring."""\n'
+        "import os\n"
+        "from utils import helper\n"
+        "\n"
+        "# This is a comment\n"
+        "def main():\n"
+        "    # Long line to trigger style checker\n"
+        f"    print('{'A' * 100}')\n"
+        "    eval('print(1)')\n"
+        "    helper()\n"
+        "\n"
+        "def unused_function():\n"
+        "    pass\n",
+        encoding="utf-8",
+    )
+
+    (project_dir / "utils.py").write_text(
+        "import json\n"
+        "\n"
+        "def helper():\n"
+        "    total = 0\n"
+        "    for i in range(10):\n"
+        "        total += i\n"
+        "    return total\n",
+        encoding="utf-8",
+    )
+
+    (project_dir / "duplicate.py").write_text(
+        "def helper():\n"
+        "    total = 0\n"
+        "    for i in range(10):\n"
+        "        total += i\n"
+        "    return total\n",
+        encoding="utf-8",
+    )
+
+    (project_dir / "complex.py").write_text(
+        "def complex_function(x, y, z):\n"
+        "    if x > 0:\n"
+        "        if y > 0:\n"
+        "            if z > 0:\n"
+        "                return x + y + z\n"
+        "            else:\n"
+        "                return x + y\n"
+        "        else:\n"
+        "            return x\n"
+        "    else:\n"
+        "        return 0\n",
+        encoding="utf-8",
+    )
+
+    output_file = tmp_path / "report.json"
+
+    exit_code = main(
+        [
+            "analyze",
+            str(project_dir),
+            "--out",
+            str(output_file),
+            "--plugins",
+            "all",
+        ]
+    )
+
+    assert exit_code == EXIT_SUCCESS
+    assert output_file.exists()
+
+    with open(output_file, encoding="utf-8") as f:
+        data = json.load(f)
+
+    assert data["analysis_metadata"]["status"] == "completed"
+    plugins_executed = data["analysis_metadata"]["plugins_executed"]
+
+    assert len(plugins_executed) >= 2
+    assert "StyleChecker" in plugins_executed
+    assert "CyclomaticComplexity" in plugins_executed
+
+    assert len(data["details"]) >= 4
+
+    total_results = sum(
+        len(plugin.get("results", []))
+        for file in data["details"]
+        for plugin in file["plugins"]
+    )
+    assert total_results > 0
+
+    summary = data["summary"]
+    assert "issues_by_plugin" in summary
+    assert sum(summary["issues_by_plugin"].values()) > 0
