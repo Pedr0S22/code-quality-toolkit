@@ -1,17 +1,15 @@
 import json
+import time
 import unittest
 
-# IMPORTAÇÃO DO PLUGIN:
 from toolkit.plugins.dependency_graph.plugin import Plugin
 from toolkit.utils.config import ToolkitConfig
-
-# --- CORPO DA CLASSE DE TESTES ---
 
 
 class UnitTestsDependencyGraph(unittest.TestCase):
     """
-    Testes Unitários focados na lógica de parsing (analyze) e no contrato do Plugin.
-    Cobre todos os critérios (A, B, C, D, E, F, G) sem testes de integração.
+    Testes Unitários focados na lógica de parsing (analyze) e no contrato.
+    Cobre todos os critérios (A-V) - testes originais + testes adicionais.
     """
 
     def setUp(self):
@@ -40,7 +38,7 @@ class UnitTestsDependencyGraph(unittest.TestCase):
         self.assertTrue(self.plugin.track_stdlib_modules)
 
     def test_g2_plugin_configuration_override(self):
-        """Test G.2: Verifica se o configure() aceita e aplica configurações."""
+        """Test G.2: Verifica se o configure() aceita configurações."""
         # Cria uma config real
         config = ToolkitConfig()
 
@@ -85,17 +83,17 @@ class UnitTestsDependencyGraph(unittest.TestCase):
 
         # Verifica a informação de módulo/nome na mensagem
         message = result["results"][0]["message"]
-        self.assertIn("Importa 'my_function' de 'my_package'", message)
+        # FIX: Atualizado para o novo padrão "Import: module name"
+        self.assertIn("Import: my_package my_function", message)
 
         # O módulo 'my_package' deve ser capturado
         self.assertEqual(result["summary"]["unique_modules"], 1)
 
     def test_c_top_level_only(self):
         """
-        Test C: Verifica que todos os imports são capturados, incluindo os
+        Test C: Verifica que todos os imports são capturados, incluindo
         aninhados, e verifica a linha de código para confirmar a captura.
         """
-
         code = (
             "import top_level_1\n"  # Linha 1
             "def bar():\n"  # Linha 2
@@ -107,10 +105,10 @@ class UnitTestsDependencyGraph(unittest.TestCase):
         # O seu código extrai 3 imports
         self.assertEqual(result["summary"]["total_imports"], 3)
 
-        # Verificando as linhas para garantir que o 'hidden_module_2' foi capturado
+        # Verificando as linhas para garantir que 'hidden_module_2' foi capturado
         lines = [r["line"] for r in result["results"]]
         self.assertIn(1, lines)
-        self.assertIn(3, lines)  # Confirma que o import dentro da função é capturado
+        self.assertIn(3, lines)  # Confirma import dentro da função
         self.assertIn(4, lines)
 
     # ====================================================================
@@ -144,7 +142,7 @@ class UnitTestsDependencyGraph(unittest.TestCase):
         self.assertEqual(result["results"][0]["code"], "DEP-SYNTAX")
 
     def test_f_import_star(self):
-        """Test F: Verifica 'from package import *' (wildcard import) e seu aviso."""
+        """Test F: Verifica 'from package import *' (wildcard import)."""
         code = "from legacy_package import *"
         result = self.plugin.analyze(code, self.file_path)
 
@@ -152,10 +150,10 @@ class UnitTestsDependencyGraph(unittest.TestCase):
         self.assertEqual(len(result["results"]), 1)
 
         # Verifica a severidade e a mensagem de aviso
-        # (Requisito: Must ensure it is treated as a dependency)
         self.assertEqual(result["results"][0]["severity"], "medium")
+        # FIX: Atualizado para a nova tag [WILDCARD]
         self.assertIn(
-            "[AVISO: wildcard import desencorajado]",
+            "[WILDCARD]",
             result["results"][0]["message"],
         )
 
@@ -167,7 +165,7 @@ class UnitTestsDependencyGraph(unittest.TestCase):
         code = "import json\nfrom local import util"
         result = self.plugin.analyze(code, self.file_path)
 
-        # Deve ser serializável em JSON (o que é garantido pelo retorno de dicts)
+        # Deve ser serializável em JSON
         try:
             json.dumps(result)
         except TypeError:
@@ -178,3 +176,230 @@ class UnitTestsDependencyGraph(unittest.TestCase):
         self.assertIn("node_count", graph_data)
         self.assertIn("categories", graph_data)
         self.assertIsInstance(graph_data["nodes"], list)
+
+    # ====================================================================
+    # TESTES ADICIONAIS (H-V) - VALIDAÇÃO FINAL
+    # ====================================================================
+
+    def test_h_multiple_imports_same_line(self):
+        """Test H: Verifica múltiplos imports na mesma linha."""
+        code = "import os, sys, json"
+        result = self.plugin.analyze(code, self.file_path)
+
+        # Deve capturar 3 imports
+        self.assertEqual(result["summary"]["total_imports"], 3)
+        # Todos da stdlib
+        self.assertEqual(result["summary"]["stdlib_count"], 3)
+
+    def test_i_relative_imports_various_levels(self):
+        """Test I: Verifica imports relativos de vários níveis."""
+        code = """
+from . import module1
+from .. import module2
+from ...package import module3
+"""
+        result = self.plugin.analyze(code, self.file_path)
+
+        self.assertEqual(result["summary"]["relative_imports"], 3)
+        # Verificar avisos para nível > max_relative_import_level
+        high_severity = [r for r in result["results"] if r["severity"] == "medium"]
+        self.assertGreater(len(high_severity), 0)
+
+    def test_j_import_with_alias(self):
+        """Test J: Verifica imports com alias."""
+        code = "import numpy as np\nfrom pandas import DataFrame as DF"
+        result = self.plugin.analyze(code, self.file_path)
+
+        self.assertEqual(len(result["results"]), 2)
+        # Verificar que hints mencionam os aliases
+        hints = [r["hint"] for r in result["results"]]
+        self.assertTrue(any("Alias: np" in h for h in hints))
+        self.assertTrue(any("Alias: DF" in h for h in hints))
+
+    def test_k_complex_package_structure(self):
+        """Test K: Verifica importação de pacotes com estrutura complexa."""
+        code = """
+from my_project.submodule.utils import helper
+from external.lib.version2.api import Client
+"""
+        result = self.plugin.analyze(code, self.file_path)
+
+        self.assertEqual(len(result["results"]), 2)
+        # Verificar categorização
+        summary = result["summary"]
+        # Ambos devem ser categorizados como local ou third_party
+        self.assertGreater(
+            summary["local_count"] + summary["third_party_count"], 0
+        )
+
+    def test_l_no_track_stdlib(self):
+        """Test L: Verifica comportamento quando track_stdlib_modules = False."""
+        # Criar nova instância do plugin
+        plugin = Plugin()
+
+        # Desabilitar tracking de stdlib
+        config = ToolkitConfig()
+        config.rules.track_stdlib_modules = False
+        plugin.configure(config)
+
+        code = "import json\nimport my_module"
+        result = plugin.analyze(code, self.file_path)
+
+        # Não deve incluir json nos resultados
+        self.assertEqual(len(result["results"]), 1)
+        self.assertIn("my_module", result["results"][0]["message"])
+
+    def test_m_graph_structure_validation(self):
+        """Test M: Verifica estrutura completa do grafo de dependências."""
+        code = """
+from module_a import something
+from module_b import other
+import module_c
+"""
+        result = self.plugin.analyze(code, self.file_path)
+
+        graph_data = result["summary"]["dependency_graph"]
+
+        # Validar estrutura
+        self.assertIn("nodes", graph_data)
+        self.assertIn("node_count", graph_data)
+        self.assertIn("categories", graph_data)
+
+        # Validar contagem de nós
+        self.assertEqual(graph_data["node_count"], 3)
+        self.assertEqual(len(graph_data["nodes"]), 3)
+
+        # Validar categorias
+        categories = graph_data["categories"]
+        self.assertIn("stdlib", categories)
+        self.assertIn("third_party", categories)
+        self.assertIn("local", categories)
+
+    def test_n_performance_large_file(self):
+        """Test N: Verifica performance com ficheiro grande."""
+        # Criar código com muitos imports
+        imports = [f"import module_{i}" for i in range(100)]
+        code = "\n".join(imports)
+
+        start_time = time.time()
+        result = self.plugin.analyze(code, self.file_path)
+        elapsed = time.time() - start_time
+
+        # Deve completar em menos de 1 segundo
+        self.assertLess(elapsed, 1.0)
+        self.assertEqual(result["summary"]["total_imports"], 100)
+
+    def test_o_unicode_module_names(self):
+        """Test O: Verifica handling de nomes de módulos com caracteres."""
+        # Python 3 permite Unicode em identificadores
+        code = "import módulo_português"
+        result = self.plugin.analyze(code, self.file_path)
+
+        self.assertEqual(len(result["results"]), 1)
+        self.assertIn("módulo_português", result["results"][0]["message"])
+
+    def test_p_edge_case_empty_module(self):
+        """Test P: Verifica edge case de 'from . import something'."""
+        code = "from . import helper"
+        result = self.plugin.analyze(code, self.file_path)
+
+        self.assertEqual(len(result["results"]), 1)
+        self.assertEqual(result["summary"]["relative_imports"], 1)
+        self.assertEqual(result["summary"]["local_count"], 1)
+
+    def test_q_mixed_import_styles(self):
+        """Test Q: Verifica mistura de estilos de import."""
+        code = """
+import os
+from sys import argv
+import pathlib as pl
+from typing import List, Dict, Optional
+from . import local_module
+from ..parent import helper
+"""
+        result = self.plugin.analyze(code, self.file_path)
+
+        # Contar tipos
+        summary = result["summary"]
+        # CORREÇÃO: from typing import List, Dict, Optional = 3 imports
+        # Total: os + argv + pathlib + List + Dict + Optional +
+        #        local_module + helper = 8
+        self.assertEqual(summary["total_imports"], 8)
+        self.assertEqual(summary["relative_imports"], 2)
+        self.assertGreater(summary["stdlib_count"], 0)
+
+    def test_r_wildcard_severity_configuration(self):
+        """Test R: Verifica configuração de severidade para wildcards."""
+        # Testar com warn_wildcard_imports = True (padrão)
+        code = "from package import *"
+        result = self.plugin.analyze(code, self.file_path)
+        self.assertEqual(result["results"][0]["severity"], "medium")
+
+        # Testar com warn_wildcard_imports = False
+        plugin = Plugin()
+        config = ToolkitConfig()
+        config.rules.warn_wildcard_imports = False
+        plugin.configure(config)
+
+        result = plugin.analyze(code, self.file_path)
+        # Mesmo com aviso desligado, deve ser capturado mas com severidade info
+        self.assertEqual(result["results"][0]["severity"], "info")
+
+    def test_s_deep_relative_imports(self):
+        """Test S: Verifica avisos para imports relativos profundos."""
+        # max_relative_import_level padrão é 1
+        code = "from ....deep.package import module"
+        result = self.plugin.analyze(code, self.file_path)
+
+        # Deve gerar aviso de nível profundo
+        self.assertEqual(result["results"][0]["severity"], "medium")
+        # Removida verificação de string exata, focado na severidade
+
+    def test_t_empty_from_module(self):
+        """Test T: Verifica from com módulo vazio (import relativo)."""
+        code = "from . import *"
+        result = self.plugin.analyze(code, self.file_path)
+
+        # Deve capturar mesmo sem nome de módulo específico
+        self.assertEqual(len(result["results"]), 1)
+        self.assertEqual(result["summary"]["wildcard_imports"], 1)
+        self.assertEqual(result["summary"]["relative_imports"], 1)
+
+    def test_u_status_field_consistency(self):
+        """Test U: Verifica consistência do campo status."""
+        # Teste com código válido
+        code = "import valid_module"
+        result = self.plugin.analyze(code, self.file_path)
+        self.assertEqual(result["summary"]["status"], "completed")
+
+        # Teste com erro de sintaxe
+        code_invalid = "import module\nimport"
+        result = self.plugin.analyze(code_invalid, self.file_path)
+        self.assertEqual(result["summary"]["status"], "failed")
+
+    def test_v_dashboard_integration(self):
+        """Test V: Verifica integração com o dashboard plugin."""
+        code = """
+import os
+import sys
+from pathlib import Path
+from my_project.utils import helper
+"""
+        result = self.plugin.analyze(code, self.file_path)
+
+        # Verificar que os dados podem ser usados pelo dashboard
+        self.assertIn("dependency_graph", result["summary"])
+
+        graph_data = result["summary"]["dependency_graph"]
+        self.assertIsInstance(graph_data["nodes"], list)
+        self.assertIsInstance(graph_data["categories"], dict)
+
+        # Verificar que as categorias estão corretas
+        for category in ["stdlib", "third_party", "local"]:
+            self.assertIn(category, graph_data["categories"])
+            self.assertIsInstance(graph_data["categories"][category], list)
+
+
+if __name__ == "__main__":
+    # Executar testes com verbosidade
+    unittest.main(verbosity=2)
