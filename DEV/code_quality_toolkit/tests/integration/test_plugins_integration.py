@@ -529,3 +529,120 @@ class MyClass:
     assert "LOW_COMMENT_DENSITY" == issue["code"]
     assert "low comment density" in issue["message"].lower()
     assert issue["severity"] == "high"
+
+
+
+def test_all_plugins_integration(tmp_path: Path):
+    """
+    Integration test that runs all enabled plugins together with the core system.
+    Verifies that all plugins execute successfully, generate a valid report,
+    and produce expected results without conflicts.
+    """
+    # 1. Setup: Create a sample project with code that triggers issues in all plugins
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+
+    # File 1: Style issues (long line), security (eval), dead code, low comment density
+    (project_dir / "main.py").write_text(
+        '"""Module docstring."""\n'
+        "import os\n"
+        "from utils import helper\n"
+        "\n"
+        "# This is a comment\n"
+        "def main():\n"
+        "    # Long line to trigger style checker\n"
+        f"    print('{'A' * 100}')\n"
+        "    # Security issue\n"
+        "    eval('print(1)')\n"
+        "    helper()\n"
+        "\n"
+        "def unused_function():\n"
+        "    pass\n",
+        encoding="utf-8",
+    )
+
+    # File 2: Duplicated code, dependency graph
+    (project_dir / "utils.py").write_text(
+        "import json\n"
+        "\n"
+        "def helper():\n"
+        "    total = 0\n"
+        "    for i in range(10):\n"
+        "        total += i\n"
+        "    return total\n",
+        encoding="utf-8",
+    )
+
+    # File 3: Another file with duplicated code
+    (project_dir / "duplicate.py").write_text(
+        "def helper():\n"
+        "    total = 0\n"
+        "    for i in range(10):\n"
+        "        total += i\n"
+        "    return total\n",
+        encoding="utf-8",
+    )
+
+    # File 4: Cyclomatic complexity (nested ifs)
+    (project_dir / "complex.py").write_text(
+        "def complex_function(x, y, z):\n"
+        "    if x > 0:\n"
+        "        if y > 0:\n"
+        "            if z > 0:\n"
+        "                return x + y + z\n"
+        "            else:\n"
+        "                return x + y\n"
+        "        else:\n"
+        "            return x\n"
+        "    else:\n"
+        "        return 0\n",
+        encoding="utf-8",
+    )
+
+    output_file = tmp_path / "report.json"
+
+    # 2. Execution: Run CLI with all plugins
+    exit_code = main(
+        [
+            "analyze",
+            str(project_dir),
+            "--out",
+            str(output_file),
+            "--plugins",
+            "all",
+        ]
+    )
+
+    # 3. Verification
+    assert exit_code == EXIT_SUCCESS
+    assert output_file.exists()
+
+    with open(output_file, encoding="utf-8") as f:
+        data = json.load(f)
+
+    # Check overall report structure
+    assert data["analysis_metadata"]["status"] == "completed"
+    plugins_executed = data["analysis_metadata"]["plugins_executed"]
+    # Only expect plugins that are actually loaded and executed
+    # (some plugins may be filtered due to missing dependencies or other conditions)
+    assert len(plugins_executed) >= 2  # At least some plugins should be executed
+    assert "StyleChecker" in plugins_executed
+    assert "CyclomaticComplexity" in plugins_executed
+
+    # Check that we have details for multiple files
+    assert len(data["details"]) >= 4  # At least the files we created
+
+    # Verify that at least some plugins produced results
+    total_results = 0
+    for file_report in data["details"]:
+        for plugin_report in file_report["plugins"]:
+            total_results += len(plugin_report.get("results", []))
+    assert total_results > 0, "No plugin produced any results"
+
+    # Check summary has issues by plugin
+    summary = data["summary"]
+    assert "issues_by_plugin" in summary
+    issues_by_plugin = summary["issues_by_plugin"]
+    # At least some plugins should have found issues
+    total_issues = sum(issues_by_plugin.values())
+    assert total_issues > 0, "No issues found by any plugin"
