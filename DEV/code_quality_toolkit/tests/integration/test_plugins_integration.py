@@ -131,7 +131,8 @@ def very_complex_function(x):
     )
     
     assert plugin is not None, "CyclomaticComplexity plugin not found in file report"
-    assert plugin["summary"]["issues_found"] >= 1, f"Expected issues, found 0. Report: {plugin}"
+    assert plugin["summary"]["issues_found"] >= 1,\
+    f"Expected issues, found 0. Report: {plugin}"
 
 
 def test_security_checker_integration(tmp_path: Path):
