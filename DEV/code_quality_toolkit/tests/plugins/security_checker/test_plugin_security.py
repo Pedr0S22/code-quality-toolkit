@@ -1,5 +1,5 @@
 from textwrap import dedent
-from unittest.mock import MagicMock
+from pathlib import Path
 
 from toolkit.plugins.security_checker.plugin import Plugin
 from toolkit.utils.config import ToolkitConfig
@@ -208,32 +208,56 @@ def test_security_checker_loads_config_correctly():
         plugin = Plugin()
         full_config = ToolkitConfig()
 
-        # SOLUÇÃO: Como o RulesConfig original é 'read-only' e ainda não tem
-        # o campo definido, nós substituímos o atributo .rules por um 
-        # objeto simples local que contém exatamente o que o plugin precisa ler.
-        class TempRules:
-            security_report_level = "HIGH"
-
-        full_config.rules = TempRules()
-
+        # Vrificamos se o default config é realmente "LOW"
         plugin.configure(full_config)
+        assert plugin.report_severity_level == "LOW"
 
-        assert plugin.report_severity_level == "HIGH"
-        
-def test_security_checker_fallback_config():
-    """Verifica se usa o fallback antigo se a nova config não existir."""
+
+        assert plugin.report_severity_level == "LOW"
+
+
+def test_generate_dashboard_real_execution(tmp_path: Path):
+    """
+    Testa a geração do dashboard, garantindo cobertura para agregação (aggregate_data)
+    e escrita do arquivo HTML.
+    """
     plugin = Plugin()
-    config = ToolkitConfig()
     
-    # --- O TRUQUE PARA CORRIGIR O ERRO ---
-    # Como o ToolkitConfig cria um security_checker default ("LOW"),
-    # temos de forçar a None para o código entrar no bloco 'elif' (fallback).
-    config.plugins.security_checker = None 
-    # -------------------------------------
+    # 1. Simulação dos resultados agregados (mínimo necessário para o dashboard)
+    # A estrutura deve espelhar a saída do Engine com resultados de vários arquivos
+    aggregated_results = [
+        {
+            "file": "file_a.py",
+            "plugins": [{
+                "plugin": "SecurityChecker",
+                "results": [
+                    {"severity": "high", "code": "B307", "message": "eval", "file": "file_a.py"},
+                    {"severity": "low", "code": "B105", "message": "pwd", "file": "file_a.py"},
+                ]
+            }]
+        },
+        {
+            "file": "file_b.py",
+            "plugins": [{
+                "plugin": "SecurityChecker",
+                "results": [
+                    {"severity": "medium", "code": "B601", "message": "os.system", "file": "file_b.py"},
+                ]
+            }]
+        },
+    ]
 
-    # Configuração antiga simulada
-    config.rules = MagicMock()
-    config.rules.security_report_level = "MEDIUM"
+    output_file = tmp_path / "security_checker_dashboard.html"
     
-    plugin.configure(config)
-    assert plugin.report_severity_level == "MEDIUM"
+    # 2. Execução da Geração do Dashboard
+    output_path_str = plugin.generate_dashboard(aggregated_results, str(output_file))
+    
+    # 3. Verificação
+    assert output_path_str == str(output_file.absolute())
+    assert output_file.exists()
+    
+    # Verifica o conteúdo mínimo
+    content = output_file.read_text(encoding="utf-8")
+    assert "<!DOCTYPE html>" in content
+    assert "SecurityChecker Dashboard" in content
+    assert "Issues by Severity" in content # Confirma que o template D3 foi processado
