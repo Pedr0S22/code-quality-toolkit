@@ -1,10 +1,19 @@
 [plugins]
+<<<<<<< HEAD
 enabled = ["StyleChecker","CyclomaticComplexity", "SecurityChecker", "DuplicationChecker", "BasicMetrics", "CommentDensity", "DeadCodeDetector","DependencyGraph", "LinterWrapper"]
+=======
+enabled = ["StyleChecker", "CyclomaticComplexity", "SecurityChecker", "DuplicationChecker", "CommentDensity", "DeadCodeDetector"]
+>>>>>>> 025753896c5786e3749a67e9e788ca80e6bd528c
 
-[plugins.dead_code]
+[plugins.dead_code_detector]
 ignore_patterns = ["^__", "^test_"]
 min_name_length = 2
 severity = "low"
+
+[plugins.cyclomatic_complexity]
+max_complexity = 10
+max_function_length = 50
+max_arguments = 5
 
 [plugins.linter_wrapper]
 enabled = true
@@ -16,11 +25,18 @@ pylint_args = [
 ]
 fail_on_severity = "high"
 
+[plugins.style_checker]
+max_line_length = 88
+check_whitespace = true
+indent_style = "spaces"
+indent_size = 4
+allow_mixed_indentation = false
+check_naming = true
+
 [rules]
 max_line_length = 88
 max_complexity = 10
-max_function_length = 50
-max_arguments = 5
+
 check_whitespace = true
 indent_style = "spaces"
 indent_size = 4
@@ -30,8 +46,8 @@ metrics_report_level = "MEDIUM"
 
 security_report_level="LOW"
 
-min_density = 0.1  
-max_density = 0.5  
+min_density = 0.1
+max_density = 0.5
 
 warn_wildcard_imports = true
 max_relative_import_level = 1

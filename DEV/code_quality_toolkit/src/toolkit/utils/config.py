@@ -40,18 +40,36 @@ class LinterWrapperConfig:
     # "none", "low", "medium", "high"
     fail_on_severity: str = "high"
 
+@dataclass(slots=True)
+class StyleCheckerConfig:
+    max_line_length: int = 88
+    check_whitespace: bool = True
+    indent_style: str = "spaces"
+    indent_size: int = 4
+    allow_mixed_indentation: bool = False
+    check_naming: bool = False
 
 @dataclass(slots=True)
 class PluginsConfig:
     """Container for plugin-specific configurations."""
 
     # We use Any/dict to allow dynamic loading of plugin settings
-    dead_code: Any = field(
+    dead_code_detector: Any = field(
         default_factory=lambda: SimpleNamespace(
             **{
                 "ignore_patterns": ["^__", "^test_"],
                 "min_name_length": 2,
                 "severity": "low",
+            }
+        )
+    )
+
+    cyclomatic_complexity: Any = field(
+        default_factory=lambda: SimpleNamespace(
+            **{
+                "max_complexity": 10,
+                "max_function_length": 50,
+                "max_arguments": 5,
             }
         )
     )
@@ -68,6 +86,7 @@ class PluginsConfig:
         )
     )
 
+    style_checker: StyleCheckerConfig = field(default_factory=StyleCheckerConfig)
 
 @dataclass(slots=True)
 class RulesConfig:
@@ -81,6 +100,8 @@ class RulesConfig:
     indent_style: str = "spaces"
     indent_size: int = 4
     allow_mixed_indentation: bool = False
+
+    security_report_level="LOW"
 
     max_function_length: int = 50
     max_arguments: int = 5
@@ -178,7 +199,15 @@ def _apply_linter_wrapper_config(
         target_config.fail_on_severity = value
 
 
-def load_config(path: str | Path | None) -> ToolkitConfig:
+def _apply_analyze_section(config: ToolkitConfig, analyze: dict[str, Any]) -> None:
+    include = analyze.get("include")
+    exclude = analyze.get("exclude")
+    if isinstance(include, list) and include:
+        config.analyze.include = [str(item) for item in include]
+    if isinstance(exclude, list) and exclude:
+        config.analyze.exclude = [str(item) for item in exclude]
+
+def load_config(path: str | Path | None) -> ToolkitConfig:  # noqa: C901
     """Load configuration from a TOML file or return defaults."""
     config = ToolkitConfig()
 
@@ -200,14 +229,7 @@ def load_config(path: str | Path | None) -> ToolkitConfig:
         config.strict = strict_value
 
     # === Plugins sections ===
-    plugins = data.get("plugins", {})
-
-    enabled = plugins.get("enabled")
-    if isinstance(enabled, list) and enabled:
-        config.enabled_plugins = [str(item) for item in enabled]
-
-    if isinstance(plugins, dict):
-        _apply_linter_wrapper_config(config, plugins)
+    plugins_configs(data, config)
 
     # === Rules Section ===
     rules_data = data.get("rules", {})
@@ -228,11 +250,37 @@ def load_config(path: str | Path | None) -> ToolkitConfig:
     # === Analyze Section ===
     analyze = data.get("analyze", {})
     if isinstance(analyze, dict):
-        include = analyze.get("include")
-        exclude = analyze.get("exclude")
-        if isinstance(include, list) and include:
-            config.analyze.include = [str(item) for item in include]
-        if isinstance(exclude, list) and exclude:
-            config.analyze.exclude = [str(item) for item in exclude]
+        _apply_analyze_section(config, analyze)
+
 
     return config
+
+def plugins_configs(data, config):
+    plugins = data.get("plugins", {})
+
+    enabled = plugins.get("enabled")
+    if isinstance(enabled, list) and enabled:
+        config.enabled_plugins = [str(item) for item in enabled]
+
+    if isinstance(plugins, dict):
+        # 1. Apply specific LinterWrapper logic (existing)
+        _apply_linter_wrapper_config(config, plugins)
+
+        for key, section_data in plugins.items():
+            if key in ["enabled", "linter_wrapper"]:
+                continue # Handled separately
+
+            # Check if PluginsConfig has this field (e.g. cyclomatic_complexity)
+            if hasattr(config.plugins, key) and isinstance(section_data, dict):
+                target_obj = getattr(config.plugins, key)
+                
+                # Update the SimpleNamespace with values from TOML
+                if hasattr(target_obj, "__dict__"):
+                    target_obj.__dict__.update(section_data)
+
+    # style_data = plugins.get("style_checker")
+    # if isinstance(style_data, dict):
+    #     target = config.plugins.style_checker
+    #     for key, value in style_data.items():
+    #         if hasattr(target, key):
+    #             setattr(target, key, value)
