@@ -1,7 +1,9 @@
 from textwrap import dedent
-
+from unittest.mock import MagicMock
 from toolkit.plugins.security_checker.plugin import Plugin
 from toolkit.utils.config import ToolkitConfig
+
+from src.toolkit.utils.config import ToolkitConfig, PluginsConfig, SecurityCheckerConfig
 
 
 def test_security_checker_detects_eval() -> None:
@@ -199,3 +201,36 @@ def test_syntax_error_handling() -> None:
     report = plugin.analyze(code, "broken.py")
 
     assert report["summary"]["status"] in ["completed", "failed"]
+
+def test_security_checker_loads_config_correctly():
+    """
+    Verifica se o plugin lê 'report_severity_level' da nova secção.
+    """
+    # 1. Criar a config específica com HIGH
+    sec_conf = SecurityCheckerConfig(report_severity_level="HIGH")
+    plugins_conf = PluginsConfig(security_checker=sec_conf)
+    full_config = ToolkitConfig(plugins=plugins_conf)
+
+    plugin = Plugin()
+    plugin.configure(full_config)
+
+    # Se isto falhar, o erro está no plugin.py (leitura da variável errada)
+    assert plugin.report_severity_level == "HIGH"
+
+def test_security_checker_fallback_config():
+    """Verifica se usa o fallback antigo se a nova config não existir."""
+    plugin = Plugin()
+    config = ToolkitConfig()
+    
+    # --- O TRUQUE PARA CORRIGIR O ERRO ---
+    # Como o ToolkitConfig cria um security_checker default ("LOW"),
+    # temos de forçar a None para o código entrar no bloco 'elif' (fallback).
+    config.plugins.security_checker = None 
+    # -------------------------------------
+
+    # Configuração antiga simulada
+    config.rules = MagicMock()
+    config.rules.security_report_level = "MEDIUM"
+    
+    plugin.configure(config)
+    assert plugin.report_severity_level == "MEDIUM"

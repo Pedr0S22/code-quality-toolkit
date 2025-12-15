@@ -55,17 +55,25 @@ class Plugin:
         }
 
     def configure(self, config: ToolkitConfig) -> None:
-        """
-        TAREFA 7: Configura o plugin a partir do ficheiro TOML global.
+        """Lê a configuração do objeto validado."""
+        
+        # 1. Aceder à estrutura
+        plugins_conf = getattr(config, "plugins", None)
+        sec_conf = getattr(plugins_conf, "security_checker", None)
 
-        """
+        if sec_conf:
+            # -----------------------------------------------------------
+            # O SEU ERRO ESTÁ PROVAVELMENTE NESTA LINHA:
+            # Verifique se está escrito "report_severity_level" (CORRETO) 
+            # e não "report_level" (ERRADO).
+            # -----------------------------------------------------------
+            val = getattr(sec_conf, "report_severity_level", "LOW")
+            
+            self.report_severity_level = val
+            # print(f"DEBUG: Config carregada = {self.report_severity_level}")
 
-        # Como não podemos mudar o config.py, temos de verificar se o atributo
-        # 'security_report_level' existe ANTES de tentar ler.
-        # Se não existir, ele simplesmente ignora e usa o valor 'default' ('LOW')
-        # definido no __init__.
-        if hasattr(config.rules, "security_report_level"):
-            self.report_severity_level = config.rules.security_report_level
+        elif hasattr(config.rules, "security_report_level"):
+             self.report_severity_level = config.rules.security_report_level
 
     def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
         """

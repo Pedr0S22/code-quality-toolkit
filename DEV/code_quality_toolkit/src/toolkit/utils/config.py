@@ -40,6 +40,23 @@ class LinterWrapperConfig:
     # "none", "low", "medium", "high"
     fail_on_severity: str = "high"
 
+@dataclass(slots=True)
+class SecurityCheckerConfig:
+    report_severity_level: str = "LOW"
+
+
+@dataclass(slots=True)
+class CommentDensityConfig:
+    min_density: float = 0.1
+    max_density: float = 0.5
+
+
+@dataclass(slots=True)
+class DependencyGraphConfig:
+    warn_wildcard_imports: bool = True
+    max_relative_import_level: int = 1
+    track_stdlib_modules: bool = True
+
 
 @dataclass(slots=True)
 class PluginsConfig:
@@ -76,6 +93,18 @@ class PluginsConfig:
             pylint_args=[],
             fail_on_severity="high",
         )
+    )
+
+    security_checker: SecurityCheckerConfig = field(
+        default_factory=SecurityCheckerConfig
+    )
+    
+    comment_density: CommentDensityConfig = field(
+        default_factory=CommentDensityConfig
+    )
+    
+    dependency_graph: DependencyGraphConfig = field(
+        default_factory=DependencyGraphConfig
     )
 
 
