@@ -82,9 +82,15 @@ class PluginsConfig:
         )
     )
 
-    security_checker: SecurityCheckerConfig = field(default_factory=SecurityCheckerConfig)
-    comment_density: CommentDensityConfig = field(default_factory=CommentDensityConfig)
-    dependency_graph: DependencyGraphConfig = field(default_factory=DependencyGraphConfig)
+    security_checker: SecurityCheckerConfig = field(
+        default_factory=SecurityCheckerConfig
+    )
+    comment_density: CommentDensityConfig = field(
+        default_factory=CommentDensityConfig
+    )
+    dependency_graph: DependencyGraphConfig = field(
+        default_factory=DependencyGraphConfig
+    )
 
 
 @dataclass(slots=True)

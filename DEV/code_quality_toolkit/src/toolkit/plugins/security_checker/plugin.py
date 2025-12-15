@@ -56,10 +56,12 @@ class Plugin:
 
         if sec_conf:
             # Lê a configuração específica
-            self.report_severity_level = getattr(sec_conf, "report_severity_level", "LOW")
-        
+            self.report_severity_level = getattr(
+                sec_conf, "report_severity_level", "LOW"
+            )
+
         elif hasattr(config.rules, "security_report_level"):
-             self.report_severity_level = config.rules.security_report_level
+            self.report_severity_level = config.rules.security_report_level
 
     def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
         """
@@ -100,7 +102,11 @@ class Plugin:
                 )
 
                 for issue in bandit_issues:
-                    severity_translation = {"LOW": "low", "MEDIUM": "medium", "HIGH": "high"}
+                    severity_translation = {
+                        "LOW": "low",
+                        "MEDIUM": "medium",
+                        "HIGH": "high"
+                    }
                     results.append({
                         "severity": severity_translation.get(issue.severity, "low"),
                         "code": issue.test_id,
@@ -142,22 +148,22 @@ class Plugin:
         Gera o dashboard D3.js.
         Lê a LISTA PLANA de issues enviada pelo Engine.
         """
-        output_dir = Path(__file__).parent 
+        output_dir = Path(__file__).parent
 
         # 1. Contadores
         total_issues = len(aggregated_results)
         severity_counts = {"high": 0, "medium": 0, "low": 0, "info": 0}
-        rule_counts = {} 
+        rule_counts = {}
         files_counter = {}
 
         # 2. Iterar sobre os erros (Lista Plana)
         for issue in aggregated_results:
-            
+
             # Severidade
             sev = issue.get("severity", "info").lower()
             if sev in severity_counts:
                 severity_counts[sev] += 1
-            
+
             # Regra
             code = issue.get("code", "UNKNOWN")
             rule_counts[code] = rule_counts.get(code, 0) + 1
@@ -167,7 +173,11 @@ class Plugin:
             files_counter[fname] = files_counter.get(fname, 0) + 1
 
         # 3. Formatar dados
-        sev_data = [{"severity": k, "count": v} for k, v in severity_counts.items() if v > 0]
+        sev_data = [
+            {"severity": k, "count": v}
+            for k, v in severity_counts.items()
+            if v > 0
+        ]
         rule_data = [{"code": k, "count": v} for k, v in rule_counts.items()]
         rule_data.sort(key=lambda x: x["count"], reverse=True)
 
@@ -181,7 +191,7 @@ class Plugin:
             },
             "severity_counts": sev_data,
             "rule_counts": rule_data,
-            "top_files": top_files[:10] # Top 10
+            "top_files": top_files[:10]  # Top 10
         }
 
         # 4. Gerar HTML
@@ -190,7 +200,7 @@ class Plugin:
 
         filename = "security_checker_dashboard.html"
         output_path = output_dir / filename
-        
+
         try:
             output_path.write_text(html_content, encoding="utf-8")
         except Exception as e:
@@ -198,6 +208,7 @@ class Plugin:
 
     def _get_html_template(self, data_json: str) -> str:
         """Template D3.js para Segurança (Vermelho) com padding nos gráficos."""
+        # Para passar no Lint (E501), o código JS/CSS foi quebrado em multiplas linhas
         return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -205,8 +216,21 @@ class Plugin:
     <title>SecurityChecker Dashboard</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-        body {{ font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; background-color: #f4f4f4; display: flex; justify-content: center; }}
-        .chart-container {{ width: 1066px; height: 628px; background: white; border: 1px solid #ccc; box-shadow: 0 4px 8px rgba(0,0,0,0.1); box-sizing: border-box; }}
+        body {{
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0; padding: 20px;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+        }}
+        .chart-container {{
+            width: 1066px;
+            height: 628px;
+            background: white;
+            border: 1px solid #ccc;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }}
     </style>
 </head>
 <body>
@@ -216,110 +240,236 @@ class Plugin:
 <script>
     const data = {data_json};
     const width = 1066; const height = 628;
-    
+
     // SVG Setup
-    const svg = d3.select("#app").append("svg").attr("width", width).attr("height", height).style("background-color", "#fff");
+    const svg = d3.select("#app")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .style("background-color", "#fff");
 
     // HEADER (Vermelho)
-    svg.append("rect").attr("x", 0).attr("y", 0).attr("width", width).attr("height", 70).attr("fill", "#dc3545");
-    svg.append("text").attr("x", 20).attr("y", 45).attr("fill", "white").style("font-size", "24px").style("font-weight", "bold").text("SecurityChecker Analysis");
+    svg.append("rect")
+        .attr("x", 0)
+        .attr("y", 0)
+        .attr("width", width)
+        .attr("height", 70)
+        .attr("fill", "#dc3545");
+
+    svg.append("text")
+        .attr("x", 20)
+        .attr("y", 45)
+        .attr("fill", "white")
+        .style("font-size", "24px")
+        .style("font-weight", "bold")
+        .text("SecurityChecker Analysis");
 
     // Métricas Header
     const mGroup = svg.append("g").attr("transform", "translate(750, 20)");
-    mGroup.append("rect").attr("x", 0).attr("width", 140).attr("height", 30).attr("rx", 5).attr("fill", "rgba(255,255,255,0.2)");
-    mGroup.append("text").attr("x", 70).attr("y", 20).attr("text-anchor", "middle").attr("fill", "white").style("font-weight", "bold").text(`Files: ${{data.metrics.total_files}}`);
-    
-    mGroup.append("rect").attr("x", 150).attr("width", 140).attr("height", 30).attr("rx", 5).attr("fill", "rgba(255,255,255,0.2)");
-    mGroup.append("text").attr("x", 220).attr("y", 20).attr("text-anchor", "middle").attr("fill", "white").style("font-weight", "bold").text(`Issues: ${{data.metrics.total_issues}}`);
+    mGroup.append("rect")
+        .attr("x", 0)
+        .attr("width", 140)
+        .attr("height", 30)
+        .attr("rx", 5)
+        .attr("fill", "rgba(255,255,255,0.2)");
+
+    mGroup.append("text")
+        .attr("x", 70)
+        .attr("y", 20)
+        .attr("text-anchor", "middle")
+        .attr("fill", "white")
+        .style("font-weight", "bold")
+        .text(`Files: ${{data.metrics.total_files}}`);
+
+    mGroup.append("rect")
+        .attr("x", 150)
+        .attr("width", 140)
+        .attr("height", 30)
+        .attr("rx", 5)
+        .attr("fill", "rgba(255,255,255,0.2)");
+
+    mGroup.append("text")
+        .attr("x", 220)
+        .attr("y", 20)
+        .attr("text-anchor", "middle")
+        .attr("fill", "white")
+        .style("font-weight", "bold")
+        .text(`Issues: ${{data.metrics.total_issues}}`);
 
     // LAYOUT CONSTANTS
     const col1X = 50; const col2X = 550; const contentY = 120;
 
     // --------------------------------------------------------
-    // CHART 1: SEVERITY (Com Padding Extra no Topo)
+    // CHART 1: SEVERITY
     // --------------------------------------------------------
-    svg.append("text").attr("x", col1X).attr("y", contentY - 10).style("font-size", "18px").style("font-weight", "bold").text("Issues by Severity");
+    svg.append("text")
+        .attr("x", col1X)
+        .attr("y", contentY - 10)
+        .style("font-size", "18px")
+        .style("font-weight", "bold")
+        .text("Issues by Severity");
+
     const sevWidth = 450; const sevHeight = 200;
-    const sevGroup = svg.append("g").attr("transform", `translate(${{col1X}}, ${{contentY}})`);
-    
+    const sevGroup = svg.append("g")
+        .attr("transform", `translate(${{col1X}}, ${{contentY}})`);
+
     const sevData = data.severity_counts || [];
     if (sevData.length > 0) {{
-        const xSev = d3.scaleBand().domain(sevData.map(d => d.severity)).range([0, sevWidth]).padding(0.3);
-        
-        // AQUI ESTÁ O PADDINGZINHO: Multiplicamos o máximo por 1.2 (20% de folga)
+        const xSev = d3.scaleBand()
+            .domain(sevData.map(d => d.severity))
+            .range([0, sevWidth])
+            .padding(0.3);
+
         const maxVal = d3.max(sevData, d => d.count);
         const ySev = d3.scaleLinear()
-            .domain([0, maxVal * 1.2]) 
+            .domain([0, maxVal * 1.2])
             .range([sevHeight, 0]);
-        
-        sevGroup.append("g").attr("transform", `translate(0,${{sevHeight}})`).call(d3.axisBottom(xSev));
+
+        sevGroup.append("g")
+            .attr("transform", `translate(0,${{sevHeight}})`)
+            .call(d3.axisBottom(xSev));
+
         sevGroup.append("g").call(d3.axisLeft(ySev).ticks(5));
-        
-        const colorMap = {{ "high": "#dc3545", "medium": "#ffc107", "low": "#17a2b8", "info": "#6c757d" }};
+
+        const colorMap = {{
+            "high": "#dc3545", "medium": "#ffc107",
+            "low": "#17a2b8", "info": "#6c757d"
+        }};
+
         sevGroup.selectAll("rect").data(sevData).enter().append("rect")
-            .attr("x", d => xSev(d.severity)).attr("y", d => ySev(d.count))
-            .attr("width", xSev.bandwidth()).attr("height", d => sevHeight - ySev(d.count))
+            .attr("x", d => xSev(d.severity))
+            .attr("y", d => ySev(d.count))
+            .attr("width", xSev.bandwidth())
+            .attr("height", d => sevHeight - ySev(d.count))
             .attr("fill", d => colorMap[d.severity] || "steelblue");
-            
+
         sevGroup.selectAll(".label").data(sevData).enter().append("text")
-            .attr("x", d => xSev(d.severity) + xSev.bandwidth()/2).attr("y", d => ySev(d.count) - 5)
-            .attr("text-anchor", "middle").style("font-size", "12px").style("font-weight", "bold").text(d => d.count);
+            .attr("x", d => xSev(d.severity) + xSev.bandwidth()/2)
+            .attr("y", d => ySev(d.count) - 5)
+            .attr("text-anchor", "middle")
+            .style("font-size", "12px")
+            .style("font-weight", "bold")
+            .text(d => d.count);
     }} else {{
          sevGroup.append("text").attr("y", 100).text("No data available");
     }}
 
     // --------------------------------------------------------
-    // CHART 2: RULES (Com Padding Extra na Largura)
+    // CHART 2: RULES
     // --------------------------------------------------------
     const rulesY = contentY + sevHeight + 60;
-    svg.append("text").attr("x", col1X).attr("y", rulesY - 10).style("font-size", "18px").style("font-weight", "bold").text("Top Vulnerabilities");
-    const ruleGroup = svg.append("g").attr("transform", `translate(${{col1X}}, ${{rulesY}})`);
+    svg.append("text")
+        .attr("x", col1X)
+        .attr("y", rulesY - 10)
+        .style("font-size", "18px")
+        .style("font-weight", "bold")
+        .text("Top Vulnerabilities");
+
+    const ruleGroup = svg.append("g")
+        .attr("transform", `translate(${{col1X}}, ${{rulesY}})`);
+
     const ruleData = (data.rule_counts || []).slice(0, 5);
-    
+
     if(ruleData.length > 0) {{
-        // Paddingzinho também no gráfico horizontal (* 1.2)
         const maxCount = d3.max(ruleData, d => d.count);
-        const xRule = d3.scaleLinear().domain([0, maxCount * 1.2]).range([0, sevWidth - 50]);
-        const yRule = d3.scaleBand().domain(ruleData.map(d => d.code)).range([0, 150]).padding(0.2);
-        
+        const xRule = d3.scaleLinear()
+            .domain([0, maxCount * 1.2])
+            .range([0, sevWidth - 50]);
+        const yRule = d3.scaleBand()
+            .domain(ruleData.map(d => d.code))
+            .range([0, 150])
+            .padding(0.2);
+
         ruleGroup.append("g").call(d3.axisLeft(yRule));
         ruleGroup.selectAll("rect").data(ruleData).enter().append("rect")
-            .attr("x", 1).attr("y", d => yRule(d.code)).attr("width", d => xRule(d.count))
-            .attr("height", yRule.bandwidth()).attr("fill", "#6610f2");
-            
+            .attr("x", 1)
+            .attr("y", d => yRule(d.code))
+            .attr("width", d => xRule(d.count))
+            .attr("height", yRule.bandwidth())
+            .attr("fill", "#6610f2");
+
         ruleGroup.selectAll("text.val").data(ruleData).enter().append("text")
-            .attr("x", d => xRule(d.count) + 5).attr("y", d => yRule(d.code) + yRule.bandwidth()/2 + 4)
-            .style("font-size", "11px").style("font-weight", "bold").text(d => d.count);
+            .attr("x", d => xRule(d.count) + 5)
+            .attr("y", d => yRule(d.code) + yRule.bandwidth()/2 + 4)
+            .style("font-size", "11px")
+            .style("font-weight", "bold")
+            .text(d => d.count);
     }} else {{
         ruleGroup.append("text").attr("y", 50).text("No data available");
     }}
 
     // --------------------------------------------------------
-    // LIST: TOP OFFENDERS (Lógica de Fallback de Ficheiros)
+    // LIST: TOP OFFENDERS
     // --------------------------------------------------------
-    svg.append("text").attr("x", col2X).attr("y", contentY - 10).style("font-size", "18px").style("font-weight", "bold").text("Top Risky Files");
-    const listGroup = svg.append("g").attr("transform", `translate(${{col2X}}, ${{contentY}})`);
-    listGroup.append("rect").attr("width", 450).attr("height", 420).attr("fill", "#fafafa").attr("stroke", "#eee");
+    svg.append("text")
+        .attr("x", col2X)
+        .attr("y", contentY - 10)
+        .style("font-size", "18px")
+        .style("font-weight", "bold")
+        .text("Top Risky Files");
+
+    const listGroup = svg.append("g")
+        .attr("transform", `translate(${{col2X}}, ${{contentY}})`);
+
+    listGroup.append("rect")
+        .attr("width", 450)
+        .attr("height", 420)
+        .attr("fill", "#fafafa")
+        .attr("stroke", "#eee");
 
     const offenders = data.top_files || [];
-    
+
     if (offenders.length > 0) {{
         offenders.forEach((file, i) => {{
             const yPos = 30 + (i * 40);
-            if (i > 0) listGroup.append("line").attr("x1", 10).attr("y1", yPos - 25).attr("x2", 440).attr("y2", yPos - 25).attr("stroke", "#eee");
-            
+            if (i > 0) listGroup.append("line")
+                .attr("x1", 10).attr("y1", yPos - 25)
+                .attr("x2", 440).attr("y2", yPos - 25)
+                .attr("stroke", "#eee");
+
             let fileName = file.file;
             if (fileName.length > 50) fileName = "..." + fileName.slice(-47);
-            
-            listGroup.append("text").attr("x", 15).attr("y", yPos).style("font-family", "monospace").style("font-size", "12px").text(`${{i+1}}. ${{fileName}}`);
-            listGroup.append("rect").attr("x", 400).attr("y", yPos - 12).attr("width", 30).attr("height", 18).attr("rx", 4).attr("fill", "#dc3545");
-            listGroup.append("text").attr("x", 415).attr("y", yPos + 1).attr("text-anchor", "middle").attr("fill", "white").style("font-size", "11px").style("font-weight", "bold").text(file.count);
+
+            listGroup.append("text")
+                .attr("x", 15)
+                .attr("y", yPos)
+                .style("font-family", "monospace")
+                .style("font-size", "12px")
+                .text(`${{i+1}}. ${{fileName}}`);
+
+            listGroup.append("rect")
+                .attr("x", 400)
+                .attr("y", yPos - 12)
+                .attr("width", 30)
+                .attr("height", 18)
+                .attr("rx", 4)
+                .attr("fill", "#dc3545");
+
+            listGroup.append("text")
+                .attr("x", 415)
+                .attr("y", yPos + 1)
+                .attr("text-anchor", "middle")
+                .attr("fill", "white")
+                .style("font-size", "11px")
+                .style("font-weight", "bold")
+                .text(file.count);
         }});
     }} else {{
         if (data.metrics.total_issues > 0) {{
-             listGroup.append("text").attr("x", 225).attr("y", 210).attr("text-anchor", "middle").attr("fill", "#dc3545").text("⚠️ Issues found (Files unavailable)");
+             listGroup.append("text")
+                .attr("x", 225)
+                .attr("y", 210)
+                .attr("text-anchor", "middle")
+                .attr("fill", "#dc3545")
+                .text("⚠️ Issues found (Files unavailable)");
         }} else {{
-             listGroup.append("text").attr("x", 225).attr("y", 210).attr("text-anchor", "middle").attr("fill", "#28a745").style("font-size", "16px").text("✅ No vulnerabilities found!");
+             listGroup.append("text")
+                .attr("x", 225)
+                .attr("y", 210)
+                .attr("text-anchor", "middle")
+                .attr("fill", "#28a745")
+                .style("font-size", "16px")
+                .text("✅ No vulnerabilities found!");
         }}
     }}
 </script>

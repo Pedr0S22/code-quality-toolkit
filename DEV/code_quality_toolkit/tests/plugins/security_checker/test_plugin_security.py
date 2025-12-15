@@ -1,4 +1,3 @@
-import pytest
 import os
 from pathlib import Path
 from textwrap import dedent
@@ -6,7 +5,8 @@ from textwrap import dedent
 # --- A CORREÇÃO CRÍTICA DOS IMPORTS ---
 # Usamos 'toolkit' direto, sem 'src'. Isso alinha com o pip install -e .
 from toolkit.plugins.security_checker.plugin import Plugin
-from toolkit.utils.config import ToolkitConfig, PluginsConfig, SecurityCheckerConfig
+from toolkit.utils.config import PluginsConfig, SecurityCheckerConfig, ToolkitConfig
+
 
 def test_security_checker_detects_eval() -> None:
     plugin = Plugin()
