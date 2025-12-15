@@ -1,16 +1,8 @@
+from pathlib import Path
 from textwrap import dedent
 
 from toolkit.plugins.security_checker.plugin import Plugin
 from toolkit.utils.config import ToolkitConfig
-
-import json
-from pathlib import Path
-from textwrap import dedent
-# NENHUM MagicMock DEVE ESTAR AQUI
-
-# Importar o Plugin real e o ToolkitConfig
-from toolkit.plugins.security_checker.plugin import Plugin
-from toolkit.utils.config import ToolkitConfig 
 
 
 class MockRules:
@@ -344,3 +336,57 @@ def test_aggregate_data_top_files_limit() -> None:
     
     # Garante que o primeiro arquivo na lista ainda é file_0.py
     assert aggregated["top_files"][0]["file"] == "file_0.py"
+
+def test_analyze_exception_handling(monkeypatch) -> None:
+    """
+    Cobre o bloco 'except Exception as e' no método analyze,
+    forçando uma falha interna controlada.
+    """
+    plugin = Plugin()
+
+    # 1. Função que substitui o Bandit.run_tests e lança um erro
+    def always_fail_run_tests(self):
+        # Aumentamos a complexidade do erro para garantir que é o nosso
+        raise RuntimeError("Simulated internal Bandit failure for coverage")
+
+    # 2. Injeta a função de falha no BanditManager
+    from toolkit.plugins.security_checker.plugin import BanditManager
+    monkeypatch.setattr(BanditManager, "run_tests", always_fail_run_tests)
+
+    code = "print('safe code')"
+    report = plugin.analyze(code, "fail_test.py")
+
+    # Esperamos que o bloco 'except' seja executado
+    assert report["summary"]["status"] == "failed"
+    # Linha quebrada para evitar E501
+    assert "Erro SecurityChecker: Simulated internal Bandit failure" in \
+           report["summary"]["error"]
+    assert report["summary"]["issues_found"] == 0
+
+
+def test_generate_dashboard_exception_handling(tmp_path: Path) -> None:
+    """
+    Cobre o bloco 'except Exception as e' no método generate_dashboard,
+    forçando uma falha de I/O ao tentar escrever em um diretório.
+    """
+    plugin = Plugin()
+
+    # Simulação mínima de resultados
+    aggregated_results = [{
+        "file": "f.py",
+        "plugins": [{
+            "plugin": "SecurityChecker",
+            "results": [
+                {
+                    "severity": "high", "code": "B307",
+                    "message": "x", "file": "f.py", "line": 1
+                }
+            ]
+        }]
+    }]
+
+    # Usamos o caminho de um diretório (tmp_path), o que forçará o erro
+    output_path = plugin.generate_dashboard(aggregated_results, str(tmp_path))
+
+    # Esperamos que a função retorne uma string vazia em caso de falha
+    assert output_path == ""
