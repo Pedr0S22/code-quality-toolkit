@@ -5,7 +5,7 @@
 Using this plugin helps you automatically detect functions that are becoming too complex. By fixing these issues, you can improve your code's quality, making it easier to test, modify, and maintain.
 
 ## Version
-0.1.2
+0.2.1
 
 ### What This Plugin Does
 
@@ -26,10 +26,10 @@ The plugin must be added in `toolkit.toml` - like is shown below - to be enabled
 enabled = ["CyclomaticComplexity","<OtherPlugin>",etc]
 ```
 
-To configure it, edit the rules described below in your `toolkit.toml` configuration file. The plugin reads its settings from the `[rules.complexity]` section:
+To configure it, edit the rules described below in your `toolkit.toml` configuration file. The plugin reads its settings from the `[plugins.cyclomatic_complexity]` section:
 
 ```toml
-[rules]
+[plugins.cyclomatic_complexity]
 max_complexity = 10
 max_function_length = 50
 max_arguments = 5
@@ -38,15 +38,33 @@ max_arguments = 5
 You can adjust these values to make the analysis more or less strict.
 
 ## How to Use It
-1. Run your toolkit's main CLI command:
+The Cyclomatic Complexity plugin can be executed in two ways, giving users flexibility depending on their environment and needs:
+1. **Run your toolkit's main CLI command:**
 
-    ```python -m toolkit.core.cli analyze <path_to_your_code> --out report.json --config toolkit.toml```
+    ```bash
+    python -m toolkit.core.cli analyze <path_to_your_code> --out report.json --config toolkit.toml
+    ```
 
     or using make command:
     
-    ```make run arg="--config toolkit.toml"```.
-2. The CyclomaticComplexity plugin will automatically analyze all Python files from the path you gave.
-3. All issues found related to this plugin and others you enable, will be included in a summary and in detail in the final report.
+    ```bash
+    make run arg="--config toolkit.toml"
+    ```
+
+2. **Run Web Application:**
+
+    **Start the Server:** Launch the core application server.
+    ```bash
+    make run_server
+    ```
+    **Access the Client:** Launch the App.
+    ```bash
+    make run_client
+    ```
+    **Run Analysis:** Use the interface to upload your file(s), select/configure plugins, and click the **"Run Analysis"** button. The results, including generated dashboards, will be displayed upon completion.
+
+The `CyclomaticComplexity` plugin will automatically analyze all Python files from the path you gave.
+All issues found related to this plugin and others you enable, will be included in a summary and in detail in the final report.
 
 ## Example Issues You May See
 - **HIGH_COMPLEXITY**: The function's complexity score exceeds the configured max_complexity.
@@ -199,3 +217,5 @@ Rabia Saygin, 2024187186, @rferyals
 Isaque Capra, 2023221892, @Isaque_capra
 
 Tiago Alves, 2023207875, @tiagoalves.21
+
+#### Disclaimer: This plugin component was build using AI.
