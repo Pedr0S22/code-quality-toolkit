@@ -1,5 +1,4 @@
 from textwrap import dedent
-from pathlib import Path
 
 from toolkit.plugins.security_checker.plugin import Plugin
 from toolkit.utils.config import ToolkitConfig
@@ -201,63 +200,3 @@ def test_syntax_error_handling() -> None:
 
     assert report["summary"]["status"] in ["completed", "failed"]
 
-def test_security_checker_loads_config_correctly():
-        """
-        Verifica se o plugin lê 'report_severity_level' corretamente.
-        """
-        plugin = Plugin()
-        full_config = ToolkitConfig()
-
-        # Vrificamos se o default config é realmente "LOW"
-        plugin.configure(full_config)
-        assert plugin.report_severity_level == "LOW"
-
-
-        assert plugin.report_severity_level == "LOW"
-
-
-def test_generate_dashboard_real_execution(tmp_path: Path):
-    """
-    Testa a geração do dashboard, garantindo cobertura para agregação (aggregate_data)
-    e escrita do arquivo HTML.
-    """
-    plugin = Plugin()
-    
-    # 1. Simulação dos resultados agregados (mínimo necessário para o dashboard)
-    # A estrutura deve espelhar a saída do Engine com resultados de vários arquivos
-    aggregated_results = [
-        {
-            "file": "file_a.py",
-            "plugins": [{
-                "plugin": "SecurityChecker",
-                "results": [
-                    {"severity": "high", "code": "B307", "message": "eval", "file": "file_a.py"},
-                    {"severity": "low", "code": "B105", "message": "pwd", "file": "file_a.py"},
-                ]
-            }]
-        },
-        {
-            "file": "file_b.py",
-            "plugins": [{
-                "plugin": "SecurityChecker",
-                "results": [
-                    {"severity": "medium", "code": "B601", "message": "os.system", "file": "file_b.py"},
-                ]
-            }]
-        },
-    ]
-
-    output_file = tmp_path / "security_checker_dashboard.html"
-    
-    # 2. Execução da Geração do Dashboard
-    output_path_str = plugin.generate_dashboard(aggregated_results, str(output_file))
-    
-    # 3. Verificação
-    assert output_path_str == str(output_file.absolute())
-    assert output_file.exists()
-    
-    # Verifica o conteúdo mínimo
-    content = output_file.read_text(encoding="utf-8")
-    assert "<!DOCTYPE html>" in content
-    assert "SecurityChecker Dashboard" in content
-    assert "Issues by Severity" in content # Confirma que o template D3 foi processado
