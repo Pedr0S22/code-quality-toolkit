@@ -63,6 +63,7 @@ class Plugin:
     def __init__(self) -> None:
         # Nível de detalhe configurável via ToolkitConfig.rules.metrics_report_level
         self.report_level: str = "LOW"
+        self.metrics_report_level: str = "LOW"
         self.name:str = "plugin_basic_metrics"
 
     def get_metadata(self) -> dict[str, str]:
@@ -76,9 +77,12 @@ class Plugin:
         }
 
     def configure(self, config: ToolkitConfig) -> None:
-        # Leitura da config, como no enunciado original.
-        if hasattr(config.rules, "metrics_report_level"):
-            self.report_level = config.rules.metrics_report_level
+        sect = getattr(getattr(config, "plugins", None), "basic_metrics", None)
+        self.metrics_report_level = getattr(
+            sect, "metrics_report_level", self.metrics_report_level
+        )
+        self.report_level = self.metrics_report_level
+
 
     # ------------------------------------------------------------------
     # Dashboard
