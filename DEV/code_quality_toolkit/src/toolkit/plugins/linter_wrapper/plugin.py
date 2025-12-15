@@ -324,7 +324,7 @@ class Plugin:
         if output_dir is None:
             output_dir = Path(__file__).parent
 
-        filename = "linterwrapper_dashboard.html"
+        filename = "linter_wrapper_dashboard.html"
         dashboard_file = Path(output_dir) / filename
 
         data_json = json.dumps(results)
