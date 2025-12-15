@@ -1,122 +1,140 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Dependency Dashboard</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: #f5f5f5;
+            margin: 0; padding: 20px;
+            background-color: #f4f4f4;
+            display: flex; justify-content: center;
         }
-        .container {
-            /* AJUSTE DE TAMANHO DA JANELA */
-            width: 95%;
-            max-width: 1600px;
-            margin: 0 auto;
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        h1 { color: #2d3748; border-bottom: 2px solid #edf2f7; padding-bottom: 15px; margin-top: 0; }
-        
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 25px;
-            margin: 30px 0;
-        }
-        .stat-card {
-            background: white;
-            border: 1px solid #e2e8f0;
-            padding: 25px;
-            border-radius: 12px;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            transition: all 0.3s ease;
-        }
-        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px rgba(0,0,0,0.1); border-color: #cbd5e0; }
-        .stat-value { font-size: 42px; font-weight: 700; color: #2b6cb0; line-height: 1.2; }
-        .stat-label { font-size: 13px; color: #718096; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 600; margin-top: 5px; }
-        
-        .modules-section { margin-top: 50px; }
-        .modules-section h2 { color: #4a5568; margin-bottom: 20px; }
-        
-        .category-container { 
-            margin-bottom: 30px; 
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        .category-header {
-            padding: 15px 25px;
-            background: #f7fafc;
-            font-weight: 600;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #edf2f7;
-        }
-        .module-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 12px;
-            padding: 25px;
-        }
-        .module-chip {
-            padding: 8px 16px;
-            background: #f7fafc;
-            border: 1px solid #edf2f7;
-            border-radius: 6px;
-            font-size: 14px;
-            color: #4a5568;
-            display: flex;
-            align-items: center;
-            transition: background 0.2s;
-        }
-        .module-chip:hover { background: #edf2f7; border-color: #cbd5e0; }
-        .module-chip:before {
-            content: "📦";
-            margin-right: 10px;
-            font-size: 16px;
+        .chart-container {
+            width: 100%;
+            max-width: 1066px;
+            aspect-ratio: 1066 / 628;
+            background: white; border: 1px solid #ccc;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-sizing: border-box;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🔗 Dependency Analysis Dashboard</h1>
-        
-        <div class="stats">
-            
-            <div class="stat-card">
-                <div class="stat-value">0</div>
-                <div class="stat-label">Total Imports</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-value">0</div>
-                <div class="stat-label">Unique Modules</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-value">0</div>
-                <div class="stat-label">StdLib Uses</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-value">0</div>
-                <div class="stat-label">3rd Party Uses</div>
-            </div>
-            
-        </div>
 
-        <div class="modules-section">
-            <h2>📦 Module Breakdown</h2>
+<div id="app" class="chart-container"></div>
+
+<script>
+    const data = {"metrics": {"total_files": 2, "total_imports": 3, "unique_modules": 3}, "category_counts": [{"category": "stdlib", "count": 2}, {"category": "local", "count": 1}], "top_modules": [{"module": "os", "count": 1}, {"module": "", "count": 1}, {"module": "json", "count": 1}], "top_files": [{"file": "C:\\Users\\delvi\\AppData\\Local\\Temp\\pytest-of-delvi\\pytest-108\\test_dependency_graph_integrat0\\project\\main.py", "count": 2}, {"file": "C:\\Users\\delvi\\AppData\\Local\\Temp\\pytest-of-delvi\\pytest-108\\test_dependency_graph_integrat0\\project\\utils.py", "count": 1}]};
+    const width = 1066; const height = 628;
+    
+    // SVG Setup Responsivo
+    const svg = d3.select("#app").append("svg")
+        .attr("viewBox", `0 0 ${width} ${height}`)
+        .attr("preserveAspectRatio", "xMidYMid meet")
+        .style("width", "100%")
+        .style("height", "100%")
+        .style("background-color", "#fff");
+
+    // HEADER (Roxo)
+    svg.append("rect").attr("x", 0).attr("y", 0).attr("width", width).attr("height", 70).attr("fill", "#6f42c1");
+    svg.append("text").attr("x", 20).attr("y", 45).attr("fill", "white").style("font-size", "24px").style("font-weight", "bold").text("Dependency Graph Analysis");
+
+    // Métricas Header
+    const mGroup = svg.append("g").attr("transform", "translate(700, 20)");
+    
+    // Box 1: Total Imports
+    mGroup.append("rect").attr("x", 0).attr("width", 140).attr("height", 30).attr("rx", 5).attr("fill", "rgba(255,255,255,0.2)");
+    mGroup.append("text").attr("x", 70).attr("y", 20).attr("text-anchor", "middle").attr("fill", "white").style("font-weight", "bold").text(`Imports: ${data.metrics.total_imports}`);
+    
+    // Box 2: Unique Modules
+    mGroup.append("rect").attr("x", 150).attr("width", 160).attr("height", 30).attr("rx", 5).attr("fill", "rgba(255,255,255,0.2)");
+    mGroup.append("text").attr("x", 230).attr("y", 20).attr("text-anchor", "middle").attr("fill", "white").style("font-weight", "bold").text(`Unique Libs: ${data.metrics.unique_modules}`);
+
+    const col1X = 50; const col2X = 550; const contentY = 120;
+
+    // --------------------------------------------------------
+    // CHART 1: CATEGORIES (Bar Chart)
+    // --------------------------------------------------------
+    svg.append("text").attr("x", col1X).attr("y", contentY - 10).style("font-size", "18px").style("font-weight", "bold").text("Imports by Category");
+    const catWidth = 450; const catHeight = 200;
+    const catGroup = svg.append("g").attr("transform", `translate(${col1X}, ${contentY})`);
+    
+    const catData = data.category_counts || [];
+    if (catData.length > 0) {
+        const xCat = d3.scaleBand().domain(catData.map(d => d.category)).range([0, catWidth]).padding(0.3);
+        const maxVal = d3.max(catData, d => d.count);
+        const yCat = d3.scaleLinear().domain([0, maxVal * 1.2]).range([catHeight, 0]);
+        
+        catGroup.append("g").attr("transform", `translate(0,${catHeight})`).call(d3.axisBottom(xCat));
+        catGroup.append("g").call(d3.axisLeft(yCat).ticks(5));
+        
+        const colorMap = { "stdlib": "#48bb78", "third_party": "#4299e1", "local": "#ed8936", "unknown": "#999" };
+        
+        catGroup.selectAll("rect").data(catData).enter().append("rect")
+            .attr("x", d => xCat(d.category)).attr("y", d => yCat(d.count))
+            .attr("width", xCat.bandwidth()).attr("height", d => catHeight - yCat(d.count))
+            .attr("fill", d => colorMap[d.category] || "#666");
             
-        </div>
-    </div>
+        catGroup.selectAll(".label").data(catData).enter().append("text")
+            .attr("x", d => xCat(d.category) + xCat.bandwidth()/2).attr("y", d => yCat(d.count) - 5)
+            .attr("text-anchor", "middle").style("font-size", "12px").style("font-weight", "bold").text(d => d.count);
+    } else {
+         catGroup.append("text").attr("y", 100).text("No imports found");
+    }
+
+    // --------------------------------------------------------
+    // CHART 2: TOP MODULES (Horizontal Bars)
+    // --------------------------------------------------------
+    const modsY = contentY + catHeight + 60;
+    svg.append("text").attr("x", col1X).attr("y", modsY - 10).style("font-size", "18px").style("font-weight", "bold").text("Most Used Libraries");
+    
+    const textPadding = 100;
+    const modGroup = svg.append("g").attr("transform", `translate(${col1X + textPadding}, ${modsY})`);
+    const modData = (data.top_modules || []).slice(0, 5);
+    
+    if(modData.length > 0) {
+        const maxCount = d3.max(modData, d => d.count);
+        const xMod = d3.scaleLinear().domain([0, maxCount * 1.2]).range([0, catWidth - textPadding]);
+        const yMod = d3.scaleBand().domain(modData.map(d => d.module)).range([0, 150]).padding(0.2);
+        
+        modGroup.append("g").call(d3.axisLeft(yMod));
+        modGroup.selectAll("rect").data(modData).enter().append("rect")
+            .attr("x", 1).attr("y", d => yMod(d.module)).attr("width", d => xMod(d.count))
+            .attr("height", yMod.bandwidth()).attr("fill", "#6f42c1");
+            
+        modGroup.selectAll("text.val").data(modData).enter().append("text")
+            .attr("x", d => xMod(d.count) + 5).attr("y", d => yMod(d.module) + yMod.bandwidth()/2 + 4)
+            .style("font-size", "11px").style("font-weight", "bold").text(d => d.count);
+    } else {
+        svg.append("text").attr("x", col1X).attr("y", modsY + 50).text("No data available");
+    }
+
+    // --------------------------------------------------------
+    // LIST: TOP FILES (Files with most imports)
+    // --------------------------------------------------------
+    svg.append("text").attr("x", col2X).attr("y", contentY - 10).style("font-size", "18px").style("font-weight", "bold").text("Files with Most Imports");
+    const listGroup = svg.append("g").attr("transform", `translate(${col2X}, ${contentY})`);
+    listGroup.append("rect").attr("width", 450).attr("height", 420).attr("fill", "#fafafa").attr("stroke", "#eee");
+
+    const files = data.top_files || [];
+    
+    if (files.length > 0) {
+        files.forEach((file, i) => {
+            const yPos = 30 + (i * 40);
+            if (i > 0) listGroup.append("line").attr("x1", 10).attr("y1", yPos - 25).attr("x2", 440).attr("y2", yPos - 25).attr("stroke", "#eee");
+            
+            let fileName = file.file;
+            if (fileName.length > 50) fileName = "..." + fileName.slice(-47);
+            
+            listGroup.append("text").attr("x", 15).attr("y", yPos).style("font-family", "monospace").style("font-size", "12px").text(`${i+1}. ${fileName}`);
+            listGroup.append("rect").attr("x", 400).attr("y", yPos - 12).attr("width", 30).attr("height", 18).attr("rx", 4).attr("fill", "#6f42c1");
+            listGroup.append("text").attr("x", 415).attr("y", yPos + 1).attr("text-anchor", "middle").attr("fill", "white").style("font-size", "11px").style("font-weight", "bold").text(file.count);
+        });
+    } else {
+        listGroup.append("text").attr("x", 225).attr("y", 210).attr("text-anchor", "middle").attr("fill", "#666").text("No files analyzed");
+    }
+</script>
 </body>
 </html>

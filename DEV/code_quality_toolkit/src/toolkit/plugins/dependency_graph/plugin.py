@@ -1,20 +1,18 @@
-# Dependency Graph Plugin - Analyzes imports and creates dependency maps
 from __future__ import annotations
 
 import ast
+import json
 from pathlib import Path
 from typing import Any
 
-# Imports do Core do Projeto
 from ...core.contracts import IssueResult
 from ...utils.config import ToolkitConfig
 
 
 class Plugin:
     """
-    Plugin de Análise de Dependências: Mapeia todas as importações de código Python,
-    categorizando-as e identificando padrões potencialmente problemáticos.
-    Também gera um dashboard visual (HTML).
+    Plugin de Análise de Dependências.
+    Mapeia importações e gera dashboard HTML (Molde Robusto D3.js).
     """
 
     # Lista parcial de módulos da biblioteca padrão do Python
@@ -55,73 +53,44 @@ class Plugin:
     }
 
     def __init__(self) -> None:
-        """Inicializa o plugin com configurações padrão."""
-        # Configurações de Análise
         self.warn_wildcard_imports = True
         self.max_relative_import_level = 1
         self.track_stdlib_modules = True
-        
-        # Configurações de Dashboard
         self.dashboard_output_format = "html"
         self.dashboard_show_stdlib = True
-        self.dashboard_color_by_category = True
 
     def get_metadata(self) -> dict[str, str]:
-        """Devolve metadados do plugin."""
         return {
             "name": "DependencyGraph",
             "version": "1.0.0",
-            "description": (
-                "Mapeia importações, deteta problemas e gera visualizações."
-            ),
+            "description": "Mapeia importações e deteta problemas.",
         }
 
     def configure(self, config: ToolkitConfig) -> None:
-        """
-        Configura o plugin a partir do ficheiro TOML global.
-        """
-        # Regras de Análise
         if hasattr(config.rules, "warn_wildcard_imports"):
             self.warn_wildcard_imports = config.rules.warn_wildcard_imports
-
         if hasattr(config.rules, "max_relative_import_level"):
             self.max_relative_import_level = config.rules.max_relative_import_level
-
         if hasattr(config.rules, "track_stdlib_modules"):
             self.track_stdlib_modules = config.rules.track_stdlib_modules
 
-        # Regras de Dashboard (Opcionais)
-        if hasattr(config.rules, "dashboard_output_format"):
-            self.dashboard_output_format = config.rules.dashboard_output_format
-        if hasattr(config.rules, "dashboard_show_stdlib"):
-            self.dashboard_show_stdlib = config.rules.dashboard_show_stdlib
-
     def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
-        """
-        Executa a análise de dependências no código fornecido.
-        """
+        """Executa a análise de dependências."""
         try:
             results: list[IssueResult] = []
-
-            # 1. Parse do código-fonte
             tree = ast.parse(source_code)
-
-            # 2. Extrair todas as importações
             imports = self._extract_imports(tree)
-
-            # 3. Categorizar importações
             categorized = self._categorize_imports(imports)
 
-            # 4. Filtrar stdlib se configurado (apenas para issues, não para grafo)
+            # Filtragem opcional para issues
             filtered_imports = imports
             if not self.track_stdlib_modules:
                 filtered_imports = [
                     imp for imp in imports if imp not in categorized["stdlib"]
                 ]
 
-            # 5. Gerar resultados para cada importação
             for imp in filtered_imports:
-                severity = self._assess_severity(imp, categorized)
+                severity = self._assess_severity(imp)
                 message = self._generate_message(imp, categorized)
 
                 results.append(
@@ -132,10 +101,12 @@ class Plugin:
                         "line": imp["line"],
                         "col": 1,
                         "hint": self._generate_hint(imp),
+                        "file": file_path or "unknown",  # Injeção para dashboard
+                        "module": imp["module"],
+                        "category": self._get_category(imp, categorized),
                     }
                 )
 
-            # 6. Criar sumário com estatísticas
             summary = self._create_summary(imports, categorized)
 
             return {
@@ -144,14 +115,15 @@ class Plugin:
             }
 
         except SyntaxError as e:
+            # Retorna lista com erro para satisfazer testes
             return {
                 "results": [
                     {
                         "severity": "high",
                         "code": "DEP-SYNTAX",
                         "message": f"Erro de sintaxe: {e}",
-                        "line": e.lineno if hasattr(e, "lineno") else 0,
-                        "col": e.offset if hasattr(e, "offset") else 0,
+                        "line": e.lineno or 1,
+                        "col": e.offset or 1,
                         "hint": "Corrija a sintaxe.",
                     }
                 ],
@@ -161,461 +133,384 @@ class Plugin:
                     "error": str(e),
                 },
             }
-
         except Exception as e:
             return {
                 "results": [],
                 "summary": {
                     "issues_found": 0,
                     "status": "failed",
-                    "error": f"Erro interno: {str(e)}",
+                    "error": str(e),
                 },
             }
 
     # ==========================================================================
-    # LÓGICA DE DASHBOARD (HTML GENERATION)
+    # DASHBOARD GENERATION (Molde Robusto D3.js)
     # ==========================================================================
 
     def generate_dashboard(
         self,
         aggregated_results: list[dict],
         output_path: str = "dependency_graph_dashboard.html",
-        dependency_data: dict[str, Any] = None
+        dependency_data: dict = None,
     ) -> str:
-        """
-        Gera um dashboard HTML interativo a partir dos dados de dependências.
-        """
-        # 1. AGREGAÇÃO DE DADOS
-        # Se não vierem dados prontos, processamos a lista de resultados acumulados
-        if dependency_data is None:
-            if aggregated_results:
-                dependency_data = self._aggregate_results(aggregated_results)
-            else:
-                # Fallback: cria estrutura vazia para não quebrar o HTML
-                dependency_data = {
-                    "summary": {
-                        "total_imports": 0, "unique_modules": 0, 
-                        "stdlib_count": 0, "third_party_count": 0,
-                        "dependency_graph": {"categories": {"stdlib": [], "third_party": [], "local": []}}
-                    }
-                }
+        """Gera o dashboard HTML agregando dados."""
 
-        summary = dependency_data.get("summary", {})
-        graph_data = summary.get("dependency_graph", {})
+        # 1. Agregação Robusta (Baseada nos Issues/Resultados)
+        dashboard_data = self._aggregate_data_for_dashboard(aggregated_results)
 
+        print(
+            f"[DependencyGraph] Dashboard: "
+            f"{dashboard_data['metrics']['total_imports']} imports processados."
+        )
+
+        # 2. Geração do HTML
+        data_json = json.dumps(dashboard_data)
+        html_content = self._get_html_template(data_json)
+
+        # 3. Salvamento
         try:
-            # 2. GERAÇÃO DO HTML (Com CSS ajustado)
-            html_content = self._generate_html(graph_data, summary)
-            
-            # 3. SALVAMENTO DO ARQUIVO (Correção de Path)
             target_path = Path(output_path)
-
             if not target_path.is_absolute():
                 output_dir = Path(__file__).parent
                 output_file = output_dir / target_path
             else:
                 output_file = target_path
 
-            # Garante que o diretório pai existe
             output_file.parent.mkdir(parents=True, exist_ok=True)
-            
             output_file.write_text(html_content, encoding="utf-8")
             return str(output_file.absolute())
 
         except Exception as e:
-            print(f"Erro ao gerar dashboard: {e}")
+            print(f"[DependencyGraph] Erro ao salvar dashboard: {e}")
             return ""
 
-    def _aggregate_results(self, results: list[dict]) -> dict[str, Any]:
+    def _aggregate_data_for_dashboard(self, results: list[dict]) -> dict:
         """
-        Método Auxiliar: Combina os resultados de vários arquivos num único sumário.
+        Normaliza os dados para o D3.js.
         """
-        total_imports = 0
-        all_stdlib = set()
-        all_third_party = set()
-        all_local = set()
-        all_unique_modules = set()
+        flattened_imports = []
 
-        for result in results:
-            summary = result.get("summary", {})
-            graph = summary.get("dependency_graph", {}).get("categories", {})
-            
-            # Soma contadores simples
-            total_imports += summary.get("total_imports", 0)
+        # Normalização: Extrair todos os imports/issues
+        for entry in results:
+            if "plugins" in entry:
+                file_path = entry.get("file", "unknown")
+                plugins_list = entry.get("plugins", [])
 
-            # Combina as listas de módulos (usando set e get seguro)
-            all_stdlib.update(graph.get("stdlib") or [])
-            all_third_party.update(graph.get("third_party") or [])
-            all_local.update(graph.get("local") or [])
-            
-            # Coleta módulos únicos
-            nodes = summary.get("dependency_graph", {}).get("nodes", [])
-            all_unique_modules.update(nodes)
+                plugin_res = next(
+                    (p for p in plugins_list if p["plugin"] == "DependencyGraph"), None
+                )
+                if plugin_res:
+                    issues = plugin_res.get("results", [])
+                    for issue in issues:
+                        if "file" not in issue:
+                            issue["file"] = file_path
+                        flattened_imports.append(issue)
+
+            elif "code" in entry or "severity" in entry:
+                # Caso venha flat
+                flattened_imports.append(entry)
+
+        # Contagem
+        category_counts = {"stdlib": 0, "third_party": 0, "local": 0}
+        module_counts = {}
+        files_counter = {}
+
+        for item in flattened_imports:
+            # Categoria
+            cat = item.get("category", "unknown")
+            if cat in category_counts:
+                category_counts[cat] += 1
+
+            # Módulo (Top External Libs)
+            mod = item.get("module", "unknown").split(".")[0]  # Pega o root module
+            module_counts[mod] = module_counts.get(mod, 0) + 1
+
+            # Arquivo (Top Consumers)
+            fname = item.get("file", "unknown")
+            files_counter[fname] = files_counter.get(fname, 0) + 1
+
+        # Formatação para D3
+        cat_data = [
+            {"category": k, "count": v} for k, v in category_counts.items() if v > 0
+        ]
+
+        # Top Módulos Externos (ignorando 'unknown' ou locais se possível)
+        mod_data = [{"module": k, "count": v} for k, v in module_counts.items()]
+        mod_data.sort(key=lambda x: x["count"], reverse=True)
+
+        # Top Files
+        top_files = [{"file": k, "count": v} for k, v in files_counter.items()]
+        top_files.sort(key=lambda x: x["count"], reverse=True)
+
+        unique_modules_count = len(module_counts)
 
         return {
-            "summary": {
-                "total_imports": total_imports,
-                "unique_modules": len(all_unique_modules),
-                "stdlib_count": len(all_stdlib),
-                "third_party_count": len(all_third_party),
-                "dependency_graph": {
-                    "categories": {
-                        "stdlib": sorted(list(all_stdlib)),
-                        "third_party": sorted(list(all_third_party)),
-                        "local": sorted(list(all_local)),
-                    }
-                }
-            }
+            "metrics": {
+                "total_files": len(files_counter),
+                "total_imports": len(flattened_imports),
+                "unique_modules": unique_modules_count,
+            },
+            "category_counts": cat_data,
+            "top_modules": mod_data[:10],  # Top 10 libs
+            "top_files": top_files[:10],   # Top 10 files
         }
 
-    
-    def _generate_html(self, graph_data: dict, summary: dict) -> str:
-        """Gera o conteúdo HTML do dashboard com CSS ajustado."""
-        stats = self._generate_stats_html(summary)
-        categories = graph_data.get("categories", {})
-
+    def _get_html_template(self, data_json: str) -> str:
+        """Template D3.js (Tema Roxo) Responsivo."""
+        # noqa: E501
         return f"""<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Dependency Dashboard</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         body {{
             font-family: 'Segoe UI', sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: #f5f5f5;
+            margin: 0; padding: 20px;
+            background-color: #f4f4f4;
+            display: flex; justify-content: center;
         }}
-        .container {{
-            /* AJUSTE DE TAMANHO DA JANELA */
-            width: 95%;
-            max-width: 1600px;
-            margin: 0 auto;
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }}
-        h1 {{ color: #2d3748; border-bottom: 2px solid #edf2f7; padding-bottom: 15px; margin-top: 0; }}
-        
-        .stats {{
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 25px;
-            margin: 30px 0;
-        }}
-        .stat-card {{
-            background: white;
-            border: 1px solid #e2e8f0;
-            padding: 25px;
-            border-radius: 12px;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            transition: all 0.3s ease;
-        }}
-        .stat-card:hover {{ transform: translateY(-5px); box-shadow: 0 10px 15px rgba(0,0,0,0.1); border-color: #cbd5e0; }}
-        .stat-value {{ font-size: 42px; font-weight: 700; color: #2b6cb0; line-height: 1.2; }}
-        .stat-label {{ font-size: 13px; color: #718096; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 600; margin-top: 5px; }}
-        
-        .modules-section {{ margin-top: 50px; }}
-        .modules-section h2 {{ color: #4a5568; margin-bottom: 20px; }}
-        
-        .category-container {{ 
-            margin-bottom: 30px; 
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            overflow: hidden;
-        }}
-        .category-header {{
-            padding: 15px 25px;
-            background: #f7fafc;
-            font-weight: 600;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #edf2f7;
-        }}
-        .module-grid {{
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 12px;
-            padding: 25px;
-        }}
-        .module-chip {{
-            padding: 8px 16px;
-            background: #f7fafc;
-            border: 1px solid #edf2f7;
-            border-radius: 6px;
-            font-size: 14px;
-            color: #4a5568;
-            display: flex;
-            align-items: center;
-            transition: background 0.2s;
-        }}
-        .module-chip:hover {{ background: #edf2f7; border-color: #cbd5e0; }}
-        .module-chip:before {{
-            content: "📦";
-            margin-right: 10px;
-            font-size: 16px;
+        .chart-container {{
+            width: 100%;
+            max-width: 1066px;
+            aspect-ratio: 1066 / 628;
+            background: white; border: 1px solid #ccc;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-sizing: border-box;
         }}
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🔗 Dependency Analysis Dashboard</h1>
-        
-        <div class="stats">
-            {stats}
-        </div>
 
-        <div class="modules-section">
-            <h2>📦 Module Breakdown</h2>
-            {self._generate_categories_html(categories)}
-        </div>
-    </div>
+<div id="app" class="chart-container"></div>
+
+<script>
+    const data = {data_json};
+    const width = 1066; const height = 628;
+    
+    // SVG Setup Responsivo
+    const svg = d3.select("#app").append("svg")
+        .attr("viewBox", `0 0 ${{width}} ${{height}}`)
+        .attr("preserveAspectRatio", "xMidYMid meet")
+        .style("width", "100%")
+        .style("height", "100%")
+        .style("background-color", "#fff");
+
+    // HEADER (Roxo)
+    svg.append("rect").attr("x", 0).attr("y", 0).attr("width", width).attr("height", 70).attr("fill", "#6f42c1");
+    svg.append("text").attr("x", 20).attr("y", 45).attr("fill", "white").style("font-size", "24px").style("font-weight", "bold").text("Dependency Graph Analysis");
+
+    // Métricas Header
+    const mGroup = svg.append("g").attr("transform", "translate(700, 20)");
+    
+    // Box 1: Total Imports
+    mGroup.append("rect").attr("x", 0).attr("width", 140).attr("height", 30).attr("rx", 5).attr("fill", "rgba(255,255,255,0.2)");
+    mGroup.append("text").attr("x", 70).attr("y", 20).attr("text-anchor", "middle").attr("fill", "white").style("font-weight", "bold").text(`Imports: ${{data.metrics.total_imports}}`);
+    
+    // Box 2: Unique Modules
+    mGroup.append("rect").attr("x", 150).attr("width", 160).attr("height", 30).attr("rx", 5).attr("fill", "rgba(255,255,255,0.2)");
+    mGroup.append("text").attr("x", 230).attr("y", 20).attr("text-anchor", "middle").attr("fill", "white").style("font-weight", "bold").text(`Unique Libs: ${{data.metrics.unique_modules}}`);
+
+    const col1X = 50; const col2X = 550; const contentY = 120;
+
+    // --------------------------------------------------------
+    // CHART 1: CATEGORIES (Bar Chart)
+    // --------------------------------------------------------
+    svg.append("text").attr("x", col1X).attr("y", contentY - 10).style("font-size", "18px").style("font-weight", "bold").text("Imports by Category");
+    const catWidth = 450; const catHeight = 200;
+    const catGroup = svg.append("g").attr("transform", `translate(${{col1X}}, ${{contentY}})`);
+    
+    const catData = data.category_counts || [];
+    if (catData.length > 0) {{
+        const xCat = d3.scaleBand().domain(catData.map(d => d.category)).range([0, catWidth]).padding(0.3);
+        const maxVal = d3.max(catData, d => d.count);
+        const yCat = d3.scaleLinear().domain([0, maxVal * 1.2]).range([catHeight, 0]);
+        
+        catGroup.append("g").attr("transform", `translate(0,${{catHeight}})`).call(d3.axisBottom(xCat));
+        catGroup.append("g").call(d3.axisLeft(yCat).ticks(5));
+        
+        const colorMap = {{ "stdlib": "#48bb78", "third_party": "#4299e1", "local": "#ed8936", "unknown": "#999" }};
+        
+        catGroup.selectAll("rect").data(catData).enter().append("rect")
+            .attr("x", d => xCat(d.category)).attr("y", d => yCat(d.count))
+            .attr("width", xCat.bandwidth()).attr("height", d => catHeight - yCat(d.count))
+            .attr("fill", d => colorMap[d.category] || "#666");
+            
+        catGroup.selectAll(".label").data(catData).enter().append("text")
+            .attr("x", d => xCat(d.category) + xCat.bandwidth()/2).attr("y", d => yCat(d.count) - 5)
+            .attr("text-anchor", "middle").style("font-size", "12px").style("font-weight", "bold").text(d => d.count);
+    }} else {{
+         catGroup.append("text").attr("y", 100).text("No imports found");
+    }}
+
+    // --------------------------------------------------------
+    // CHART 2: TOP MODULES (Horizontal Bars)
+    // --------------------------------------------------------
+    const modsY = contentY + catHeight + 60;
+    svg.append("text").attr("x", col1X).attr("y", modsY - 10).style("font-size", "18px").style("font-weight", "bold").text("Most Used Libraries");
+    
+    const textPadding = 100;
+    const modGroup = svg.append("g").attr("transform", `translate(${{col1X + textPadding}}, ${{modsY}})`);
+    const modData = (data.top_modules || []).slice(0, 5);
+    
+    if(modData.length > 0) {{
+        const maxCount = d3.max(modData, d => d.count);
+        const xMod = d3.scaleLinear().domain([0, maxCount * 1.2]).range([0, catWidth - textPadding]);
+        const yMod = d3.scaleBand().domain(modData.map(d => d.module)).range([0, 150]).padding(0.2);
+        
+        modGroup.append("g").call(d3.axisLeft(yMod));
+        modGroup.selectAll("rect").data(modData).enter().append("rect")
+            .attr("x", 1).attr("y", d => yMod(d.module)).attr("width", d => xMod(d.count))
+            .attr("height", yMod.bandwidth()).attr("fill", "#6f42c1");
+            
+        modGroup.selectAll("text.val").data(modData).enter().append("text")
+            .attr("x", d => xMod(d.count) + 5).attr("y", d => yMod(d.module) + yMod.bandwidth()/2 + 4)
+            .style("font-size", "11px").style("font-weight", "bold").text(d => d.count);
+    }} else {{
+        svg.append("text").attr("x", col1X).attr("y", modsY + 50).text("No data available");
+    }}
+
+    // --------------------------------------------------------
+    // LIST: TOP FILES (Files with most imports)
+    // --------------------------------------------------------
+    svg.append("text").attr("x", col2X).attr("y", contentY - 10).style("font-size", "18px").style("font-weight", "bold").text("Files with Most Imports");
+    const listGroup = svg.append("g").attr("transform", `translate(${{col2X}}, ${{contentY}})`);
+    listGroup.append("rect").attr("width", 450).attr("height", 420).attr("fill", "#fafafa").attr("stroke", "#eee");
+
+    const files = data.top_files || [];
+    
+    if (files.length > 0) {{
+        files.forEach((file, i) => {{
+            const yPos = 30 + (i * 40);
+            if (i > 0) listGroup.append("line").attr("x1", 10).attr("y1", yPos - 25).attr("x2", 440).attr("y2", yPos - 25).attr("stroke", "#eee");
+            
+            let fileName = file.file;
+            if (fileName.length > 50) fileName = "..." + fileName.slice(-47);
+            
+            listGroup.append("text").attr("x", 15).attr("y", yPos).style("font-family", "monospace").style("font-size", "12px").text(`${{i+1}}. ${{fileName}}`);
+            listGroup.append("rect").attr("x", 400).attr("y", yPos - 12).attr("width", 30).attr("height", 18).attr("rx", 4).attr("fill", "#6f42c1");
+            listGroup.append("text").attr("x", 415).attr("y", yPos + 1).attr("text-anchor", "middle").attr("fill", "white").style("font-size", "11px").style("font-weight", "bold").text(file.count);
+        }});
+    }} else {{
+        listGroup.append("text").attr("x", 225).attr("y", 210).attr("text-anchor", "middle").attr("fill", "#666").text("No files analyzed");
+    }}
+</script>
 </body>
 </html>"""
 
-    def _generate_stats_html(self, summary: dict) -> str:
-        """Gera os cartões de estatística."""
-        metrics = [
-            ("Total Imports", summary.get('total_imports', 0)),
-            ("Unique Modules", summary.get('unique_modules', 0)),
-            ("StdLib Uses", summary.get('stdlib_count', 0)),
-            ("3rd Party Uses", summary.get('third_party_count', 0))
-        ]
-        
-        html = ""
-        for label, value in metrics:
-            html += f"""
-            <div class="stat-card">
-                <div class="stat-value">{value}</div>
-                <div class="stat-label">{label}</div>
-            </div>
-            """
-        return html
-
-    def _generate_categories_html(self, categories: dict) -> str:
-        """Gera a lista de módulos por categoria."""
-        html = ""
-        
-        cat_meta = {
-            "stdlib": {"color": "#48bb78", "label": "Standard Library"},
-            "third_party": {"color": "#4299e1", "label": "Third Party"},
-            "local": {"color": "#ed8936", "label": "Local / Internal"}
-        }
-
-        for cat_key, modules in categories.items():
-            if not modules:
-                continue
-                
-            meta = cat_meta.get(cat_key, {"color": "#666", "label": cat_key.title()})
-            color = meta["color"]
-            label = meta["label"]
-            
-            module_chips = "".join(
-                f'<div class="module-chip">{m}</div>' for m in sorted(modules)
-            )
-            
-            html += f"""
-            <div class="category-container">
-                <div class="category-header" style="border-left: 5px solid {color}">
-                    <span>{label}</span>
-                    <span style="background:{color}; color:white; padding:2px 8px; border-radius:12px; font-size:12px;">
-                        {len(modules)}
-                    </span>
-                </div>
-                <div class="module-grid">
-                    {module_chips}
-                </div>
-            </div>
-            """
-        return html
-    def _generate_stats_html(self, summary: dict) -> str:
-        """Gera os cartões de estatística."""
-        metrics = [
-            ("Total Imports", summary.get('total_imports', 0)),
-            ("Unique Modules", summary.get('unique_modules', 0)),
-            ("StdLib Uses", summary.get('stdlib_count', 0)),
-            ("3rd Party Uses", summary.get('third_party_count', 0))
-        ]
-        
-        html = ""
-        for label, value in metrics:
-            html += f"""
-            <div class="stat-card">
-                <div class="stat-value">{value}</div>
-                <div class="stat-label">{label}</div>
-            </div>
-            """
-        return html
-
-    def _generate_categories_html(self, categories: dict) -> str:
-        """Gera a lista de módulos por categoria."""
-        html = ""
-        
-        # Mapeamento de cores e ícones para cada categoria
-        cat_meta = {
-            "stdlib": {"color": "#48bb78", "label": "Standard Library"},
-            "third_party": {"color": "#4299e1", "label": "Third Party"},
-            "local": {"color": "#ed8936", "label": "Local / Internal"}
-        }
-
-        for cat_key, modules in categories.items():
-            if not modules:
-                continue
-                
-            meta = cat_meta.get(cat_key, {"color": "#666", "label": cat_key.title()})
-            color = meta["color"]
-            label = meta["label"]
-            
-            # Gerar chips para cada módulo
-            module_chips = "".join(
-                f'<div class="module-chip">{m}</div>' for m in sorted(modules)
-            )
-            
-            html += f"""
-            <div class="category-container">
-                <div class="category-header" style="border-left: 5px solid {color}">
-                    <span>{label}</span>
-                    <span style="background:{color}; color:white; padding:2px 8px; border-radius:12px; font-size:12px;">
-                        {len(modules)}
-                    </span>
-                </div>
-                <div class="module-grid">
-                    {module_chips}
-                </div>
-            </div>
-            """
-        return html
-
     # ==========================================================================
-    # LÓGICA DE ANÁLISE (AST PARSING)
+    # LÓGICA DE ANÁLISE (AST)
     # ==========================================================================
 
     def _extract_imports(self, tree: ast.AST) -> list[dict[str, Any]]:
-        """Extrai todas as declarações de import da AST."""
         imports = []
-
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for alias in node.names:
-                    imports.append({
-                        "type": "import",
-                        "module": alias.name,
-                        "alias": alias.asname,
-                        "name": None,
-                        "line": node.lineno,
-                        "level": 0,
-                    })
-
+                    imports.append(
+                        {
+                            "type": "import",
+                            "module": alias.name,
+                            "alias": alias.asname,  # Mantido para testes
+                            "name": None,
+                            "line": node.lineno,
+                            "level": 0,
+                        }
+                    )
             elif isinstance(node, ast.ImportFrom):
                 module = node.module or ""
                 for alias in node.names:
-                    imports.append({
-                        "type": "from_import",
-                        "module": module,
-                        "alias": alias.asname,
-                        "name": alias.name,
-                        "line": node.lineno,
-                        "level": node.level,
-                    })
-
+                    imports.append(
+                        {
+                            "type": "from_import",
+                            "module": module,
+                            "alias": alias.asname,  # Mantido para testes
+                            "name": alias.name,
+                            "line": node.lineno,
+                            "level": node.level,
+                        }
+                    )
         return imports
 
-    def _categorize_imports(self, imports: list[dict[str, Any]]) -> dict[str, list]:
-        """Categoriza imports em stdlib, third_party e local."""
+    def _categorize_imports(self, imports: list[dict]) -> dict[str, list]:
         categorized = {"stdlib": [], "third_party": [], "local": []}
-
         for imp in imports:
             module = imp["module"]
-            base_module = module.split(".")[0] if module else ""
+            base = module.split(".")[0] if module else ""
 
             if imp["level"] > 0:
                 categorized["local"].append(imp)
-            elif base_module in self.STDLIB_MODULES:
+            elif base in self.STDLIB_MODULES:
                 categorized["stdlib"].append(imp)
             elif module and "." in module:
                 categorized["local"].append(imp)
-            elif (base_module and base_module[0].islower()
-                  and base_module not in self.STDLIB_MODULES):
+            elif base and base[0].islower() and base not in self.STDLIB_MODULES:
                 categorized["local"].append(imp)
             else:
                 categorized["third_party"].append(imp)
-
         return categorized
 
-    def _assess_severity(self, imp: dict[str, Any], categorized: dict) -> str:
-        """Avalia a severidade/importância de uma importação."""
+    def _assess_severity(self, imp: dict) -> str:
         if self.warn_wildcard_imports and imp.get("name") == "*":
             return "medium"
         if imp["level"] > self.max_relative_import_level:
             return "medium"
         return "info"
 
-    def _generate_message(self, imp: dict[str, Any], categorized: dict) -> str:
-        """Gera uma mensagem descritiva."""
-        category = "unknown"
-        for cat, items in categorized.items():
-            if imp in items:
-                category = cat
-                break
+    def _generate_message(self, imp: dict, categorized: dict) -> str:
+        cat = self._get_category(imp, categorized)
+        name = imp.get("name")
 
         if imp["type"] == "import":
-            msg = f"Importa módulo '{imp['module']}'"
+            msg = f"Import: {imp['module']} ({cat})"
         else:
-            name = imp.get("name", "*")
-            msg = f"Importa '{name}' de '{imp['module']}'"
+            target = name if name else "*"
+            msg = f"Import: {imp['module']} {target} ({cat})"
 
-        msg += f" ({category})"
-
-        if imp["level"] > 0:
-            msg += f" - relativa (nível {imp['level']})"
         if imp.get("name") == "*":
-            msg += " [AVISO: wildcard]"
-
+            msg += " [WILDCARD]"
         return msg
 
-    def _generate_hint(self, imp: dict[str, Any]) -> str:
-        """Gera uma dica/hint."""
+    def _generate_hint(self, imp: dict) -> str:
         hints = []
         if imp.get("name") == "*":
-            hints.append("Evite wildcard imports.")
-        if imp["level"] > 2:
-            hints.append("Reduza profundidade de imports relativos.")
-        
-        return " | ".join(hints) if hints else ""
+            hints.append("Evite wildcard imports (*).")
 
-    def _create_summary(self, imports: list[dict], categorized: dict) -> dict[str, Any]:
-        """Cria um sumário com estatísticas agregadas."""
-        unique_modules = set(imp["module"] for imp in imports if imp["module"])
+        if imp.get("alias"):
+            hints.append(f"Alias: {imp['alias']}")
+
+        return " | ".join(hints)
+
+    def _get_category(self, imp: dict, categorized: dict) -> str:
+        """Helper para retornar a categoria do import."""
+        for c, items in categorized.items():
+            if imp in items:
+                return c
+        return "unknown"
+
+    def _create_summary(self, imports: list, categorized: dict) -> dict:
+        unique = set(imp["module"] for imp in imports if imp["module"])
+        nodes = list(unique)  # Lista para serialização JSON
+
+        # Métricas para testes de compatibilidade
+        wildcard_count = sum(1 for imp in imports if imp.get("name") == "*")
+        relative_count = sum(1 for imp in imports if imp["level"] > 0)
 
         return {
+            # CHAVE OBRIGATÓRIA ADICIONADA:
             "issues_found": len(imports),
             "status": "completed",
             "total_imports": len(imports),
+            "wildcard_imports": wildcard_count,
+            "relative_imports": relative_count,
             "stdlib_count": len(categorized["stdlib"]),
             "third_party_count": len(categorized["third_party"]),
             "local_count": len(categorized["local"]),
-            "unique_modules": len(unique_modules),
-            "wildcard_imports": sum(1 for imp in imports if imp.get("name") == "*"),
-            "relative_imports": sum(1 for imp in imports if imp["level"] > 0),
-            "dependency_graph": self._build_graph_data(imports, categorized),
-        }
-
-    def _build_graph_data(
-        self, imports: list[dict], categorized: dict
-    ) -> dict[str, Any]:
-        """Constrói dados estruturados para visualização."""
-        nodes = set(imp["module"] for imp in imports if imp["module"])
-
-        return {
-            "node_count": len(nodes),
-            "nodes": sorted(nodes),
-            "categories": {
-                "stdlib": sorted(set(imp["module"] for imp in categorized["stdlib"] if imp["module"])),
-                "third_party": sorted(set(imp["module"] for imp in categorized["third_party"] if imp["module"])),
-                "local": sorted(set(imp["module"] for imp in categorized["local"] if imp["module"])),
+            "unique_modules": len(unique),
+            "dependency_graph": {
+                "nodes": nodes,
+                "node_count": len(nodes),
+                "categories": categorized,  # Passamos os objetos categorizados
             },
         }
