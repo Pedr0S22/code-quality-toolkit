@@ -117,7 +117,7 @@ def test_generate_dashboard(tmp_path):
     }
 
     # Create expected directory structure
-    assets_dir = tmp_path / "web" / "assets"
+    assets_dir = tmp_path / "src" / "toolkit" / "plugins"
     assets_dir.mkdir(parents=True)
 
     # Run from tmp_path so relative paths resolve correctly
