@@ -20,17 +20,17 @@ This plugin helps you find and remove redundant code that clutters the project.
 
 ### How to Enable the Plugin
 
-The plugin must be added in `toolkit.toml` - like is shown below - to be enabled automatically by the core toolkit.
+The plugin must be added in `toolkit.toml` - like is shown below - to be enabled automatically by the core toolkit. 
 
 ```toml
 [plugins]
 enabled = ["DeadCodeDetector","<OtherPlugin>",etc]
 ```
 
-To configure it, edit the rules described below in your toolkit.toml configuration file. The plugin reads its settings from the [`plugins.dead_code`] section (**note**: this is not under [`rules`]):
+To configure it, edit the rules described below in your toolkit.toml configuration file. The plugin reads its settings from the [`plugins.dead_code_detector`] section (**note**: this is not under [`rules`]):
 
 ```toml
-[plugins.dead_code]
+[plugins.dead_code_detector]
 ignore_patterns = ["^__", "tests/"]
 min_name_length = 3
 severity = "low"
@@ -54,6 +54,14 @@ You can adjust these values:
     ```make run arg="--config toolkit.toml"```.
 2. The `DeadCodeDetector` plugin will automatically analyze all Python files from the path you gave.
 3. All issues found related to this plugin and others you enable, will be included in a summary and in detail in the final report.
+
+4. Or you could run through Web Application
+**Start the Server:** Launch the core application server.
+    ```bash
+    make run_server
+    ```
+    **Access the Client:** Open your browser and navigate to the Web App interface (typically `http://localhost:8000`).
+    **Run Analysis:** Use the interface to upload your project, select/configure plugins, and click the **"Run Analysis"** button. The results, including generated dashboards, will be displayed upon completion.
 
 ## Example Issues You May See
 - **DEAD_CODE**: A function, class, or variable was defined but never used (loaded) anywhere in the file.

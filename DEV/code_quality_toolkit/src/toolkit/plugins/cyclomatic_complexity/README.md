@@ -26,10 +26,10 @@ The plugin must be added in `toolkit.toml` - like is shown below - to be enabled
 enabled = ["CyclomaticComplexity","<OtherPlugin>",etc]
 ```
 
-To configure it, edit the rules described below in your `toolkit.toml` configuration file. The plugin reads its settings from the `[rules.complexity]` section:
+To configure it, edit the rules described below in your `toolkit.toml` configuration file. The plugin reads its settings from the `[plugins.cyclomatic_complexity]` section:
 
 ```toml
-[rules]
+[plugins.cyclomatic_complexity]
 max_complexity = 10
 max_function_length = 50
 max_arguments = 5
@@ -38,6 +38,7 @@ max_arguments = 5
 You can adjust these values to make the analysis more or less strict.
 
 ## How to Use It
+The Cyclomatic Complexity plugin can be executed in three primary ways, giving users flexibility depending on their environment and needs:
 1. Run your toolkit's main CLI command:
 
     ```python -m toolkit.core.cli analyze <path_to_your_code> --out report.json --config toolkit.toml```
@@ -47,6 +48,15 @@ You can adjust these values to make the analysis more or less strict.
     ```make run arg="--config toolkit.toml"```.
 2. The CyclomaticComplexity plugin will automatically analyze all Python files from the path you gave.
 3. All issues found related to this plugin and others you enable, will be included in a summary and in detail in the final report.
+
+4. Or you could run through Web Application
+**Start the Server:** Launch the core application server.
+    ```bash
+    make run_server
+    ```
+    **Access the Client:** Open your browser and navigate to the Web App interface (typically `http://localhost:8000`).
+
+    **Run Analysis:** Use the interface to upload your project, select/configure plugins, and click the **"Run Analysis"** button. The results, including generated dashboards, will be displayed upon completion.
 
 ## Example Issues You May See
 - **HIGH_COMPLEXITY**: The function's complexity score exceeds the configured max_complexity.
