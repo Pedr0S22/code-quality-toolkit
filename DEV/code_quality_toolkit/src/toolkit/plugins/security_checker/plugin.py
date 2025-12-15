@@ -116,6 +116,7 @@ class Plugin:
             "results": results,
             "summary": {"issues_found": len(results), "status": "completed"},
         }
+    
     # ==========================================================================
     # DASHBOARD GENERATION
     # ==========================================================================
@@ -189,9 +190,14 @@ class Plugin:
         files_counter = {}
 
         for issue in flattened_issues:
+            # Pega a severidade, padronizando para 'info' se a chave estiver ausente
             sev = issue.get("severity", "info").lower()
-            if sev in severity_counts:
-                severity_counts[sev] += 1
+            
+            # CORREÇÃO: Se a severidade lida não for uma das chaves válidas, use 'info'.
+            if sev not in severity_counts:
+                sev = "info"
+                
+            severity_counts[sev] += 1
 
             code = issue.get("code", "UNKNOWN")
             rule_counts[code] = rule_counts.get(code, 0) + 1
