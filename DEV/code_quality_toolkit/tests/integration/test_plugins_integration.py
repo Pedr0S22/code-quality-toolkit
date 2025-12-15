@@ -5,6 +5,7 @@ and reports specific issues in the final JSON output.
 """
 
 import json
+import textwrap
 from pathlib import Path
 
 from toolkit.core.cli import EXIT_SUCCESS, main
@@ -12,25 +13,55 @@ from toolkit.core.cli import EXIT_SUCCESS, main
 
 def test_dead_code_detector_integration(tmp_path: Path):
     """
-    Verifies that the DeadCodeDetector plugin finds unused functions/variables
-    when run via the CLI.
+    Verifies that the DeadCodeDetector plugin finds unused functions/variables/classes
+    when run via the CLI with a comprehensive test case.
     """
-    # 1. Setup: Create a file with obvious dead code
-    project_dir = tmp_path / "project"
+    # 1. Setup: Create a file with multiple dead code scenarios
+    project_dir = tmp_path / "project_dead"
     project_dir.mkdir()
-    code_file = project_dir / "dead.py"
-    code_file.write_text(
-        "def unused_function():\n"
-        "    pass\n"
-        "\n"
-        "def main():\n"
-        "    print('hello')\n",
-        encoding="utf-8",
-    )
-    output_file = tmp_path / "report.json"
+    code_file = project_dir / "dead_complex.py"
+    
+    source_code = textwrap.dedent("""
+        import math
+        # Import não usado, mas imports geralmente são ignorados ou
+        # tratados diferentemente
+        from os import path
 
-    # 2. Execution: Run CLI targeting this folder with only DeadCodeDetector enabled
-    # We use the real CLI main function, which will discover and load the real plugin
+        # 1. Variável Global Não Usada
+        UNUSED_GLOBAL = 42
+
+        # 2. Classe Não Usada
+        class UnusedClass:
+            def method(self):
+                pass
+
+        # 3. Função Não Usada
+        def unused_function():
+            return "I am lonely"
+
+        # 4. Variável Local Não Usada (dentro de função) - O plugin
+        # pode ou não apanhar isto dependendo da implementação (scope
+        # visitor)
+        def calculation():
+            unused_local = 10
+            return 5
+
+        # 5. Código Usado (Não deve ser reportado)
+        def used_function():
+            return "I am popular"
+
+        def main():
+            print(used_function())
+            
+        if __name__ == "__main__":
+            main()
+    """)
+    
+    code_file.write_text(source_code, encoding="utf-8")
+    
+    output_file = tmp_path / "report_dead.json"
+
+    # 2. Execution: Run CLI targeting this folder with DeadCodeDetector enabled
     exit_code = main(
         [
             "analyze",
@@ -42,27 +73,54 @@ def test_dead_code_detector_integration(tmp_path: Path):
         ]
     )
 
-    # 3. Verification
+    # 3. Verification - Basic CLI Success
     assert exit_code == EXIT_SUCCESS
     assert output_file.exists()
 
+    # 4. Verification - JSON Content Analysis
     with open(output_file, encoding="utf-8") as f:
         data = json.load(f)
 
-    # Find the results for our file
-    # structure: details -> [ {file: ..., plugins: [ {plugin:..., results: []} ]} ]
-    file_report = next(f for f in data["details"] if "dead.py" in f["file"])
+    # Encontrar o relatório do ficheiro
+    file_report = next(f for f in data["details"] if "dead_complex.py" in f["file"])
     plugin_report = next(
         p for p in file_report["plugins"] if p["plugin"] == "DeadCodeDetector"
     )
 
-    # Expect to find the unused function issue
-    # Note: exact code depends on your plugin implementation,
-    # usually 'DEAD_CODE' or 'VULTURE_ISSUE'
-    assert len(plugin_report["results"]) >= 1
-    issue = plugin_report["results"][0]
-    assert "unused_function" in issue["message"]
-    assert issue["severity"] in ["low", "medium", "high"]
+    results = plugin_report["results"]
+    messages = [r["message"] for r in results]
+    
+    # DEBUG: Print messages se falhar
+    print(f"Dead Code Results: {messages}")
+
+    # A. Verificar Deteções Esperadas (Dead Code)
+    # Dependendo da implementação do Visitor (escopo módulo vs local),
+    # alguns podem não aparecer. Assumindo Visitor padrão de módulo:
+    assert (
+        any("unused_function" in m for m in messages)
+    ), "Failed to detect unused_function"
+    assert (
+        any("UnusedClass" in m for m in messages)
+    ), "Failed to detect UnusedClass"
+    assert (
+        any("UNUSED_GLOBAL" in m for m in messages)
+    ), "Failed to detect UNUSED_GLOBAL"
+    
+    # B. Verificar Falsos Positivos (Code Used)
+    # 'used_function' e 'main' são usados, não devem aparecer
+    assert not any(
+        "'used_function'" in m for m in messages
+    ), "False positive: used_function reported"
+    assert not any(
+        "'main'" in m for m in messages
+    ), "False positive: main reported"
+    
+    # C. Verificar Severidade
+    # O default é 'low', mas verificamos se está dentro dos permitidos
+    for issue in results:
+        assert issue["severity"] in [
+            "low", "medium", "high"
+        ], f"Invalid severity: {issue['severity']}"
     
 def test_cyclomatic_complexity_integration(tmp_path):
     """
