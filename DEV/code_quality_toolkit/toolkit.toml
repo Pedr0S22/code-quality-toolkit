@@ -21,6 +21,14 @@ pylint_args = [
 ]
 fail_on_severity = "high"
 
+[plugins.style_checker]
+max_line_length = 88
+check_whitespace = true
+indent_style = "spaces"
+indent_size = 4
+allow_mixed_indentation = false
+check_naming = true
+
 [rules]
 max_line_length = 88
 max_complexity = 10
