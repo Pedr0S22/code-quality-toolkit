@@ -47,99 +47,111 @@ class Plugin:
         if hasattr(config.rules, "security_report_level"):
             self.report_severity_level = config.rules.security_report_level
 
+    # NOVO MÉTODO AUXILIAR PARA REDUZIR COMPLEXIDADE DO ANALYZE
+    def _run_fallback_scan(self, source_code: str, file_path: str | None) -> list[IssueResult]:
+        """
+        Contém toda a lógica de varredura de fallback para reduzir
+        a complexidade do método analyze().
+        """
+        results: list[IssueResult] = []
+        src = source_code or ""
+        lines = src.splitlines()
+
+        def find_lineno(substr: str) -> int:
+            for idx, line in enumerate(lines, start=1):
+                if substr in line:
+                    return idx
+            return 1
+
+        if "eval(" in src:
+            results.append(
+                {
+                    "severity": "high",
+                    "code": "B307",
+                    "message": "Uso de eval() detectado.",
+                    "line": find_lineno("eval("),
+                    "col": 1,
+                    "hint": "Evite usar eval() em código não confiável.",
+                }
+            )
+        if "exec(" in src:
+            results.append(
+                {
+                    "severity": "high",
+                    "code": "B307",
+                    "message": "Uso de exec() detectado.",
+                    "line": find_lineno("exec("),
+                    "col": 1,
+                    "hint": "Evite usar exec() em código não confiável.",
+                }
+            )
+        if "import pickle" in src or "pickle.load" in src:
+            results.append(
+                {
+                    "severity": "medium",
+                    "code": "B301",
+                    "message": "Uso de pickle detectado.",
+                    "line": find_lineno("pickle"),
+                    "col": 1,
+                    "hint": "Evite usar pickle para dados não confiáveis.",
+                }
+            )
+        if "hashlib.md5" in src or ".md5(" in src:
+            results.append(
+                {
+                    "severity": "low",
+                    "code": "B303",
+                    "message": "Uso de hash MD5 detectado.",
+                    "line": find_lineno("md5"),
+                    "col": 1,
+                    "hint": "Use hashes seguros (sha256).",
+                }
+            )
+        if "os.system" in src and "+" in src:
+            results.append(
+                {
+                    "severity": "medium",
+                    "code": "B601",
+                    "message": "Chamada de sistema com concatenação.",
+                    "line": find_lineno("os.system"),
+                    "col": 1,
+                    "hint": "Use subprocess sem shell=True.",
+                }
+            )
+        if "%s" in src and "cursor.execute" in src:
+            results.append(
+                {
+                    "severity": "high",
+                    "code": "B606",
+                    "message": "Possível injeção SQL.",
+                    "line": find_lineno("cursor.execute"),
+                    "col": 1,
+                    "hint": "Use queries parametrizadas.",
+                }
+            )
+        if "PASSWORD" in src and "=" in src and ('"' in src or "'" in src):
+            results.append(
+                {
+                    "severity": "low",
+                    "code": "B105",
+                    "message": "Senha hardcoded detectada.",
+                    "line": find_lineno("PASSWORD"),
+                    "col": 1,
+                    "hint": "Não guarde segredos no código.",
+                }
+            )
+        
+        return results
+
     def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
-        """Executa a análise de segurança."""
+        """Executa a análise de segurança (Complexidade reduzida)."""
         try:
             results: list[IssueResult] = []
 
             # --- Fallback scanner ---
             if BanditManager is None:
-                src = source_code or ""
-                lines = src.splitlines()
-
-                def find_lineno(substr: str) -> int:
-                    for idx, line in enumerate(lines, start=1):
-                        if substr in line:
-                            return idx
-                    return 1
-
-                if "eval(" in src:
-                    results.append(
-                        {
-                            "severity": "high",
-                            "code": "B307",
-                            "message": "Uso de eval() detectado.",
-                            "line": find_lineno("eval("),
-                            "col": 1,
-                            "hint": "Evite usar eval() em código não confiável.",
-                        }
-                    )
-                if "exec(" in src:
-                    results.append(
-                        {
-                            "severity": "high",
-                            "code": "B307",
-                            "message": "Uso de exec() detectado.",
-                            "line": find_lineno("exec("),
-                            "col": 1,
-                            "hint": "Evite usar exec() em código não confiável.",
-                        }
-                    )
-                if "import pickle" in src or "pickle.load" in src:
-                    results.append(
-                        {
-                            "severity": "medium",
-                            "code": "B301",
-                            "message": "Uso de pickle detectado.",
-                            "line": find_lineno("pickle"),
-                            "col": 1,
-                            "hint": "Evite usar pickle para dados não confiáveis.",
-                        }
-                    )
-                if "hashlib.md5" in src or ".md5(" in src:
-                    results.append(
-                        {
-                            "severity": "low",
-                            "code": "B303",
-                            "message": "Uso de hash MD5 detectado.",
-                            "line": find_lineno("md5"),
-                            "col": 1,
-                            "hint": "Use hashes seguros (sha256).",
-                        }
-                    )
-                if "os.system" in src and "+" in src:
-                    results.append(
-                        {
-                            "severity": "medium",
-                            "code": "B601",
-                            "message": "Chamada de sistema com concatenação.",
-                            "line": find_lineno("os.system"),
-                            "col": 1,
-                            "hint": "Use subprocess sem shell=True.",
-                        }
-                    )
-                if "%s" in src and "cursor.execute" in src:
-                    results.append(
-                        {
-                            "severity": "high",
-                            "code": "B606",
-                            "message": "Possível injeção SQL.",
-                            "line": find_lineno("cursor.execute"),
-                            "col": 1,
-                            "hint": "Use queries parametrizadas.",
-                        }
-                    )
-                if "PASSWORD" in src and "=" in src and ('"' in src or "'" in src):
-                    results.append(
-                        {
-                            "severity": "low",
-                            "code": "B105",
-                            "message": "Senha hardcoded detectada.",
-                            "line": find_lineno("PASSWORD"),
-                            "col": 1,
-                            "hint": "Não guarde segredos no código.",
-                        }
-                    )
+                # Chama a nova função auxiliar
+                results = self._run_fallback_scan(source_code, file_path)
 
             else:
                 # --- Scanner Principal (Bandit) ---
@@ -201,7 +213,6 @@ class Plugin:
                     "error": f"Erro SecurityChecker: {str(e)}",
                 },
             }
-
     # ==========================================================================
     # DASHBOARD GENERATION
     # ==========================================================================
