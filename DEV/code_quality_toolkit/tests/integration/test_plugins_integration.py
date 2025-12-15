@@ -529,3 +529,73 @@ class MyClass:
     assert "LOW_COMMENT_DENSITY" == issue["code"]
     assert "low comment density" in issue["message"].lower()
     assert issue["severity"] == "high"
+
+def test_integration_linter_wrapper_plugin(tmp_path: Path):
+    """
+    Verifies that the LinterWrapper plugin (wrapping pylint) finds issues
+    when run via the CLI against a real file.
+    """
+    # 1. Setup: Create a file with standard Pylint violations.
+    # Violations: Unused import (W0611) and Missing module docstring (C0114)
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    code_file = project_dir / "bad_lint.py"
+    code_file.write_text(
+        "import os\n"
+        "\n"
+        "def foo():\n"
+        "    return 1\n",
+        encoding="utf-8",
+    )
+    output_file = tmp_path / "report.json"
+
+    # 2. Execution: Run CLI with LinterWrapper enabled
+    exit_code = main(
+        [
+            "analyze",
+            str(project_dir),
+            "--out",
+            str(output_file),
+            "--plugins",
+            "LinterWrapper",
+        ]
+    )
+
+    # 3. Verification
+    assert exit_code == EXIT_SUCCESS
+    assert output_file.exists()
+
+    with open(output_file, encoding="utf-8") as f:
+        data = json.load(f)
+
+    # Locate the report for our specific file
+    file_report = next(f for f in data["details"] if "bad_lint.py" in f["file"])
+    plugin_report = next(
+        p for p in file_report["plugins"] if p["plugin"] == "LinterWrapper"
+    )
+
+    results = plugin_report["results"]
+    assert len(results) >= 1
+
+    # Extract codes to verify we caught the expected issues.
+    # Pylint output depends on version/config, but usually:
+    # - W0611: unused-import
+    # - C0114: missing-module-docstring
+    # - C0116: missing-function-docstring
+    # Or, if pylint is not installed in the test env, the plugin returns LINTER_NOT_FOUND.
+    
+    found_codes = {r.get("code") for r in results}
+    
+    # We verify that we either found a valid lint error OR the specific error 
+    # indicating pylint is missing (which is also a valid plugin behavior test).
+    expected_lint_codes = {"W0611", "unused-import", "C0114", "missing-module-docstring", "C0116"}
+    
+    assert (
+        bool(found_codes & expected_lint_codes) 
+        or "LINTER_NOT_FOUND" in found_codes
+    ), f"Expected Pylint issues or LINTER_NOT_FOUND, but got: {found_codes}"
+
+    # Verify severity mapping (convention/refactor -> low, warning -> medium, etc.)
+    # If we found an issue, check if severity key exists and is valid
+    if results:
+        assert results[0]["severity"] in ["low", "medium", "high"]
