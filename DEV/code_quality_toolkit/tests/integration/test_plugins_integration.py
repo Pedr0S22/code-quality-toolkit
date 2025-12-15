@@ -529,3 +529,146 @@ class MyClass:
     assert "LOW_COMMENT_DENSITY" == issue["code"]
     assert "low comment density" in issue["message"].lower()
     assert issue["severity"] == "high"
+
+def test_comment_density_sufficient_coverage_integration(tmp_path: Path):
+    """
+    Verifica se o plugin CommentDensity APROVA um arquivo que tem
+    comentários suficientes (Caminho feliz/Success Path).
+    """
+    # 1. Setup: Criar arquivo com boa densidade de comentários (~50%)
+    project_dir = tmp_path / "project_good"
+    project_dir.mkdir()
+    code_file = project_dir / "good_comments.py"
+    
+    # Código onde cada função tem explicação
+    code_content = """
+# Constante global para configuração
+TIMEOUT = 10
+
+def connect():
+    # Tenta estabelecer conexão
+    # Se falhar, retorna False
+    return True
+
+def disconnect():
+    # Fecha a conexão segura
+    pass
+"""
+    code_file.write_text(code_content, encoding="utf-8")
+    output_file = tmp_path / "report_good.json"
+
+    # 2. Execução
+    exit_code = main(
+        [
+            "analyze",
+            str(project_dir),
+            "--out",
+            str(output_file),
+            "--plugins",
+            "CommentDensity",
+        ]
+    )
+
+    # 3. Verificação
+    assert exit_code == EXIT_SUCCESS
+    
+    with open(output_file, encoding="utf-8") as f:
+        data = json.load(f)
+
+    file_report = next(f for f in data["details"] if "good_comments.py" in f["file"])
+    plugin_report = next(
+        p for p in file_report["plugins"] if p["plugin"] == "CommentDensity"
+    )
+
+    # NÃO deve haver resultados (issues), pois a densidade é boa
+    assert len(plugin_report["results"]) == 0
+
+
+def test_comment_density_docstrings_integration(tmp_path: Path):
+    """
+    Verifica se Docstrings são contabilizadas corretamente como 'comentários'
+    para o cálculo da densidade, evitando falsos positivos.
+    """
+    # 1. Setup: Arquivo sem # comentários, mas com docstrings ricas
+    project_dir = tmp_path / "project_docstrings"
+    project_dir.mkdir()
+    code_file = project_dir / "docstrings_only.py"
+    
+    code_content = '''
+def complex_algorithm(a, b):
+    """
+    Executa um algoritmo complexo.
+    
+    Args:
+        a: Primeiro parametro
+        b: Segundo parametro
+        
+    Returns:
+        O resultado da soma
+    """
+    return a + b
+'''
+    code_file.write_text(code_content, encoding="utf-8")
+    output_file = tmp_path / "report_docs.json"
+
+    # 2. Execução
+    main(
+        [
+            "analyze", str(project_dir),
+            "--out", str(output_file),
+            "--plugins", "CommentDensity",
+        ]
+    )
+
+    # 3. Verificação
+    with open(output_file, encoding="utf-8") as f:
+        data = json.load(f)
+
+    # AQUI ESTAVA O ERRO: Quebramos em várias linhas
+    file_report = next(
+        f for f in data["details"] if "docstrings_only.py" in f["file"]
+    )
+    plugin_report = next(
+        p for p in file_report["plugins"] if p["plugin"] == "CommentDensity"
+    )
+
+    # Deve passar no teste de densidade apenas com docstrings
+    assert len(plugin_report["results"]) == 0
+
+
+def test_comment_density_ignores_small_files_integration(tmp_path: Path):
+    """
+    Verifica se o plugin ignora arquivos muito pequenos (ex: menos de X linhas)
+    para evitar ruído em arquivos de configuração ou exports simples.
+    """
+    # 1. Setup: Arquivo minúsculo sem comentários
+    project_dir = tmp_path / "project_tiny"
+    project_dir.mkdir()
+    code_file = project_dir / "tiny.py"
+    
+    # Apenas 2 linhas de código, 0 comentários.
+    code_file.write_text("x = 1\ny = 2\n", encoding="utf-8")
+    output_file = tmp_path / "report_tiny.json"
+
+    # 2. Execução
+    main(
+        [
+            "analyze", str(project_dir),
+            "--out", str(output_file),
+            "--plugins", "CommentDensity",
+        ]
+    )
+
+    # 3. Verificação
+    with open(output_file, encoding="utf-8") as f:
+        data = json.load(f)
+
+    file_report = next(f for f in data["details"] if "tiny.py" in f["file"])
+    
+    # AQUI TAMBÉM: Quebramos a linha longa
+    plugin_report = next(
+        p for p in file_report["plugins"] if p["plugin"] == "CommentDensity"
+    )
+
+    # Esperamos que não gere erro para arquivos triviais
+    assert len(plugin_report["results"]) == 0
