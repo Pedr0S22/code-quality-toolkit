@@ -9,7 +9,7 @@ from toolkit.utils.config import ToolkitConfig
 class Plugin:
     """
     Comment Density Analyzer Plugin.
-    Gera Dashboard D3.js com indicadores de tipo de violação.
+    Gera Dashboard D3.js Responsivo (Blue Theme).
     """
 
     def __init__(self) -> None:
@@ -26,7 +26,7 @@ class Plugin:
     def get_metadata(self) -> dict[str, str]:
         return {
             "name": "CommentDensity",
-            "version": "0.3.3",
+            "version": "0.3.4",
             "description": "Analyzes comment density violations (D3.js Dashboard).",
         }
 
@@ -147,8 +147,8 @@ class Plugin:
                     "metrics": {
                         "code_lines": code_lines,
                         "comment_lines": comment_lines,
-                        # AQUI ESTAVA O ERRO: VOLTOU PARA 'comment_density'
-                        "comment_density": density,
+                        "density": density,
+                        "comment_density": density,  # Mantido para testes
                     },
                 },
             }
@@ -263,9 +263,7 @@ class Plugin:
         }
 
     def _get_html_template(self, data_json: str) -> str:
-        """
-        Template D3.js com indicadores coloridos na lista de arquivos.
-        """
+        """Template D3.js Responsivo (Blue Theme)."""
         # noqa: E501
         return f"""<!DOCTYPE html>
 <html lang="en">
@@ -274,8 +272,21 @@ class Plugin:
     <title>Comment Density Dashboard</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-        body {{ font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; background-color: #f4f4f4; display: flex; justify-content: center; }}
-        .chart-container {{ width: 1066px; height: 628px; background: white; border: 1px solid #ccc; box-shadow: 0 4px 8px rgba(0,0,0,0.1); box-sizing: border-box; }}
+        body {{
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0; padding: 20px;
+            background-color: #f4f4f4;
+            display: flex; justify-content: center;
+        }}
+        .chart-container {{
+            /* CORREÇÃO RESPONSIVA */
+            width: 100%;
+            max-width: 1066px;
+            aspect-ratio: 1066 / 628;
+            background: white; border: 1px solid #ccc;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }}
     </style>
 </head>
 <body>
@@ -288,7 +299,13 @@ class Plugin:
     const minThreshold = data.thresholds ? data.thresholds.min : "10%";
     const maxThreshold = data.thresholds ? data.thresholds.max : "50%";
     
-    const svg = d3.select("#app").append("svg").attr("width", width).attr("height", height).style("background-color", "#fff");
+    // CORREÇÃO: viewBox para escalar o SVG automaticamente
+    const svg = d3.select("#app").append("svg")
+        .attr("viewBox", `0 0 ${{width}} ${{height}}`)
+        .attr("preserveAspectRatio", "xMidYMid meet")
+        .style("width", "100%")
+        .style("height", "100%")
+        .style("background-color", "#fff");
 
     // HEADER (Azul)
     svg.append("rect").attr("x", 0).attr("y", 0).attr("width", width).attr("height", 70).attr("fill", "#0d6efd");
