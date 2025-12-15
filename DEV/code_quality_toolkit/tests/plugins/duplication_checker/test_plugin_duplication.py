@@ -179,7 +179,7 @@ def test_duplication_generate_dashboard(tmp_path) -> None:
     }
 
     # Create expected directory
-    assets_dir = tmp_path / "web" / "assets"
+    assets_dir = tmp_path / "src" / "toolkit" / "plugins" / "duplicate_code_checker"
     assets_dir.mkdir(parents=True)
 
     # Run from tmp_path so relative path resolves
