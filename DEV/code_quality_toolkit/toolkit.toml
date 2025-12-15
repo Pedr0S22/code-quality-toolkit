@@ -1,9 +1,5 @@
 [plugins]
-<<<<<<< HEAD
 enabled = ["StyleChecker","CyclomaticComplexity", "SecurityChecker", "DuplicationChecker", "BasicMetrics", "CommentDensity", "DeadCodeDetector","DependencyGraph", "LinterWrapper"]
-=======
-enabled = ["StyleChecker", "CyclomaticComplexity", "SecurityChecker", "DuplicationChecker", "CommentDensity", "DeadCodeDetector"]
->>>>>>> 025753896c5786e3749a67e9e788ca80e6bd528c
 
 [plugins.dead_code_detector]
 ignore_patterns = ["^__", "^test_"]
