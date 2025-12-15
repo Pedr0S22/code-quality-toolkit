@@ -5,7 +5,7 @@
 Using this plugin helps you automatically detect defined code that is never used. By fixing these issues, you can clean up the codebase, reduce confusion, and improve your code's quality, making it easier to read and maintain.
 
 ## Version
-0.1.0
+0.2.1
 
 ### What This Plugin Does
 
@@ -44,24 +44,38 @@ You can adjust these values:
 
 - `severity`: The severity level ("info", "low", "medium", "high") for reported issues.
 
-## How to Use It
-1. Run your toolkit's main CLI command:
+**Note:** If you are using the web application, these modifications can be done directly in the app, using the information above.
 
-    ```python -m toolkit.core.cli analyze <path_to_your_code> --out report.json --config toolkit.toml```
+## How to Use It
+
+The Dead Code Detector plugin can be executed in two ways, giving users flexibility depending on their environment and needs:
+
+1. **Run your toolkit's main CLI command:**
+
+    ```bash
+    python -m toolkit.core.cli analyze <path_to_your_code> --out report.json --config toolkit.toml
+    ```
 
     or using make command:
     
-    ```make run arg="--config toolkit.toml"```.
-2. The `DeadCodeDetector` plugin will automatically analyze all Python files from the path you gave.
-3. All issues found related to this plugin and others you enable, will be included in a summary and in detail in the final report.
+    ```bash
+    make run arg="--config toolkit.toml"
+    ```
 
-4. Or you could run through Web Application
-**Start the Server:** Launch the core application server.
+2. **Run Web Application:**
+
+    **Start the Server:** Launch the core application server.
     ```bash
     make run_server
     ```
-    **Access the Client:** Open your browser and navigate to the Web App interface (typically `http://localhost:8000`).
-    **Run Analysis:** Use the interface to upload your project, select/configure plugins, and click the **"Run Analysis"** button. The results, including generated dashboards, will be displayed upon completion.
+    **Access the Client:** Launch the App.
+    ```bash
+    make run_client
+    ```
+    **Run Analysis:** Use the interface to upload your file(s), select/configure plugins, and click the **"Run Analysis"** button. The results, including generated dashboards, will be displayed upon completion.
+
+The `DeadCodeDetector` plugin will automatically analyze all Python files from the path you gave.
+All issues found related to this plugin and others you enable, will be included in a summary and in detail in the final report.
 
 ## Example Issues You May See
 - **DEAD_CODE**: A function, class, or variable was defined but never used (loaded) anywhere in the file.
@@ -209,3 +223,5 @@ Rabia Saygin, 2024187186, @rferyals
 Isaque Capra, 2023221892, @Isaque_capra
 
 Tiago Alves, 2023207875, @tiagoalves.21
+
+#### Disclaimer: This plugin component was build using AI.
