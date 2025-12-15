@@ -1,5 +1,6 @@
-from textwrap import dedent
 from pathlib import Path
+from textwrap import dedent
+
 import pytest
 
 # Importa as classes que precisamos testar e simular
