@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Dependency Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            /* AJUSTE DE TAMANHO DA JANELA */
+            width: 95%;
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 { color: #2d3748; border-bottom: 2px solid #edf2f7; padding-bottom: 15px; margin-top: 0; }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+        .stat-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px rgba(0,0,0,0.1); border-color: #cbd5e0; }
+        .stat-value { font-size: 42px; font-weight: 700; color: #2b6cb0; line-height: 1.2; }
+        .stat-label { font-size: 13px; color: #718096; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 600; margin-top: 5px; }
+        
+        .modules-section { margin-top: 50px; }
+        .modules-section h2 { color: #4a5568; margin-bottom: 20px; }
+        
+        .category-container { 
+            margin-bottom: 30px; 
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .category-header {
+            padding: 15px 25px;
+            background: #f7fafc;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #edf2f7;
+        }
+        .module-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+            padding: 25px;
+        }
+        .module-chip {
+            padding: 8px 16px;
+            background: #f7fafc;
+            border: 1px solid #edf2f7;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #4a5568;
+            display: flex;
+            align-items: center;
+            transition: background 0.2s;
+        }
+        .module-chip:hover { background: #edf2f7; border-color: #cbd5e0; }
+        .module-chip:before {
+            content: "📦";
+            margin-right: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 Dependency Analysis Dashboard</h1>
+        
+        <div class="stats">
+            
+            <div class="stat-card">
+                <div class="stat-value">0</div>
+                <div class="stat-label">Total Imports</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-value">0</div>
+                <div class="stat-label">Unique Modules</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-value">0</div>
+                <div class="stat-label">StdLib Uses</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-value">0</div>
+                <div class="stat-label">3rd Party Uses</div>
+            </div>
+            
+        </div>
+
+        <div class="modules-section">
+            <h2>📦 Module Breakdown</h2>
+            
+        </div>
+    </div>
+</body>
+</html>

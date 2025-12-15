@@ -6,6 +6,7 @@ from toolkit.plugins.dependency_graph.plugin import Plugin
 from toolkit.utils.config import ToolkitConfig
 
 
+
 class UnitTestsDependencyGraph(unittest.TestCase):
     """
     Testes Unitários focados na lógica de parsing (analyze) e no contrato.
@@ -14,6 +15,7 @@ class UnitTestsDependencyGraph(unittest.TestCase):
 
     def setUp(self):
         """Inicializa o plugin antes de cada teste."""
+        # Se a classe Plugin não estiver definida neste arquivo, este passo falhará.
         self.plugin = Plugin()
         self.file_path = "my_test_module.py"
         self.config = ToolkitConfig()
@@ -69,8 +71,7 @@ class UnitTestsDependencyGraph(unittest.TestCase):
         self.assertEqual(result["summary"]["unique_modules"], 1)
         # Verifica a categoria (Third-party ou Local) - deve ser 1 no total
         self.assertIn(
-            result["summary"]["third_party_count"]
-            + result["summary"]["local_count"],
+            result["summary"]["third_party_count"] + result["summary"]["local_count"],
             [1],
         )
 
@@ -164,6 +165,7 @@ class UnitTestsDependencyGraph(unittest.TestCase):
         result = self.plugin.analyze(code, self.file_path)
 
         # Deve ser serializável em JSON
+        # Deve ser serializável em JSON (o que é garantido pelo retorno de dicts)
         try:
             json.dumps(result)
         except TypeError:

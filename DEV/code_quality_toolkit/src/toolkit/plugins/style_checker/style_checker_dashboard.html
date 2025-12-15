@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>StyleChecker Dashboard</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        .chart-container {
+            width: 1066px;
+            height: 628px;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Main container for the dashboard -->
+<div id="app" class="chart-container"></div>
+
+<script>
+    // Data injected from Python (JSON literal)
+    const data = {"plugin": "StyleChecker", "total_issues": 11, "severity_counts": [{"severity": "info", "count": 1}, {"severity": "low", "count": 10}], "rule_counts": [{"code": "TRAILING_WHITESPACE", "count": 2}, {"code": "INDENT_WIDTH", "count": 2}, {"code": "INDENT_TABS_NOT_ALLOWED", "count": 2}, {"code": "LINE_LENGTH", "count": 1}, {"code": "INDENT_MIXED", "count": 1}, {"code": "CLASS_NAMING", "count": 1}, {"code": "FUNC_NAMING", "count": 1}, {"code": "FILENAME_STYLE", "count": 1}], "top_files": [{"file": "C:\\Users\\welzm\\AppData\\Local\\Temp\\toolkit_sessions\\b87ce4b7-ec42-4e16-bbbd-0f0fbcac8bd5\\source\\BadStyleFile.py", "count": 11}]};
+
+    const width = 1066;
+    const height = 628;
+
+    // Create main SVG canvas with required dimensions
+    const svg = d3.select("#app")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    // ---- Header / title ----
+    svg.append("text")
+        .attr("x", 20)
+        .attr("y", 30)
+        .style("font-size", "16px")
+        .style("font-weight", "bold")
+        .text("StyleChecker - Dashboard");
+
+    // ---- Summary line (e.g. total issues) ----
+    const summaryText = `Total issues: ${data.total_issues}`;
+    svg.append("text")
+        .attr("x", 20)
+        .attr("y", 55)
+        .style("font-size", "12px")
+        .text(summaryText);
+
+    // ---------- Helper function: reusable bar chart ----------
+    function drawBarChart(group, dataset, xKey, yKey, title, chartWidth, chartHeight) {
+        // If no data, display a simple message
+        if (!dataset || dataset.length === 0) {
+            group.append("text")
+                .attr("x", 0)
+                .attr("y", 15)
+                .style("font-size", "12px")
+                .text("No data available");
+            return;
+        }
+
+        // X scale: categorical (band) based on xKey (severity or rule code)
+        const x = d3.scaleBand()
+            .domain(dataset.map(d => d[xKey]))
+            .range([0, chartWidth])
+            .padding(0.2);
+
+        // Y scale: linear, based on counts
+        const y = d3.scaleLinear()
+            .domain([0, d3.max(dataset, d => d[yKey]) || 0])
+            .nice()
+            .range([chartHeight, 0]);
+
+        // X axis (bottom)
+        group.append("g")
+            .attr("transform", `translate(0,${chartHeight})`)
+            .call(d3.axisBottom(x))
+            .selectAll("text")
+            .style("font-size", "10px")
+            .attr("transform", "rotate(-30)")
+            .style("text-anchor", "end");
+
+        // Y axis (left)
+        group.append("g")
+            .call(d3.axisLeft(y).ticks(5))
+            .selectAll("text")
+            .style("font-size", "10px");
+
+        // Bars
+        group.selectAll("rect")
+            .data(dataset)
+            .enter()
+            .append("rect")
+            .attr("x", d => x(d[xKey]))
+            .attr("y", d => y(d[yKey]))
+            .attr("width", x.bandwidth())
+            .attr("height", d => chartHeight - y(d[yKey]))
+            .attr("fill", "#3b82f6");  // basic blue color
+
+        // Chart title
+        group.append("text")
+            .attr("x", 0)
+            .attr("y", -10)
+            .style("font-weight", "bold")
+            .style("font-size", "12px")
+            .text(title);
+    }
+
+    // ---------- Chart 1: Issues by severity ----------
+    const severityGroup = svg.append("g")
+        .attr("transform", "translate(60, 100)");
+
+    drawBarChart(
+        severityGroup,
+        data.severity_counts,
+        "severity",
+        "count",
+        "Issues by severity",
+        400,
+        180
+    );
+
+    // ---------- Chart 2: Issues by rule/code ----------
+    const rulesGroup = svg.append("g")
+        .attr("transform", "translate(560, 100)");
+
+    // Only show top 8 rules to avoid label clutter
+    const topRules = (data.rule_counts || []).slice(0, 8);
+
+    drawBarChart(
+        rulesGroup,
+        topRules,
+        "code",
+        "count",
+        "Issues by rule",
+        400,
+        180
+    );
+
+    // ---------- Section: Top files (text list) ----------
+    const filesGroup = svg.append("g")
+        .attr("transform", "translate(60, 340)");
+
+    filesGroup.append("text")
+        .attr("x", 0)
+        .attr("y", 0)
+        .style("font-weight", "bold")
+        .style("font-size", "12px")
+        .text("Top files (by number of StyleChecker issues)");
+
+    if (data.top_files && data.top_files.length > 0) {
+        data.top_files.forEach((d, i) => {
+            filesGroup.append("text")
+                .attr("x", 0)
+                .attr("y", 20 + i * 16)
+                .style("font-size", "11px")
+                .text(`${i + 1}. ${d.file} (${d.count})`);
+        });
+    } else {
+        filesGroup.append("text")
+            .attr("x", 0)
+            .attr("y", 20)
+            .style("font-size", "11px")
+            .text("No file-level data available.");
+    }
+</script>
+
+</body>
+</html>

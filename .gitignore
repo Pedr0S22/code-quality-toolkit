@@ -24,6 +24,8 @@ build/
 # Project specific
 report.json
 toolkit.log
+report.html
+report.md
 
 # IDE settings
 .vscode/
@@ -31,3 +33,6 @@ toolkit.log
 
 # Environment variables
 .env
+
+# web assets
+web/assets/

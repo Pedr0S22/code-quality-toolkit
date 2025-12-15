@@ -279,7 +279,12 @@ def load_plugins(requested: Iterable[str] | None = None) -> dict[str, PluginProt
         # plugin's name is not in the requested set. If both are true, the plugin
         # is logged as skipped and the loop continues to the next module.
         if requested_set is not None and metadata["name"] not in requested_set:
-            logging.log("plugin.skipped", plugin=metadata["name"], reason="filtered")
+            logging.log(
+                "plugin.skipped",
+                level="INFO",
+                plugin=metadata["name"],
+                reason="filtered",
+            )
             continue
 
         # Check if a plugin with the same name has already been loaded. If so, it
@@ -293,23 +298,28 @@ def load_plugins(requested: Iterable[str] | None = None) -> dict[str, PluginProt
         # metadata name as the key. Success is logged with the plugin's name and
         # the module file path.
         plugin_instances[metadata["name"]] = plugin
-        logging.log("plugin.loaded", plugin=metadata["name"], module=str(module_file))
+        logging.log(
+            "plugin.loaded",
+            level="INFO",
+            plugin=metadata["name"],
+            module=str(module_file),
+        )
 
     # == end of Iterating ==
 
     # == Missing Plugins Check ==
     if requested_set is not None:
-        missing = sorted(
-            requested_set - set(plugin_instances)
-        )  # set containing all names that were requested but not successfully
-        # added to plugin_instances.
+        loaded_names = set(plugin_instances.keys())
+        missing = requested_set - loaded_names
         if missing:
-            # a PluginLoadError is raised, detailing exactly which requested
-            # plugins could not be loaded.
-            raise PluginLoadError(f"Requested plugins not found: {', '.join(missing)}")
-        # otherwise...
+            for name in sorted(missing):
+                logging.log(
+                    "plugin.missing",
+                    level="ERROR",
+                    plugin=name,
+                    error=f"Requested plugins not found: {', '.join(missing)}",
+                )
 
-    # ...the dictionary of validated and loaded plugin instances is returned.
     return plugin_instances
 
 

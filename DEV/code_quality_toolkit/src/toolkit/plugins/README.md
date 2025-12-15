@@ -109,6 +109,10 @@ If your plugin encounters *any* internal error (a bug, a bad regex, etc.), it **
 }
 ```
 
+## 4\. `generate_dashboard()`
+
+This method is the helper function to generate the mandatory dashboard for each plugin and it's called in `engine.py`. Note that this function receives the aggregated plugin results from `engine.py`. For more information, check [DASHBOARD.md](./DASHBOARD.md).
+
 -----
 
 ## "Golden Standard" Plugin Template
@@ -118,8 +122,9 @@ Use this file as a starting point for your new plugin. It includes all required 
 ```python
 # my_new_plugin.py
 from __future__ import annotations
+import pathlib
 
-from typing import Any
+from typing import Any, List
 from ...core.contracts import IssueResult
 from ...utils.config import ToolkitConfig
 
@@ -145,6 +150,18 @@ class Plugin:
         # Example: loading a value from toolkit.toml [tool.cqt.rules]
         if config.rules.get("my_rule_setting"):
             self.my_rule_setting = config.rules.my_rule_setting
+
+    def generate_dashboard(self, results: List[IssueResult]):
+      """
+      Generates the D3.js dashboard HTML file.
+      """
+      plugin_folder = pathlib.Path(__file__).parent
+      dashboard_file = plugin_folder / f"{self.get_metadata()['name']}_dashboard.html"
+      
+      # Dashboard generation logic
+      html_content = None # fix with the d3.js content
+
+      dashboard_file.write_text(html_content, encoding="utf-8")
 
     def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
         """

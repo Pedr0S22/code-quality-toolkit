@@ -43,6 +43,9 @@ def run_analysis(
     # results for every file scanned.
     files: list[FileReport] = []
 
+    # accumulator to hold results for every plugin
+    all_plugins_results = {name: [] for name in plugins}
+
     # == File discovery ==
 
     # Calls a utility (fs.discover_files) to locate all files that need analysis.
@@ -50,7 +53,7 @@ def run_analysis(
     # glob patterns defined in config.analyze to filter the file list.
     file_paths = fs.discover_files(root, config.analyze.include, config.analyze.exclude)
     logging.log(
-        "engine.files_discovered", count=len(file_paths)
+        "engine.files_discovered", level="INFO", count=len(file_paths)
     )  # The total number of files found is logged.
 
     # == Main Analysis Loop (File Iteration) ==
@@ -84,6 +87,7 @@ def run_analysis(
             except Exception as exc:  # noqa: BLE001 - convert to structured error
                 logging.log(
                     "plugin.failure",
+                    level="ERROR",
                     plugin=plugin_name,
                     file=str(file_path),
                     error=str(exc),
@@ -113,6 +117,9 @@ def run_analysis(
                     },
                 }
 
+            # Collect results into our accumulator
+            all_plugins_results[plugin_name].extend(report["results"])
+
             # === Aggregation of results (per file) ===
             plugin_reports.append(
                 # per file: Each plugin's report (whether successful or
@@ -129,6 +136,12 @@ def run_analysis(
         files.append({"file": str(file_path), "plugins": plugin_reports})
 
     # analysis complete (all files x all plugins)
+
+    # Call final report hook (Dispatch)
+    for plugin_name, plugin in plugins.items():
+        if hasattr(plugin, "generate_dashboard"):
+            # We pass ONLY the results relevant to this specific plugin
+            plugin.generate_dashboard(all_plugins_results[plugin_name])
 
     # This function returns two distinct pieces of information:
     # - files: A detailed list of reports, structured by file.

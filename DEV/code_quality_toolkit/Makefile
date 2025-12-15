@@ -17,6 +17,8 @@ setup:
 	$(PYTHON) -m venv $(VENV)
 	$(BIN)/python -m pip install --upgrade pip
 	$(BIN)/python -m pip install -e .[dev]
+	@echo "Fetching static assets..."
+	$(BIN)/python web/scripts/fetch_assets.py
 
 lint:
 	$(BIN)/ruff check src tests
@@ -31,12 +33,18 @@ typecheck:
 	$(BIN)/mypy src/toolkit
 
 test:
-	$(BIN)/pytest $(DIR)
+	$(BIN)/pytest $(DIR) -rs
 
 run:
-	$(BIN)/python -m toolkit.core.cli analyze examples/sample_project --out report.json $(arg)
+	$(BIN)/python -m toolkit.core.cli analyze examples/sample_project --out report.json --config toolkit.toml $(arg)
+
+run_server:
+	$(BIN)/python -m web.server
+
+run_client:
+	$(BIN)/python -m web.client
 
 report: run
 
 clean:
-	rm -rf $(VENV) report.json .mypy_cache .pytest_cache
+	rm -rf $(VENV) report.json .mypy_cache .pytest_cache web/assets

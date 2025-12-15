@@ -164,6 +164,125 @@ def test_style_checker_integration(tmp_path: Path):
     assert issue["severity"] in ["info", "low"]
 
 
+def test_duplication_checker_integration(tmp_path: Path):
+    """
+    Verifies that the DuplicationChecker plugin detects duplicated code (R0801)
+    when run via the CLI across multiple files.
+    """
+
+    # 1. Setup: Create a project with two files containing duplicated code
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+
+    file_a = project_dir / "a.py"
+    file_b = project_dir / "b.py"
+
+    duplicated_block = """
+def compute():
+    total = 0
+    for i in range(10):
+        total += i
+    if total > 5:
+        total -= 1
+    return total
+"""
+
+    file_a.write_text(duplicated_block, encoding="utf-8")
+    file_b.write_text(duplicated_block, encoding="utf-8")
+
+    output_file = tmp_path / "report.json"
+
+    # 2. Execution: Run CLI with DuplicationChecker
+    exit_code = main(
+        [
+            "analyze",
+            str(project_dir),
+            "--out",
+            str(output_file),
+            "--plugins",
+            "DuplicationChecker",
+        ]
+    )
+
+    # 3. Verification
+    assert exit_code == EXIT_SUCCESS
+    assert output_file.exists()
+
+    with open(output_file, encoding="utf-8") as f:
+        data = json.load(f)
+
+    file_reports = [
+        f
+        for f in data["details"]
+        if f["file"].endswith("a.py") or f["file"].endswith("b.py")
+    ]
+    assert file_reports, "No .py files found in report."
+
+    num_reports = 0
+    for file_report in file_reports:
+        plugin_report = next(
+            (p for p in file_report["plugins"] if p["plugin"] == "DuplicationChecker"),
+            None,
+        )
+        assert plugin_report is not None, "DuplicationChecker not found in plugin list."
+        num_reports += 1
+
+    assert num_reports > 0, "Expected more than one report across multiple files."
+
+
+def test_core_unified_report_generation(tmp_path: Path):
+    """
+    Integration tests(End-to-End):
+    Verify if the analyze function generate the 2 files (JSON e HTML)
+    correctly
+    """
+
+    # 1. Setup
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    (project_dir / "main.py").write_text("print('hello')", encoding="utf-8")
+
+    # Define where we want the file to be
+    output_json = tmp_path / "final_report.json"
+
+    # 2. Execution
+    exit_code = main(
+        [
+            "analyze",
+            str(project_dir),
+            "--out",
+            str(output_json),
+            "--plugins",
+            "StyleChecker",
+        ]
+    )
+
+    # 3.Succes verify
+    assert exit_code == EXIT_SUCCESS
+
+    # --- 1: JSON ---
+    # Just to be sure
+    assert output_json.exists(), "O ficheiro report.json não foi criado!"
+
+    with open(output_json, encoding="utf-8") as f:
+        data = json.load(f)
+    assert data["analysis_metadata"]["status"] == "completed"
+
+    # --- 2: HTML (The issue) ---
+    # The system should create the html too
+    output_html = output_json.with_suffix(".html")
+
+    assert output_html.exists(), "O ficheiro report.html não foi criado automaticamente"
+
+    # Checks if the file is not empty
+    assert output_html.stat().st_size > 0
+
+    # Verify if the html file appeared
+    html_content = output_html.read_text(encoding="utf-8")
+    assert "<!DOCTYPE html>" in html_content
+    assert "Code Quality Report" in html_content
+
+
 def test_dependency_graph_integration(tmp_path: Path):
     """
     Verifies that the DependencyGraph plugin correctly identifies imports
@@ -172,20 +291,15 @@ def test_dependency_graph_integration(tmp_path: Path):
     # 1. Setup: Create a project with 2 files that import each other/standard lib
     project_dir = tmp_path / "project"
     project_dir.mkdir()
-    
+
     # main.py imports utils and os
     (project_dir / "main.py").write_text(
-        "import os\n"
-        "from . import utils\n",
-        encoding="utf-8"
+        "import os\n" "from . import utils\n", encoding="utf-8"
     )
-    
+
     # utils.py imports json
-    (project_dir / "utils.py").write_text(
-        "import json\n",
-        encoding="utf-8"
-    )
-    
+    (project_dir / "utils.py").write_text("import json\n", encoding="utf-8")
+
     output_file = tmp_path / "report.json"
 
     # 2. Execution: Run CLI with DependencyGraph
@@ -212,7 +326,7 @@ def test_dependency_graph_integration(tmp_path: Path):
     main_plugin = next(
         p for p in main_report["plugins"] if p["plugin"] == "DependencyGraph"
     )
-    
+
     # Should find 'os' and 'utils'
     messages = [r["message"] for r in main_plugin["results"]]
     assert any("os" in m for m in messages)
@@ -223,16 +337,82 @@ def test_dependency_graph_integration(tmp_path: Path):
     utils_plugin = next(
         p for p in utils_report["plugins"] if p["plugin"] == "DependencyGraph"
     )
-    
+
     # Should find 'json'
     messages = [r["message"] for r in utils_plugin["results"]]
     assert any("json" in m for m in messages)
-    
+
     # Check Summary Graph Data
     # O plugin deve ter gerado a estrutura do grafo no sumário
     graph_data = utils_plugin["summary"].get("dependency_graph")
     assert graph_data is not None
     assert "json" in graph_data["nodes"]
+
+
+def test_basic_metrics_integration(tmp_path: Path):
+    """
+    Verifies that the BasicMetrics plugin correctly computes metrics
+    like total_lines, logical_lines, comment_lines, blank_lines,
+    docstring_lines, and Halstead metrics when run via the CLI.
+    """
+    import json
+
+    from toolkit.core.cli import EXIT_SUCCESS, main
+
+    # 1. Setup: Create a small Python file
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    code_file = project_dir / "metrics_test.py"
+    code_file.write_text(
+        '"""Module docstring."""\n'
+        "def foo():\n"
+        "    # This is a comment\n"
+        "    return 42\n\n"
+        "def bar():\n"
+        "    return foo()\n",
+        encoding="utf-8",
+    )
+    output_file = tmp_path / "report.json"
+
+    # 2. Execution: Run CLI with BasicMetrics plugin
+    exit_code = main(
+        [
+            "analyze",
+            str(project_dir),
+            "--out",
+            str(output_file),
+            "--plugins",
+            "BasicMetrics",
+        ]
+    )
+
+    # 3. Verification
+    assert exit_code == EXIT_SUCCESS
+    assert output_file.exists()
+
+    with open(output_file, encoding="utf-8") as f:
+        data = json.load(f)
+
+    # Find the report for the test file
+    file_report = next(f for f in data["details"] if "metrics_test.py" in f["file"])
+    plugin_report = next(
+        p for p in file_report["plugins"] if p["plugin"] == "BasicMetrics"
+    )
+
+    # Check that metrics are reported
+    summary = plugin_report["summary"]
+    metrics = summary.get("metrics", {})
+
+    # Expect non-zero totals
+    assert metrics.get("total_lines", 0) > 0
+    assert metrics.get("logical_lines", 0) > 0
+    assert "comment_lines" in metrics
+    assert "docstring_lines" in metrics
+    assert "blank_lines" in metrics
+
+    # Check results list matches issues_found
+    assert len(plugin_report["results"]) == summary.get("issues_found", 0)
+
 
 def test_multiple_specific_plugins_integration(tmp_path: Path):
     """
@@ -287,3 +467,65 @@ def test_multiple_specific_plugins_integration(tmp_path: Path):
     assert "DeadCodeDetector" in plugin_names
     assert "StyleChecker" in plugin_names
     assert len(plugin_names) == 2  # Ensure no extra plugins appeared
+
+
+def test_comment_density_integration(tmp_path: Path):
+    """
+    Verifies that the CommentDensity plugin finds comment density violations
+    when run via the CLI.
+    """
+    # 1. Setup: Create a file with very low comment density
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    code_file = project_dir / "nocomments.py"
+
+    # Create a file with NO comments (will trigger low density violation)
+    code_content = """def function_one():
+    x = 1
+    y = 2
+    return x + y
+
+def function_two():
+    a = 3
+    b = 4
+    return a * b
+
+class MyClass:
+    def method(self):
+        pass
+"""
+    code_file.write_text(code_content, encoding="utf-8")
+    output_file = tmp_path / "report.json"
+
+    # 2. Execution: Run CLI with CommentDensity plugin
+    exit_code = main(
+        [
+            "analyze",
+            str(project_dir),
+            "--out",
+            str(output_file),
+            "--plugins",
+            "CommentDensity",
+        ]
+    )
+
+    # 3. Verification
+    assert exit_code == EXIT_SUCCESS
+    assert output_file.exists()
+
+    with open(output_file, encoding="utf-8") as f:
+        data = json.load(f)
+
+    file_report = next(f for f in data["details"] if "nocomments.py" in f["file"])
+    plugin_report = next(
+        p for p in file_report["plugins"] if p["plugin"] == "CommentDensity"
+    )
+
+    # Expect to find a low comment density issue
+    assert len(plugin_report["results"]) >= 1
+    issue = plugin_report["results"][0]
+
+    # Check the issue details
+    assert "LOW_COMMENT_DENSITY" == issue["code"]
+    assert "low comment density" in issue["message"].lower()
+    assert issue["severity"] == "high"
