@@ -1,6 +1,7 @@
 import json
 import time
 import unittest
+from pathlib import Path
 
 from toolkit.plugins.dependency_graph.plugin import Plugin
 from toolkit.utils.config import ToolkitConfig
@@ -399,6 +400,108 @@ from my_project.utils import helper
             self.assertIn(category, graph_data["categories"])
             self.assertIsInstance(graph_data["categories"][category], list)
 
+def test_dashboard_aggregation_logic(tmp_path: Path):
+    """
+    Verifica a lógica de agregação do dashboard (contagem de tipos) com
+    resultados aninhados do Engine (cobre _aggregate_data_for_dashboard).
+    """
+    plugin = Plugin()
+    # Simulação dos dados de análise de múltiplos arquivos (saída do Engine)
+    aggregated_results = [
+        {
+            "file": "file_a.py",
+            "plugins": [{
+                "plugin": "DependencyGraph",
+                "results": [
+                    # stdlib (1). Plugin espera 'category' na entrada.
+                    {
+                        "message": "Import: os", 
+                        "severity": "info", 
+                        "category": "stdlib"
+                    },
+                    # local (1)
+                    {
+                        "message": "Import: local.util", 
+                        "severity": "info", 
+                        "category": "local"
+                    },
+                ]
+            }],
+        },
+        {
+            "file": "file_b.py",
+            "plugins": [{
+                "plugin": "DependencyGraph",
+                "results": [
+                    # third_party (1)
+                    {
+                        "message": "Import: requests", 
+                        "severity": "info", 
+                        "category": "third_party"
+                    },
+                    # local (1)
+                    {
+                        "message": "Import: .module", 
+                        "severity": "medium", 
+                        "category": "local"
+                    },
+                ]
+            }],
+        },
+    ]
+
+    dashboard_data = plugin._aggregate_data_for_dashboard(aggregated_results)
+
+    # 1. Verificação das Métricas Agregadas
+    assert dashboard_data["metrics"]["total_files"] == 2
+    assert dashboard_data["metrics"]["total_imports"] == 4
+    
+    # 2. Verificação das Contagens por Categoria
+    # CORRIGIDO: usa 'category_counts' e 'category'
+    category_counts = {
+        d["category"]: d["count"] 
+        for d in dashboard_data["category_counts"]
+    }
+    assert category_counts["stdlib"] == 1
+    assert category_counts["local"] == 2
+    assert category_counts["third_party"] == 1
+
+def test_dashboard_generation_success(tmp_path: Path):
+    """
+    Verifica a geração real do arquivo HTML,
+    sucesso e conteúdo (cobre generate_dashboard).
+    """
+    plugin = Plugin()
+    aggregated_results = [
+        {
+            "file": "file_c.py",
+            "plugins": [{
+                "plugin": "DependencyGraph",
+                "results": [
+                    {"message": "Import: os", "severity": "info", "type": "stdlib"},
+                ]
+            }]
+        },
+    ]
+
+    output_file = tmp_path / "dependency_dashboard.html"
+    
+    # Executa a geração do dashboard, escrevendo no disco
+    output_file_path = plugin.generate_dashboard(
+        aggregated_results, 
+        str(output_file)
+    )
+    
+    # 1. Verifica sucesso (retorna o caminho absoluto)
+    assert Path(output_file_path) == output_file.absolute()
+    assert output_file.exists()
+    
+    # 2. Verifica o conteúdo HTML
+    content = output_file.read_text(encoding='utf-8')
+    assert "<!DOCTYPE html>" in content
+    # CORRIGIDO: Agora espera o título real do template ("Dependency Dashboard")
+    assert "Dependency Dashboard" in content
+    assert '"total_imports": 1' in content
 
 if __name__ == "__main__":
     # Executar testes com verbosidade
