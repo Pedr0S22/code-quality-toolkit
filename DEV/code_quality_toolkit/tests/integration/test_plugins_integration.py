@@ -834,6 +834,7 @@ def test_comment_density_integration(tmp_path: Path):
     code_file = project_dir / "nocomments.py"
 
     # Create a file with NO comments (will trigger low density violation)
+    # GARANTINDO MAIS DE 5 LINHAS PARA NÃO SER IGNORADO
     code_content = """def function_one():
     x = 1
     y = 2
@@ -883,6 +884,7 @@ class MyClass:
     assert "LOW_COMMENT_DENSITY" == issue["code"]
     assert "low comment density" in issue["message"].lower()
     assert issue["severity"] == "high"
+
 
 def test_comment_density_sufficient_coverage_integration(tmp_path: Path):
     """
@@ -941,14 +943,13 @@ def disconnect():
 def test_comment_density_docstrings_integration(tmp_path: Path):
     """
     Verifica se Docstrings são aceitas.
-   
     """
     # 1. Setup
     project_dir = tmp_path / "project_docstrings"
     project_dir.mkdir()
     code_file = project_dir / "docstrings_only.py"
 
-    # Aumento drasticamente a lógica para diluir a docstring
+    # Aumento drasticamente a lógica para diluir a docstring e testar o cálculo real
     code_content = '''
 def complex_algorithm(a, b):
     """
@@ -1009,14 +1010,15 @@ def complex_algorithm(a, b):
         p for p in file_report["plugins"] if p["plugin"] == "CommentDensity"
     )
 
-
+    # Comentários e docstrings devem contar, então não deve haver erro 
+    # de baixa densidade.
+    # Neste caso ajustado, temos docstring + comentários inline suficientes.
     assert len(plugin_report["results"]) == 0
 
 
 def test_comment_density_low_density_integration(tmp_path: Path):
     """
-    Verifica se o plugin detecta corretamente baixa densidade de comentários
-    mesmo em arquivos pequenos (já que o plugin atual não ignora arquivos).
+    Verifica se o plugin detecta corretamente baixa densidade de comentários.
     """
     # 1. Setup: Arquivo pequeno sem comentários
     project_dir = tmp_path / "project_tiny"
@@ -1024,7 +1026,11 @@ def test_comment_density_low_density_integration(tmp_path: Path):
     code_file = project_dir / "tiny.py"
 
     # Código sem nenhum comentário -> Densidade 0% -> Deve falhar
-    code_file.write_text("x = 1\ny = 2\nprint(x+y)\n", encoding="utf-8")
+    # CORREÇÃO: Adicionadas linhas extras para superar o limite de "skip small files"
+    code_file.write_text((
+    "x = 1\ny = 2\nz = 3\n"
+    "w = 4\nk = 5\nprint(x+y)\n"
+), encoding="utf-8")
     output_file = tmp_path / "report_tiny.json"
 
     # 2. Execução
@@ -1045,7 +1051,6 @@ def test_comment_density_low_density_integration(tmp_path: Path):
         p for p in file_report["plugins"] if p["plugin"] == "CommentDensity"
     )
 
-    # MUDANÇA: Como não alteramos o plugin para ignorar, ele VAI achar erro.
-    # O teste passa se ele encontrar EXATAMENTE 1 erro (LOW_COMMENT_DENSITY).
+    # Deve encontrar EXATAMENTE 1 erro (LOW_COMMENT_DENSITY)
     assert len(plugin_report["results"]) >= 1
     assert plugin_report["results"][0]["code"] == "LOW_COMMENT_DENSITY"

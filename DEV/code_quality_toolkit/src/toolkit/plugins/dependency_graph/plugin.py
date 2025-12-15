@@ -101,7 +101,7 @@ class Plugin:
                         "line": imp["line"],
                         "col": 1,
                         "hint": self._generate_hint(imp),
-                        "file": file_path or "unknown",  # Injeção para dashboard
+                        "file": file_path or "unknown",
                         "module": imp["module"],
                         "category": self._get_category(imp, categorized),
                     }
@@ -115,16 +115,17 @@ class Plugin:
             }
 
         except SyntaxError as e:
-            # Retorna lista com erro para satisfazer testes
+            # FIX: Retorna o erro na lista 'results' para o teste passar
             return {
                 "results": [
                     {
                         "severity": "high",
                         "code": "DEP-SYNTAX",
                         "message": f"Erro de sintaxe: {e}",
-                        "line": e.lineno or 1,
-                        "col": e.offset or 1,
+                        "line": getattr(e, "lineno", 1) or 1,
+                        "col": getattr(e, "offset", 1) or 1,
                         "hint": "Corrija a sintaxe.",
+                        "file": file_path or "unknown",
                     }
                 ],
                 "summary": {
@@ -155,7 +156,7 @@ class Plugin:
     ) -> str:
         """Gera o dashboard HTML agregando dados."""
 
-        # 1. Agregação Robusta (Baseada nos Issues/Resultados)
+        # 1. Agregação Robusta
         dashboard_data = self._aggregate_data_for_dashboard(aggregated_results)
 
         print(
@@ -207,7 +208,6 @@ class Plugin:
                         flattened_imports.append(issue)
 
             elif "code" in entry or "severity" in entry:
-                # Caso venha flat
                 flattened_imports.append(entry)
 
         # Contagem
@@ -234,11 +234,9 @@ class Plugin:
             {"category": k, "count": v} for k, v in category_counts.items() if v > 0
         ]
 
-        # Top Módulos Externos (ignorando 'unknown' ou locais se possível)
         mod_data = [{"module": k, "count": v} for k, v in module_counts.items()]
         mod_data.sort(key=lambda x: x["count"], reverse=True)
 
-        # Top Files
         top_files = [{"file": k, "count": v} for k, v in files_counter.items()]
         top_files.sort(key=lambda x: x["count"], reverse=True)
 
@@ -251,13 +249,13 @@ class Plugin:
                 "unique_modules": unique_modules_count,
             },
             "category_counts": cat_data,
-            "top_modules": mod_data[:10],  # Top 10 libs
-            "top_files": top_files[:10],   # Top 10 files
+            "top_modules": mod_data[:10],
+            "top_files": top_files[:10],
         }
+
 
     def _get_html_template(self, data_json: str) -> str:
         """Template D3.js (Tema Roxo) Responsivo."""
-        # noqa: E501
         return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -298,34 +296,50 @@ class Plugin:
         .style("background-color", "#fff");
 
     // HEADER (Roxo)
-    svg.append("rect").attr("x", 0).attr("y", 0).attr("width", width).attr("height", 70).attr("fill", "#6f42c1");
-    svg.append("text").attr("x", 20).attr("y", 45).attr("fill", "white").style("font-size", "24px").style("font-weight", "bold").text("Dependency Graph Analysis");
+    svg.append("rect")
+        .attr("x", 0).attr("y", 0).attr("width", width)
+        .attr("height", 70).attr("fill", "#6f42c1");
+    svg.append("text").attr("x", 20).attr("y", 45).attr("fill", "white")
+        .style("font-size", "24px").style("font-weight", "bold")
+        .text("Dependency Graph Analysis");
 
-    // Métricas Header
+    // METRICS
     const mGroup = svg.append("g").attr("transform", "translate(700, 20)");
     
-    // Box 1: Total Imports
-    mGroup.append("rect").attr("x", 0).attr("width", 140).attr("height", 30).attr("rx", 5).attr("fill", "rgba(255,255,255,0.2)");
-    mGroup.append("text").attr("x", 70).attr("y", 20).attr("text-anchor", "middle").attr("fill", "white").style("font-weight", "bold").text(`Imports: ${{data.metrics.total_imports}}`);
+    mGroup.append("rect")
+        .attr("x", 0).attr("width", 140).attr("height", 30)
+        .attr("rx", 5).attr("fill", "rgba(255,255,255,0.2)");
+    mGroup.append("text").attr("x", 70).attr("y", 20)
+        .attr("text-anchor", "middle").attr("fill", "white")
+        .style("font-weight", "bold")
+        .text(`Imports: ${{data.metrics.total_imports}}`);
     
-    // Box 2: Unique Modules
-    mGroup.append("rect").attr("x", 150).attr("width", 160).attr("height", 30).attr("rx", 5).attr("fill", "rgba(255,255,255,0.2)");
-    mGroup.append("text").attr("x", 230).attr("y", 20).attr("text-anchor", "middle").attr("fill", "white").style("font-weight", "bold").text(`Unique Libs: ${{data.metrics.unique_modules}}`);
+    mGroup.append("rect")
+        .attr("x", 150).attr("width", 160).attr("height", 30)
+        .attr("rx", 5).attr("fill", "rgba(255,255,255,0.2)");
+    mGroup.append("text").attr("x", 230).attr("y", 20)
+        .attr("text-anchor", "middle").attr("fill", "white")
+        .style("font-weight", "bold")
+        .text(`Unique Libs: ${{data.metrics.unique_modules}}`);
 
     const col1X = 50; const col2X = 550; const contentY = 120;
 
-    // --------------------------------------------------------
-    // CHART 1: CATEGORIES (Bar Chart)
-    // --------------------------------------------------------
-    svg.append("text").attr("x", col1X).attr("y", contentY - 10).style("font-size", "18px").style("font-weight", "bold").text("Imports by Category");
+    // CHART 1: CATEGORIES
+    svg.append("text").attr("x", col1X).attr("y", contentY - 10)
+        .style("font-size", "18px").style("font-weight", "bold")
+        .text("Imports by Category");
     const catWidth = 450; const catHeight = 200;
-    const catGroup = svg.append("g").attr("transform", `translate(${{col1X}}, ${{contentY}})`);
+    const catGroup = svg.append("g")
+        .attr("transform", `translate(${{col1X}}, ${{contentY}})`);
     
     const catData = data.category_counts || [];
     if (catData.length > 0) {{
-        const xCat = d3.scaleBand().domain(catData.map(d => d.category)).range([0, catWidth]).padding(0.3);
+        const xCat = d3.scaleBand()
+            .domain(catData.map(d => d.category))
+            .range([0, catWidth]).padding(0.3);
         const maxVal = d3.max(catData, d => d.count);
-        const yCat = d3.scaleLinear().domain([0, maxVal * 1.2]).range([catHeight, 0]);
+        const yCat = d3.scaleLinear()
+            .domain([0, maxVal * 1.2]).range([catHeight, 0]);
         
         catGroup.append("g").attr("transform", `translate(0,${{catHeight}})`).call(d3.axisBottom(xCat));
         catGroup.append("g").call(d3.axisLeft(yCat).ticks(5));
@@ -334,70 +348,94 @@ class Plugin:
         
         catGroup.selectAll("rect").data(catData).enter().append("rect")
             .attr("x", d => xCat(d.category)).attr("y", d => yCat(d.count))
-            .attr("width", xCat.bandwidth()).attr("height", d => catHeight - yCat(d.count))
+            .attr("width", xCat.bandwidth())
+            .attr("height", d => catHeight - yCat(d.count))
             .attr("fill", d => colorMap[d.category] || "#666");
             
         catGroup.selectAll(".label").data(catData).enter().append("text")
-            .attr("x", d => xCat(d.category) + xCat.bandwidth()/2).attr("y", d => yCat(d.count) - 5)
-            .attr("text-anchor", "middle").style("font-size", "12px").style("font-weight", "bold").text(d => d.count);
+            .attr("x", d => xCat(d.category) + xCat.bandwidth()/2)
+            .attr("y", d => yCat(d.count) - 5).attr("text-anchor", "middle")
+            .style("font-size", "12px").style("font-weight", "bold")
+            .text(d => d.count);
     }} else {{
          catGroup.append("text").attr("y", 100).text("No imports found");
     }}
 
-    // --------------------------------------------------------
-    // CHART 2: TOP MODULES (Horizontal Bars)
-    // --------------------------------------------------------
+    // CHART 2: TOP MODULES
     const modsY = contentY + catHeight + 60;
-    svg.append("text").attr("x", col1X).attr("y", modsY - 10).style("font-size", "18px").style("font-weight", "bold").text("Most Used Libraries");
+    svg.append("text").attr("x", col1X).attr("y", modsY - 10)
+        .style("font-size", "18px").style("font-weight", "bold")
+        .text("Most Used Libraries");
     
     const textPadding = 100;
-    const modGroup = svg.append("g").attr("transform", `translate(${{col1X + textPadding}}, ${{modsY}})`);
+    const modGroup = svg.append("g")
+        .attr("transform", `translate(${{col1X + textPadding}}, ${{modsY}})`);
     const modData = (data.top_modules || []).slice(0, 5);
     
     if(modData.length > 0) {{
         const maxCount = d3.max(modData, d => d.count);
-        const xMod = d3.scaleLinear().domain([0, maxCount * 1.2]).range([0, catWidth - textPadding]);
-        const yMod = d3.scaleBand().domain(modData.map(d => d.module)).range([0, 150]).padding(0.2);
+        const xMod = d3.scaleLinear()
+            .domain([0, maxCount * 1.2]).range([0, catWidth - textPadding]);
+        const yMod = d3.scaleBand()
+            .domain(modData.map(d => d.module)).range([0, 150]).padding(0.2);
         
         modGroup.append("g").call(d3.axisLeft(yMod));
         modGroup.selectAll("rect").data(modData).enter().append("rect")
-            .attr("x", 1).attr("y", d => yMod(d.module)).attr("width", d => xMod(d.count))
+            .attr("x", 1).attr("y", d => yMod(d.module))
+            .attr("width", d => xMod(d.count))
             .attr("height", yMod.bandwidth()).attr("fill", "#6f42c1");
             
         modGroup.selectAll("text.val").data(modData).enter().append("text")
-            .attr("x", d => xMod(d.count) + 5).attr("y", d => yMod(d.module) + yMod.bandwidth()/2 + 4)
-            .style("font-size", "11px").style("font-weight", "bold").text(d => d.count);
+            .attr("x", d => xMod(d.count) + 5)
+            .attr("y", d => yMod(d.module) + yMod.bandwidth()/2 + 4)
+            .style("font-size", "11px").style("font-weight", "bold")
+            .text(d => d.count);
     }} else {{
-        svg.append("text").attr("x", col1X).attr("y", modsY + 50).text("No data available");
+        svg.append("text").attr("x", col1X).attr("y", modsY + 50)
+            .text("No data available");
     }}
 
-    // --------------------------------------------------------
-    // LIST: TOP FILES (Files with most imports)
-    // --------------------------------------------------------
-    svg.append("text").attr("x", col2X).attr("y", contentY - 10).style("font-size", "18px").style("font-weight", "bold").text("Files with Most Imports");
-    const listGroup = svg.append("g").attr("transform", `translate(${{col2X}}, ${{contentY}})`);
-    listGroup.append("rect").attr("width", 450).attr("height", 420).attr("fill", "#fafafa").attr("stroke", "#eee");
+    // LIST: TOP FILES
+    svg.append("text").attr("x", col2X).attr("y", contentY - 10)
+        .style("font-size", "18px").style("font-weight", "bold")
+        .text("Files with Most Imports");
+    const listGroup = svg.append("g")
+        .attr("transform", `translate(${{col2X}}, ${{contentY}})`);
+    listGroup.append("rect")
+        .attr("width", 450).attr("height", 420)
+        .attr("fill", "#fafafa").attr("stroke", "#eee");
 
     const files = data.top_files || [];
     
     if (files.length > 0) {{
         files.forEach((file, i) => {{
             const yPos = 30 + (i * 40);
-            if (i > 0) listGroup.append("line").attr("x1", 10).attr("y1", yPos - 25).attr("x2", 440).attr("y2", yPos - 25).attr("stroke", "#eee");
+            if (i > 0) listGroup.append("line")
+                .attr("x1", 10).attr("y1", yPos - 25).attr("x2", 440)
+                .attr("y2", yPos - 25).attr("stroke", "#eee");
             
             let fileName = file.file;
             if (fileName.length > 50) fileName = "..." + fileName.slice(-47);
             
-            listGroup.append("text").attr("x", 15).attr("y", yPos).style("font-family", "monospace").style("font-size", "12px").text(`${{i+1}}. ${{fileName}}`);
-            listGroup.append("rect").attr("x", 400).attr("y", yPos - 12).attr("width", 30).attr("height", 18).attr("rx", 4).attr("fill", "#6f42c1");
-            listGroup.append("text").attr("x", 415).attr("y", yPos + 1).attr("text-anchor", "middle").attr("fill", "white").style("font-size", "11px").style("font-weight", "bold").text(file.count);
+            listGroup.append("text").attr("x", 15).attr("y", yPos)
+                .style("font-family", "monospace").style("font-size", "12px")
+                .text(`${{i+1}}. ${{fileName}}`);
+            listGroup.append("rect").attr("x", 400).attr("y", yPos - 12)
+                .attr("width", 30).attr("height", 18).attr("rx", 4)
+                .attr("fill", "#6f42c1");
+            listGroup.append("text").attr("x", 415).attr("y", yPos + 1)
+                .attr("text-anchor", "middle").attr("fill", "white")
+                .style("font-size", "11px").style("font-weight", "bold")
+                .text(file.count);
         }});
     }} else {{
-        listGroup.append("text").attr("x", 225).attr("y", 210).attr("text-anchor", "middle").attr("fill", "#666").text("No files analyzed");
+        listGroup.append("text").attr("x", 225).attr("y", 210)
+            .attr("text-anchor", "middle").attr("fill", "#666")
+            .text("No files analyzed");
     }}
 </script>
 </body>
-</html>"""
+</html>"""  # noqa: E501
 
     # ==========================================================================
     # LÓGICA DE ANÁLISE (AST)
@@ -493,12 +531,11 @@ class Plugin:
         unique = set(imp["module"] for imp in imports if imp["module"])
         nodes = list(unique)  # Lista para serialização JSON
 
-        # Métricas para testes de compatibilidade
         wildcard_count = sum(1 for imp in imports if imp.get("name") == "*")
         relative_count = sum(1 for imp in imports if imp["level"] > 0)
 
         return {
-            # CHAVE OBRIGATÓRIA ADICIONADA:
+            # FIX: Adicionada a chave issues_found e status
             "issues_found": len(imports),
             "status": "completed",
             "total_imports": len(imports),
@@ -511,6 +548,6 @@ class Plugin:
             "dependency_graph": {
                 "nodes": nodes,
                 "node_count": len(nodes),
-                "categories": categorized,  # Passamos os objetos categorizados
+                "categories": categorized,
             },
         }
