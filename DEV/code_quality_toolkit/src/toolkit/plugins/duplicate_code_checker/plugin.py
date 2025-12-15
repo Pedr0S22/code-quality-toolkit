@@ -44,7 +44,7 @@ class Plugin:
         """
         Generates the D3.js dashboard HTML file.
         """
-        dashboard_file = 'web/assets/' + f"{self.name}_dashboard.html"
+        dashboard_file = 'src/toolkit/plugins/' + f"{self.name}_dashboard.html"
         html_content = self.render_html(results)
 
         with open(dashboard_file, "w", encoding="utf-8") as f:
