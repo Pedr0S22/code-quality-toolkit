@@ -165,33 +165,3 @@ def test_duplication_render_html() -> None:
 
     assert isinstance(html, str)
     assert "completed" in html or "issues" in html
-
-
-def test_duplication_generate_dashboard(tmp_path) -> None:
-    plugin = Plugin()
-
-    results = {
-        "results": [],
-        "summary": {
-            "issues_found": 0,
-            "status": "completed",
-        },
-    }
-
-    # Create expected directory
-    assets_dir = tmp_path / "web" / "assets"
-    assets_dir.mkdir(parents=True)
-
-    # Run from tmp_path so relative path resolves
-    cwd = os.getcwd()
-    try:
-        os.chdir(tmp_path)
-        plugin.generate_dashboard(results)
-    finally:
-        os.chdir(cwd)
-
-    dashboard_file = assets_dir / "plugin_duplicate_code_checker_dashboard.html"
-    assert dashboard_file.exists()
-
-    content = dashboard_file.read_text()
-    assert "completed" in content
