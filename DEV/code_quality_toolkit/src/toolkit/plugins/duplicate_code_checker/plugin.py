@@ -20,7 +20,7 @@ JINJA_ENV = Environment(
 class Plugin:
     def __init__(self) -> None:
         self.max_complexity = 10
-        self.name: str = "plugin_duplicate_code_checker"
+        self.name: str = "duplicate_code_checker"
 
     def configure(self, config: ToolkitConfig) -> None:
         """Recebe parâmetros de [plugins.duplicate_code_checker] do toolkit.toml."""
@@ -50,7 +50,7 @@ class Plugin:
         """
         Generates the D3.js dashboard HTML file.
         """
-        dashboard_file = "web/assets/" + f"{self.name}_dashboard.html"
+        dashboard_file = f"{self.name}_dashboard.html"
         html_content = self.render_html(results)
 
         with open(dashboard_file, "w", encoding="utf-8") as f:
