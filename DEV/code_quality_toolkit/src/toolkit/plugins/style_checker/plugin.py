@@ -30,9 +30,8 @@ class Plugin:
 
     def configure(self, config):
         # Compatibilidad con test antiguos que usan MockToolkitConfig
-        if  (
-            not hasattr(config, "plugins") 
-            or not hasattr(config.plugins, "style_checker")
+        if not hasattr(config, "plugins") or not hasattr(
+            config.plugins, "style_checker"
         ):
             self.max_line_length = config.rules.max_line_length
             self.check_whitespace = config.rules.check_whitespace
@@ -50,8 +49,6 @@ class Plugin:
         self.indent_size = sc.indent_size
         self.allow_mixed_indentation = sc.allow_mixed_indentation
         self.check_naming = sc.check_naming
-
-        
 
     def get_metadata(self) -> dict[str, str]:
         return {
@@ -233,7 +230,7 @@ class Plugin:
                         "hint": "Utilize nomes como sample_module.py",
                     }
                 )
-            
+
             if file_path:
                 for issue in results:
                     issue.setdefault("file", str(file_path))
@@ -256,7 +253,7 @@ class Plugin:
                     "error": str(e),
                 },
             }
-        
+
     def generate_dashboard(self, results: list[IssueResult]) -> None:
         """
         Generate a D3.js HTML dashboard for the StyleChecker plugin.
@@ -509,4 +506,3 @@ class Plugin:
 
         # Finally, write the HTML content to disk
         dashboard_file.write_text(html_content, encoding="utf-8")
-

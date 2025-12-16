@@ -151,7 +151,6 @@ def test_analyze_syntax_error():
     plugin = Plugin()
     plugin.configure(ToolkitConfig())
 
- 
     broken_code = """
 def bad_syntax(:
     print("linha 2 para encher linguiça")
@@ -165,11 +164,13 @@ def bad_syntax(:
 
     # CORREÇÃO: Agora o plugin retorna "failed" quando há exceção, não "partial"
     assert report["summary"]["status"] == "failed"
-    
+
     # Verifica se a mensagem de erro foi capturada
     assert report["summary"]["error"] is not None
 
+
 # --- NOVOS TESTES DE ANÁLISE (LIMITE E COBERTURA) ---
+
 
 def test_analyze_too_few_lines_skip():
     """
@@ -196,7 +197,7 @@ def test_analyze_density_exactly_min():
     """
     plugin = Plugin()
     # Usando o default: min_density = 0.1
-    plugin.configure(ToolkitConfig()) 
+    plugin.configure(ToolkitConfig())
 
     # 1 comentário / 10 linhas totais -> 0.10
     code = "# C\n" + "\n".join([f"print({i})" for i in range(9)])
@@ -205,7 +206,9 @@ def test_analyze_density_exactly_min():
     assert report["summary"]["issues_found"] == 0
     assert f"{report['summary']['metrics']['comment_density']:.2f}" == "0.10"
 
+
 # --- NOVOS TESTES DE AGREGAÇÃO (DASHBOARD) ---
+
 
 def test_aggregate_dashboard_file_type_priority():
     """
@@ -217,21 +220,17 @@ def test_aggregate_dashboard_file_type_priority():
     aggregated_results = [
         {
             "file": "file_mixed.py",
-            "plugins": [{
-                "plugin": "CommentDensity",
-                "results": [
-                    # A: Low Density
-                    {
-                        "code": "LOW_COMMENT_DENSITY", 
-                        "file": "file_mixed.py"
-                    }, 
-                    # B: High Density (DEVE SOBRESCREVER A)
-                    {
-                        "code": "HIGH_COMMENT_DENSITY", 
-                        "file": "file_mixed.py"
-                    },
-                ]
-            }]
+            "plugins": [
+                {
+                    "plugin": "CommentDensity",
+                    "results": [
+                        # A: Low Density
+                        {"code": "LOW_COMMENT_DENSITY", "file": "file_mixed.py"},
+                        # B: High Density (DEVE SOBRESCREVER A)
+                        {"code": "HIGH_COMMENT_DENSITY", "file": "file_mixed.py"},
+                    ],
+                }
+            ],
         },
     ]
 
@@ -240,15 +239,15 @@ def test_aggregate_dashboard_file_type_priority():
     # Verifica métricas
     assert dashboard_data["metrics"]["total_issues"] == 2
     assert dashboard_data["metrics"]["total_files"] == 1
-    
+
     # Verifica o top_files: O tipo deve ser HIGH, não LOW
     top_file = dashboard_data["top_files"][0]
     assert top_file["file"] == "file_mixed.py"
     assert top_file["count"] == 2
-    assert top_file["type"] == "HIGH_COMMENT_DENSITY" # Prioridade do HIGH
+    assert top_file["type"] == "HIGH_COMMENT_DENSITY"  # Prioridade do HIGH
+
 
 # --- TESTES DE EXCEÇÃO (COBERTURA DO EXCEPT) ---
-
 
 
 def test_generate_dashboard_exception_handling(tmp_path: Path):
@@ -259,15 +258,17 @@ def test_generate_dashboard_exception_handling(tmp_path: Path):
     plugin = Plugin()
 
     # Simulação mínima de resultados
-    aggregated_results = [{
-        "file": "f.py", 
-        "plugins": [{
-            "plugin": "CommentDensity", 
-            "results": [
-                {"code": "LOW_COMMENT_DENSITY", "file": "f.py"}
-            ]
-        }]
-    }]
+    aggregated_results = [
+        {
+            "file": "f.py",
+            "plugins": [
+                {
+                    "plugin": "CommentDensity",
+                    "results": [{"code": "LOW_COMMENT_DENSITY", "file": "f.py"}],
+                }
+            ],
+        }
+    ]
 
     # Usamos o caminho de um diretório (tmp_path), o que forçará o erro
     output_path = plugin.generate_dashboard(aggregated_results, str(tmp_path))

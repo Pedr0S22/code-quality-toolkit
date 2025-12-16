@@ -3,6 +3,7 @@ Real Integration Tests for Web App workflow.
 ZIP Upload -> Server -> Core Analysis -> ZIP Response
 and Web vs CLI equivalence (stable summary fields).
 """
+
 from __future__ import annotations
 
 import io
@@ -18,6 +19,7 @@ from toolkit.core.cli import main as cli_main
 from web.server import app
 
 fastapi = pytest.importorskip("fastapi")
+
 
 @pytest.fixture()
 def client() -> TestClient:
@@ -60,8 +62,9 @@ def _extract_zip_bytes(content: bytes, out_dir: Path) -> list[str]:
         return zf.namelist()
 
 
-def test_run_analysis_end_to_end_includes_reports_and_dashboards(client: TestClient,
-    tmp_path: Path):
+def test_run_analysis_end_to_end_includes_reports_and_dashboards(
+    client: TestClient, tmp_path: Path
+):
     zip_bytes = _make_project_zip(tmp_path)
 
     configs = {

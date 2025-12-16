@@ -7,11 +7,14 @@ from toolkit.utils.config import ToolkitConfig
 
 class MockRules:
     """Simula a secção config.rules com o atributo de severidade."""
+
     def __init__(self, severity):
         self.security_report_level = severity
 
+
 class MockToolkitConfig:
     """Simula o objeto ToolkitConfig que o plugin lê."""
+
     def __init__(self, severity="LOW"):
         # O plugin SecurityChecker lê de config.rules
         self.rules = MockRules(severity)
@@ -19,6 +22,7 @@ class MockToolkitConfig:
     @property
     def plugins(self):
         return None
+
 
 def test_security_checker_detects_eval() -> None:
     plugin = Plugin()
@@ -216,9 +220,11 @@ def test_syntax_error_handling() -> None:
 
     assert report["summary"]["status"] in ["completed", "failed"]
 
+
 # ======================================================================
 # NOVOS TESTES PARA AUMENTAR COBERTURA
 # ======================================================================
+
 
 def test_analyze_no_issues_found() -> None:
     """Verifica o fluxo de retorno de 0 issues (completed) pelo Bandit."""
@@ -231,6 +237,7 @@ def test_analyze_no_issues_found() -> None:
     assert report["summary"]["issues_found"] == 0
     assert report["results"] == []
 
+
 def test_analyze_empty_code() -> None:
     """Verifica a análise com string de código vazia."""
     plugin = Plugin()
@@ -240,13 +247,14 @@ def test_analyze_empty_code() -> None:
     assert report["summary"]["status"] == "completed"
     assert report["summary"]["issues_found"] == 0
 
+
 def test_configuration_no_rules_section() -> None:
     """Cobre o caso em que 'config.rules' é None ou não tem o atributo."""
-    
+
     # 1. Simula config.rules = None
     class MockNoRules:
-        rules = None 
-    
+        rules = None
+
     plugin_a = Plugin()
     plugin_a.configure(MockNoRules())
     # Deve manter o default
@@ -256,9 +264,11 @@ def test_configuration_no_rules_section() -> None:
     class MockRulesMissingAttr:
         def __init__(self):
             # O atributo existe, mas está vazio
-            pass 
+            pass
+
     class MockConfigMissingAttr:
         rules = MockRulesMissingAttr()
+
         @property
         def plugins(self):
             return None
@@ -280,6 +290,7 @@ def test_aggregate_data_for_dashboard_empty_results() -> None:
     assert aggregated["rule_counts"] == []
     assert aggregated["top_files"] == []
 
+
 def test_aggregate_data_for_dashboard_flat_format() -> None:
     """
     Cobre o fluxo de agregação de resultados 'flat' (sem aninhamento de plugins),
@@ -297,10 +308,11 @@ def test_aggregate_data_for_dashboard_flat_format() -> None:
 
     assert aggregated["metrics"]["total_issues"] == 3
     assert aggregated["metrics"]["total_files"] == 3
-    
+
     # Verifica a contagem de regras UNKNOWN e info
     assert any(d["severity"] == "info" for d in aggregated["severity_counts"])
     assert any(d["code"] == "UNKNOWN" for d in aggregated["rule_counts"])
+
 
 def test_aggregate_data_top_files_limit() -> None:
     """
@@ -312,30 +324,30 @@ def test_aggregate_data_top_files_limit() -> None:
     for i in range(12):
         issue_data = {
             "severity": "high",
-            "code": "B307", 
-            "message": "eval", 
-            "file": f"file_{i}.py", 
-            "line": 1
+            "code": "B307",
+            "message": "eval",
+            "file": f"file_{i}.py",
+            "line": 1,
         }
         # Simula o formato aninhado
-        many_files.append({
-            "file": f"file_{i}.py",
-            "plugins": [{
-                "plugin": "SecurityChecker",
-                "results": [issue_data]
-            }]
-        })
+        many_files.append(
+            {
+                "file": f"file_{i}.py",
+                "plugins": [{"plugin": "SecurityChecker", "results": [issue_data]}],
+            }
+        )
 
     aggregated = plugin._aggregate_data_for_dashboard(many_files)
-    
+
     # total_files deve ser 12 (todos únicos)
-    assert aggregated["metrics"]["total_files"] == 12 
-    
+    assert aggregated["metrics"]["total_files"] == 12
+
     # top_files deve ser limitado a 10
     assert len(aggregated["top_files"]) == 10
-    
+
     # Garante que o primeiro arquivo na lista ainda é file_0.py
     assert aggregated["top_files"][0]["file"] == "file_0.py"
+
 
 def test_analyze_exception_handling(monkeypatch) -> None:
     """
@@ -351,6 +363,7 @@ def test_analyze_exception_handling(monkeypatch) -> None:
 
     # 2. Injeta a função de falha no BanditManager
     from toolkit.plugins.security_checker.plugin import BanditManager
+
     monkeypatch.setattr(BanditManager, "run_tests", always_fail_run_tests)
 
     code = "print('safe code')"
@@ -359,8 +372,10 @@ def test_analyze_exception_handling(monkeypatch) -> None:
     # Esperamos que o bloco 'except' seja executado
     assert report["summary"]["status"] == "failed"
     # Linha quebrada para evitar E501
-    assert "Erro SecurityChecker: Simulated internal Bandit failure" in \
-           report["summary"]["error"]
+    assert (
+        "Erro SecurityChecker: Simulated internal Bandit failure"
+        in report["summary"]["error"]
+    )
     assert report["summary"]["issues_found"] == 0
 
 
@@ -372,18 +387,25 @@ def test_generate_dashboard_exception_handling(tmp_path: Path) -> None:
     plugin = Plugin()
 
     # Simulação mínima de resultados
-    aggregated_results = [{
-        "file": "f.py",
-        "plugins": [{
-            "plugin": "SecurityChecker",
-            "results": [
+    aggregated_results = [
+        {
+            "file": "f.py",
+            "plugins": [
                 {
-                    "severity": "high", "code": "B307",
-                    "message": "x", "file": "f.py", "line": 1
+                    "plugin": "SecurityChecker",
+                    "results": [
+                        {
+                            "severity": "high",
+                            "code": "B307",
+                            "message": "x",
+                            "file": "f.py",
+                            "line": 1,
+                        }
+                    ],
                 }
-            ]
-        }]
-    }]
+            ],
+        }
+    ]
 
     # Usamos o caminho de um diretório (tmp_path), o que forçará o erro
     output_path = plugin.generate_dashboard(aggregated_results, str(tmp_path))

@@ -279,7 +279,7 @@ class Plugin:
                 str(msg.get("message-id", "")) or str(msg.get("symbol", "")) or "PYLINT"
             )
             text = str(msg.get("message", "")) or ""
-            
+
             # --- FIX: CAPTURE FILENAME ---
             # We must explicitly capture the path here so the dashboard knows it.
             msg_file = str(msg.get("path", file_path))
@@ -289,7 +289,7 @@ class Plugin:
                     "severity": severity,
                     "code": msg_id,
                     "message": text,
-                    "file": msg_file, # Added Key
+                    "file": msg_file,  # Added Key
                     "line": line,
                     "col": col,
                     "hint": f"Reveja a regra '{msg_id}'.",
@@ -891,6 +891,8 @@ class Plugin:
 </script>
 </body>
 </html>
-""".replace("{{DATA_JSON}}", data_json)
+""".replace(
+            "{{DATA_JSON}}", data_json
+        )
 
         dashboard_file.write_text(html, encoding="utf-8")

@@ -45,9 +45,10 @@ class Plugin:
             if in_multiline_comment:
                 comment_lines += 1
                 if multiline_comment_char in stripped_line:
-                    if stripped_line.endswith(
-                        multiline_comment_char
-                    ) or stripped_line.count(multiline_comment_char) >= 2:
+                    if (
+                        stripped_line.endswith(multiline_comment_char)
+                        or stripped_line.count(multiline_comment_char) >= 2
+                    ):
                         in_multiline_comment = False
                 continue
 

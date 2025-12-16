@@ -66,29 +66,20 @@ class Plugin:
             "affected_files": set(),
         }
 
-
     def configure(self, config: ToolkitConfig) -> None:
         """Update plugin thresholds from new [plugins.cyclomatic_complexity] section."""
 
         # Access the new configuration section [plugins.cyclomatic_complexity]
-        sect = getattr(
-            getattr(config, "plugins", None),
-            "cyclomatic_complexity",
-            None
-        )
+        sect = getattr(getattr(config, "plugins", None), "cyclomatic_complexity", None)
 
         # Use the section if found, otherwise stick to defaults
         if sect:
             # All rules are now defined under the plugin section
-            self.max_complexity = getattr(
-                sect, "max_complexity", self.max_complexity
-            )
+            self.max_complexity = getattr(sect, "max_complexity", self.max_complexity)
             self.max_function_length = getattr(
                 sect, "max_function_length", self.max_function_length
             )
-            self.max_arguments = getattr(
-                sect, "max_arguments", self.max_arguments
-            )
+            self.max_arguments = getattr(sect, "max_arguments", self.max_arguments)
 
     def get_metadata(self) -> dict[str, str]:
         return {
@@ -117,7 +108,7 @@ class Plugin:
 
             # 2) Plugin-specific metrics (extract from messages when possible)
             # Issue codes in this plugin:
-            #HIGH_COMPLEXITY, LONG_FUNCTION, TOO_MANY_ARGUMENTS, SYNTAX_ERROR
+            # HIGH_COMPLEXITY, LONG_FUNCTION, TOO_MANY_ARGUMENTS, SYNTAX_ERROR
             code_counts: dict[str, int] = {}
             complexities: list[int] = []
             lengths: list[int] = []
@@ -439,8 +430,6 @@ class Plugin:
 
         except Exception:
             return
-
-
 
     def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
         """

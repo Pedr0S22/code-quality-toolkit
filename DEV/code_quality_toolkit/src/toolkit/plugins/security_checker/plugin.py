@@ -35,7 +35,7 @@ class Plugin:
                 "O plugin SecurityChecker requer o 'bandit'. "
                 "Instale-o via 'pip install bandit'."
             )
-            
+
         self.report_severity_level = "LOW"
 
     def get_metadata(self) -> dict[str, str]:
@@ -116,7 +116,7 @@ class Plugin:
             "results": results,
             "summary": {"issues_found": len(results), "status": "completed"},
         }
-    
+
     # ==========================================================================
     # DASHBOARD GENERATION
     # ==========================================================================
@@ -192,11 +192,11 @@ class Plugin:
         for issue in flattened_issues:
             # Pega a severidade, padronizando para 'info' se a chave estiver ausente
             sev = issue.get("severity", "info").lower()
-            
+
             # CORREÇÃO: Se a severidade lida não for uma das chaves válidas, use 'info'.
             if sev not in severity_counts:
                 sev = "info"
-                
+
             severity_counts[sev] += 1
 
             code = issue.get("code", "UNKNOWN")
@@ -206,9 +206,7 @@ class Plugin:
             files_counter[fname] = files_counter.get(fname, 0) + 1
 
         sev_data = [
-            {"severity": k, "count": v}
-            for k, v in severity_counts.items()
-            if v > 0
+            {"severity": k, "count": v} for k, v in severity_counts.items() if v > 0
         ]
         rule_data = [{"code": k, "count": v} for k, v in rule_counts.items()]
         rule_data.sort(key=lambda x: x["count"], reverse=True)

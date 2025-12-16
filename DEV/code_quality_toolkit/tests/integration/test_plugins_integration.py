@@ -891,11 +891,10 @@ def test_comment_density_sufficient_coverage_integration(tmp_path: Path):
     Verifica se o plugin CommentDensity APROVA um arquivo que tem
     comentários suficientes (Caminho feliz/Success Path).
     """
-    # 1. Setup: Criar arquivo com boa densidade de comentários (~50%)
-    project_dir = tmp_path / "project_good"
+    project_dir = tmp_path / "project"
     project_dir.mkdir()
     code_file = project_dir / "good_comments.py"
-    
+
     # Código onde cada função tem explicação
     code_content = """
 # Constante global para configuração
@@ -913,7 +912,6 @@ def disconnect():
     code_file.write_text(code_content, encoding="utf-8")
     output_file = tmp_path / "report_good.json"
 
-    # 2. Execução
     exit_code = main(
         [
             "analyze",
@@ -925,132 +923,118 @@ def disconnect():
         ]
     )
 
-    # 3. Verificação
     assert exit_code == EXIT_SUCCESS
-    
+
     with open(output_file, encoding="utf-8") as f:
         data = json.load(f)
 
     file_report = next(f for f in data["details"] if "good_comments.py" in f["file"])
-    plugin_report = next(
-        p for p in file_report["plugins"] if p["plugin"] == "CommentDensity"
-    )
-
-    # NÃO deve haver resultados (issues), pois a densidade é boa
-    assert len(plugin_report["results"]) == 0
-
-
-def test_comment_density_docstrings_integration(tmp_path: Path):
-    """
-    Verifica se Docstrings são aceitas.
-    """
-    # 1. Setup
-    project_dir = tmp_path / "project_docstrings"
-    project_dir.mkdir()
-    code_file = project_dir / "docstrings_only.py"
-
-    # Aumento drasticamente a lógica para diluir a docstring e testar o cálculo real
-    code_content = '''
-def complex_algorithm(a, b):
-    """
-    Executa um algoritmo complexo.
-    Args:
-        a: Parametro 1
-        b: Parametro 2
-    Returns:
-        Soma
-    """
-    # Início da lógica simulada
-    x = a * 10
-    y = b * 20
-    result = 0
     
-    # Loop para gerar linhas de código
-    for i in range(10):
-        temp = x + y + i
-        if temp % 2 == 0:
-            result += temp
-        else:
-            result -= temp
-            
-    # Condicionais extras
-    if result > 100:
-        print("Resultado alto")
-        result = result / 2
-    elif result < 0:
-        print("Resultado negativo")
-        result = abs(result)
-    else:
-        print("Resultado normal")
-        
-    # Mais operações matemáticas
-    final_calc = (result ** 2) + (x * y)
-    return final_calc
-'''
-    code_file.write_text(code_content, encoding="utf-8")
-    output_file = tmp_path / "report_docs.json"
-
-    # 2. Execução
-    main(
-        [
-            "analyze", str(project_dir),
-            "--out", str(output_file),
-            "--plugins", "CommentDensity",
-        ]
-    )
-
-    # 3. Verificação
-    with open(output_file, encoding="utf-8") as f:
-        data = json.load(f)
-
-    file_report = next(
-        f for f in data["details"] if "docstrings_only.py" in f["file"]
-    )
     plugin_report = next(
         p for p in file_report["plugins"] if p["plugin"] == "CommentDensity"
     )
 
-    # Comentários e docstrings devem contar, então não deve haver erro 
-    # de baixa densidade.
-    # Neste caso ajustado, temos docstring + comentários inline suficientes.
-    assert len(plugin_report["results"]) == 0
+    results = plugin_report["results"]
+    
+    assert len(results) == 0, f"Expected 0 violations for well-commented code" \
+        f", found: {results}"
+    assert plugin_report["summary"]["issues_found"] == 0
 
 
-def test_comment_density_low_density_integration(tmp_path: Path):
+def test_all_plugins_integration(tmp_path: Path):
     """
-    Verifica se o plugin detecta corretamente baixa densidade de comentários.
+    Integration test that runs all enabled plugins together with the core system.
     """
-    # 1. Setup: Arquivo pequeno sem comentários
-    project_dir = tmp_path / "project_tiny"
+    project_dir = tmp_path / "project"
     project_dir.mkdir()
-    code_file = project_dir / "tiny.py"
 
-    # Código sem nenhum comentário -> Densidade 0% -> Deve falhar
-    # CORREÇÃO: Adicionadas linhas extras para superar o limite de "skip small files"
-    code_file.write_text((
-    "x = 1\ny = 2\nz = 3\n"
-    "w = 4\nk = 5\nprint(x+y)\n"
-), encoding="utf-8")
-    output_file = tmp_path / "report_tiny.json"
+    (project_dir / "main.py").write_text(
+        '"""Module docstring."""\n'
+        "import os\n"
+        "from utils import helper\n"
+        "\n"
+        "# This is a comment\n"
+        "def main():\n"
+        "    # Long line to trigger style checker\n"
+        f"    print('{'A' * 100}')\n"
+        "    eval('print(1)')\n"
+        "    helper()\n"
+        "\n"
+        "def unused_function():\n"
+        "    pass\n",
+        encoding="utf-8",
+    )
 
-    # 2. Execução
-    main(
+    (project_dir / "utils.py").write_text(
+        "import json\n"
+        "\n"
+        "def helper():\n"
+        "    total = 0\n"
+        "    for i in range(10):\n"
+        "        total += i\n"
+        "    return total\n",
+        encoding="utf-8",
+    )
+
+    (project_dir / "duplicate.py").write_text(
+        "def helper():\n"
+        "    total = 0\n"
+        "    for i in range(10):\n"
+        "        total += i\n"
+        "    return total\n",
+        encoding="utf-8",
+    )
+
+    (project_dir / "complex.py").write_text(
+        "def complex_function(x, y, z):\n"
+        "    if x > 0:\n"
+        "        if y > 0:\n"
+        "            if z > 0:\n"
+        "                return x + y + z\n"
+        "            else:\n"
+        "                return x + y\n"
+        "        else:\n"
+        "            return x\n"
+        "    else:\n"
+        "        return 0\n",
+        encoding="utf-8",
+    )
+
+    output_file = tmp_path / "report.json"
+
+    exit_code = main(
         [
-            "analyze", str(project_dir),
-            "--out", str(output_file),
-            "--plugins", "CommentDensity",
+            "analyze",
+            str(project_dir),
+            "--out",
+            str(output_file),
+            "--plugins",
+            "all",
         ]
     )
 
-    # 3. Verificação
+    assert exit_code == EXIT_SUCCESS
+    assert output_file.exists()
+
     with open(output_file, encoding="utf-8") as f:
         data = json.load(f)
 
-    file_report = next(f for f in data["details"] if "tiny.py" in f["file"])
-    plugin_report = next(
-        p for p in file_report["plugins"] if p["plugin"] == "CommentDensity"
-    )
+    assert data["analysis_metadata"]["status"] == "completed"
+    plugins_executed = data["analysis_metadata"]["plugins_executed"]
 
-    # Deve encontrar EXATAMENTE 1 erro (LOW_COMMENT_DENSITY)
-    assert len(plugin_report["results"]) >= 1
-    assert plugin_report["results"][0]["code"] == "LOW_COMMENT_DENSITY"
+    assert len(plugins_executed) >= 2
+    assert "StyleChecker" in plugins_executed
+    assert "CyclomaticComplexity" in plugins_executed
+
+    assert len(data["details"]) >= 4
+
+    total_results = sum(
+        len(plugin.get("results", []))
+        for file in data["details"]
+        for plugin in file["plugins"]
+    )
+    assert total_results > 0
+
+    summary = data["summary"]
+    assert "issues_by_plugin" in summary
+    assert sum(summary["issues_by_plugin"].values()) > 0

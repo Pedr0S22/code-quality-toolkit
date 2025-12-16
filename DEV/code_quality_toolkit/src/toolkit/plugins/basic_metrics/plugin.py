@@ -9,7 +9,18 @@ import io
 import tokenize
 from typing import Any
 
-# Import opcional do radon: se não estiver instalado, o plugin continua a funcionar.
+from jinja2 import Environment, PackageLoader, select_autoescape
+
+from ...core.contracts import IssueResult
+from ...utils.config import ToolkitConfig
+
+JINJA_ENV = Environment(
+    loader=PackageLoader("toolkit.plugins.basic_metrics"),
+    autoescape=select_autoescape(["html", "xml"]),
+)
+
+
+# Import opcional do radon: se não estiver instalado, o plugin continua a funcionar .
 try:
     from radon.metrics import h_visit
     from radon.raw import analyze as raw_analyze
@@ -25,9 +36,6 @@ except Exception:  # pragma: no cover - ambiente sem radon
 # import tempfile
 # from radon.raw import analyze as raw_analyze
 # from radon.metrics import h_visit, HalsteadReport
-
-from ...core.contracts import IssueResult
-from ...utils.config import ToolkitConfig
 
 
 def issue() -> None:
@@ -55,6 +63,8 @@ class Plugin:
     def __init__(self) -> None:
         # Nível de detalhe configurável via ToolkitConfig.rules.metrics_report_level
         self.report_level: str = "LOW"
+        self.metrics_report_level: str = "LOW"
+        self.name: str = "plugin_basic_metrics"
 
     def get_metadata(self) -> dict[str, str]:
         return {
@@ -67,9 +77,29 @@ class Plugin:
         }
 
     def configure(self, config: ToolkitConfig) -> None:
-        # Leitura da config, como no enunciado original.
-        if hasattr(config.rules, "metrics_report_level"):
-            self.report_level = config.rules.metrics_report_level
+        sect = getattr(getattr(config, "plugins", None), "basic_metrics", None)
+        self.metrics_report_level = getattr(
+            sect, "metrics_report_level", self.metrics_report_level
+        )
+        self.report_level = self.metrics_report_level
+
+    # ------------------------------------------------------------------
+    # Dashboard
+    # ------------------------------------------------------------------
+
+    def render_html(self, results) -> str:
+        template = JINJA_ENV.get_template("dashboard.html")
+        return template.render(results=results)
+
+    def generate_dashboard(self, results, output_dir="out"):
+        """
+        Generates the D3.js dashboard HTML file.
+        """
+        dashboard_file = output_dir + "/" + f"{self.name}_dashboard.html"
+        html_content = self.render_html(results)
+
+        with open(dashboard_file, "w", encoding="utf-8") as f:
+            f.write(html_content)
 
     # ------------------------------------------------------------------
     # Helpers para descobrir docstrings, comentários e linhas em branco
@@ -303,6 +333,7 @@ class Plugin:
             - lista de issues em "results"
             - métricas numéricas em "summary['metrics']"
         """
+        results = {}
         try:
             metrics = self._compute_basic_metrics(source_code)
             total = int(metrics.get("total_lines", 0))
@@ -313,7 +344,7 @@ class Plugin:
                 if issue_obj is not None:
                     issues.append(issue_obj)
 
-            return {
+            results = {
                 "results": issues,
                 "summary": {
                     "issues_found": len(issues),
@@ -323,7 +354,7 @@ class Plugin:
             }
         except Exception as exc:
             # Defesa: o plugin nunca deve mandar o engine abaixo.
-            return {
+            results = {
                 "results": [],
                 "summary": {
                     "issues_found": 0,
@@ -331,3 +362,5 @@ class Plugin:
                     "error": f"Internal error in BasicMetrics: {exc}",
                 },
             }
+
+        return results

@@ -40,20 +40,24 @@ class LinterWrapperConfig:
     # "none", "low", "medium", "high"
     fail_on_severity: str = "high"
 
+
 @dataclass(slots=True)
 class SecurityCheckerConfig:
     report_severity_level: str = "LOW"
+
 
 @dataclass(slots=True)
 class CommentDensityConfig:
     min_density: float = 0.1
     max_density: float = 0.5
 
+
 @dataclass(slots=True)
 class DependencyGraphConfig:
     warn_wildcard_imports: bool = True
     max_relative_import_level: int = 1
     track_stdlib_modules: bool = True
+
 
 @dataclass(slots=True)
 class PluginsConfig:
@@ -95,9 +99,7 @@ class PluginsConfig:
     security_checker: SecurityCheckerConfig = field(
         default_factory=SecurityCheckerConfig
     )
-    comment_density: CommentDensityConfig = field(
-        default_factory=CommentDensityConfig
-    )
+    comment_density: CommentDensityConfig = field(default_factory=CommentDensityConfig)
     dependency_graph: DependencyGraphConfig = field(
         default_factory=DependencyGraphConfig
     )
@@ -116,7 +118,7 @@ class RulesConfig:
     indent_size: int = 4
     allow_mixed_indentation: bool = False
 
-    security_report_level="LOW"
+    security_report_level = "LOW"
 
     max_function_length: int = 50
     max_arguments: int = 5
@@ -222,6 +224,7 @@ def _apply_analyze_section(config: ToolkitConfig, analyze: dict[str, Any]) -> No
     if isinstance(exclude, list) and exclude:
         config.analyze.exclude = [str(item) for item in exclude]
 
+
 def load_config(path: str | Path | None) -> ToolkitConfig:  # noqa: C901
     """Load configuration from a TOML file or return defaults."""
     config = ToolkitConfig()
@@ -267,8 +270,8 @@ def load_config(path: str | Path | None) -> ToolkitConfig:  # noqa: C901
     if isinstance(analyze, dict):
         _apply_analyze_section(config, analyze)
 
-
     return config
+
 
 def plugins_configs(data, config):
     plugins = data.get("plugins", {})
@@ -283,12 +286,12 @@ def plugins_configs(data, config):
 
         for key, section_data in plugins.items():
             if key in ["enabled", "linter_wrapper"]:
-                continue # Handled separately
+                continue  # Handled separately
 
             # Check if PluginsConfig has this field (e.g. cyclomatic_complexity)
             if hasattr(config.plugins, key) and isinstance(section_data, dict):
                 target_obj = getattr(config.plugins, key)
-                
+
                 # Update the SimpleNamespace with values from TOML
                 if hasattr(target_obj, "__dict__"):
                     target_obj.__dict__.update(section_data)
