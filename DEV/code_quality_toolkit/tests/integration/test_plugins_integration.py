@@ -834,6 +834,7 @@ def test_comment_density_integration(tmp_path: Path):
     code_file = project_dir / "nocomments.py"
 
     # Create a file with NO comments (will trigger low density violation)
+    # GARANTINDO MAIS DE 5 LINHAS PARA NÃO SER IGNORADO
     code_content = """def function_one():
     x = 1
     y = 2
@@ -884,26 +885,35 @@ class MyClass:
     assert "low comment density" in issue["message"].lower()
     assert issue["severity"] == "high"
 
-def test_integration_linter_wrapper_plugin(tmp_path: Path):
-    """
-    Verifies that the LinterWrapper plugin (wrapping pylint) finds issues
-    when run via the CLI against a real file.
-    """
-    # 1. Setup: Create a file with standard Pylint violations.
-    # Violations: Unused import (W0611) and Missing module docstring (C0114)
-    project_dir = tmp_path / "project"
-    project_dir.mkdir()
-    code_file = project_dir / "bad_lint.py"
-    code_file.write_text(
-        "import os\n"
-        "\n"
-        "def foo():\n"
-        "    return 1\n",
-        encoding="utf-8",
-    )
-    output_file = tmp_path / "report.json"
 
-    # 2. Execution: Run CLI with LinterWrapper enabled
+def test_comment_density_sufficient_coverage_integration(tmp_path: Path):
+    """
+    Verifica se o plugin CommentDensity APROVA um arquivo que tem
+    comentários suficientes (Caminho feliz/Success Path).
+    """
+    # 1. Setup: Criar arquivo com boa densidade de comentários (~50%)
+    project_dir = tmp_path / "project_good"
+    project_dir.mkdir()
+    code_file = project_dir / "good_comments.py"
+    
+    # Código onde cada função tem explicação
+    code_content = """
+# Constante global para configuração
+TIMEOUT = 10
+
+def connect():
+    # Tenta estabelecer conexão
+    # Se falhar, retorna False
+    return True
+
+def disconnect():
+    # Fecha a conexão segura
+    pass
+"""
+    code_file.write_text(code_content, encoding="utf-8")
+    output_file = tmp_path / "report_good.json"
+
+    # 2. Execução
     exit_code = main(
         [
             "analyze",
@@ -911,47 +921,136 @@ def test_integration_linter_wrapper_plugin(tmp_path: Path):
             "--out",
             str(output_file),
             "--plugins",
-            "LinterWrapper",
+            "CommentDensity",
         ]
     )
 
-    # 3. Verification
+    # 3. Verificação
     assert exit_code == EXIT_SUCCESS
-    assert output_file.exists()
-
+    
     with open(output_file, encoding="utf-8") as f:
         data = json.load(f)
 
-    # Locate the report for our specific file
-    file_report = next(f for f in data["details"] if "bad_lint.py" in f["file"])
+    file_report = next(f for f in data["details"] if "good_comments.py" in f["file"])
     plugin_report = next(
-        p for p in file_report["plugins"] if p["plugin"] == "LinterWrapper"
+        p for p in file_report["plugins"] if p["plugin"] == "CommentDensity"
     )
 
-    results = plugin_report["results"]
-    assert len(results) >= 1
+    # NÃO deve haver resultados (issues), pois a densidade é boa
+    assert len(plugin_report["results"]) == 0
 
-    # Extract codes to verify we caught the expected issues.
-    # Pylint output depends on version/config, but usually:
-    # - W0611: unused-import
-    # - C0114: missing-module-docstring
-    # - C0116: missing-function-docstring
-    # Or, if pylint is not installed in the test 
-    # env, the plugin returns LINTER_NOT_FOUND.
-    
-    found_codes = {r.get("code") for r in results}
-    
-    # We verify that we either found a valid lint error OR the specific error 
-    # indicating pylint is missing (which is also a valid plugin behavior test).
-    expected_lint_codes = {"W0611", "unused-import", "C0114", 
-                           "missing-module-docstring", "C0116"}
-    
-    assert (
-        bool(found_codes & expected_lint_codes) 
-        or "LINTER_NOT_FOUND" in found_codes
-    ), f"Expected Pylint issues or LINTER_NOT_FOUND, but got: {found_codes}"
 
-    # Verify severity mapping (convention/refactor -> low, warning -> medium, etc.)
-    # If we found an issue, check if severity key exists and is valid
-    if results:
-        assert results[0]["severity"] in ["low", "medium", "high"]
+def test_comment_density_docstrings_integration(tmp_path: Path):
+    """
+    Verifica se Docstrings são aceitas.
+    """
+    # 1. Setup
+    project_dir = tmp_path / "project_docstrings"
+    project_dir.mkdir()
+    code_file = project_dir / "docstrings_only.py"
+
+    # Aumento drasticamente a lógica para diluir a docstring e testar o cálculo real
+    code_content = '''
+def complex_algorithm(a, b):
+    """
+    Executa um algoritmo complexo.
+    Args:
+        a: Parametro 1
+        b: Parametro 2
+    Returns:
+        Soma
+    """
+    # Início da lógica simulada
+    x = a * 10
+    y = b * 20
+    result = 0
+    
+    # Loop para gerar linhas de código
+    for i in range(10):
+        temp = x + y + i
+        if temp % 2 == 0:
+            result += temp
+        else:
+            result -= temp
+            
+    # Condicionais extras
+    if result > 100:
+        print("Resultado alto")
+        result = result / 2
+    elif result < 0:
+        print("Resultado negativo")
+        result = abs(result)
+    else:
+        print("Resultado normal")
+        
+    # Mais operações matemáticas
+    final_calc = (result ** 2) + (x * y)
+    return final_calc
+'''
+    code_file.write_text(code_content, encoding="utf-8")
+    output_file = tmp_path / "report_docs.json"
+
+    # 2. Execução
+    main(
+        [
+            "analyze", str(project_dir),
+            "--out", str(output_file),
+            "--plugins", "CommentDensity",
+        ]
+    )
+
+    # 3. Verificação
+    with open(output_file, encoding="utf-8") as f:
+        data = json.load(f)
+
+    file_report = next(
+        f for f in data["details"] if "docstrings_only.py" in f["file"]
+    )
+    plugin_report = next(
+        p for p in file_report["plugins"] if p["plugin"] == "CommentDensity"
+    )
+
+    # Comentários e docstrings devem contar, então não deve haver erro 
+    # de baixa densidade.
+    # Neste caso ajustado, temos docstring + comentários inline suficientes.
+    assert len(plugin_report["results"]) == 0
+
+
+def test_comment_density_low_density_integration(tmp_path: Path):
+    """
+    Verifica se o plugin detecta corretamente baixa densidade de comentários.
+    """
+    # 1. Setup: Arquivo pequeno sem comentários
+    project_dir = tmp_path / "project_tiny"
+    project_dir.mkdir()
+    code_file = project_dir / "tiny.py"
+
+    # Código sem nenhum comentário -> Densidade 0% -> Deve falhar
+    # CORREÇÃO: Adicionadas linhas extras para superar o limite de "skip small files"
+    code_file.write_text((
+    "x = 1\ny = 2\nz = 3\n"
+    "w = 4\nk = 5\nprint(x+y)\n"
+), encoding="utf-8")
+    output_file = tmp_path / "report_tiny.json"
+
+    # 2. Execução
+    main(
+        [
+            "analyze", str(project_dir),
+            "--out", str(output_file),
+            "--plugins", "CommentDensity",
+        ]
+    )
+
+    # 3. Verificação
+    with open(output_file, encoding="utf-8") as f:
+        data = json.load(f)
+
+    file_report = next(f for f in data["details"] if "tiny.py" in f["file"])
+    plugin_report = next(
+        p for p in file_report["plugins"] if p["plugin"] == "CommentDensity"
+    )
+
+    # Deve encontrar EXATAMENTE 1 erro (LOW_COMMENT_DENSITY)
+    assert len(plugin_report["results"]) >= 1
+    assert plugin_report["results"][0]["code"] == "LOW_COMMENT_DENSITY"

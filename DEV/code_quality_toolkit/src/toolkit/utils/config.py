@@ -41,13 +41,19 @@ class LinterWrapperConfig:
     fail_on_severity: str = "high"
 
 @dataclass(slots=True)
-class StyleCheckerConfig:
-    max_line_length: int = 88
-    check_whitespace: bool = True
-    indent_style: str = "spaces"
-    indent_size: int = 4
-    allow_mixed_indentation: bool = False
-    check_naming: bool = False
+class SecurityCheckerConfig:
+    report_severity_level: str = "LOW"
+
+@dataclass(slots=True)
+class CommentDensityConfig:
+    min_density: float = 0.1
+    max_density: float = 0.5
+
+@dataclass(slots=True)
+class DependencyGraphConfig:
+    warn_wildcard_imports: bool = True
+    max_relative_import_level: int = 1
+    track_stdlib_modules: bool = True
 
 @dataclass(slots=True)
 class PluginsConfig:
@@ -86,7 +92,16 @@ class PluginsConfig:
         )
     )
 
-    style_checker: StyleCheckerConfig = field(default_factory=StyleCheckerConfig)
+    security_checker: SecurityCheckerConfig = field(
+        default_factory=SecurityCheckerConfig
+    )
+    comment_density: CommentDensityConfig = field(
+        default_factory=CommentDensityConfig
+    )
+    dependency_graph: DependencyGraphConfig = field(
+        default_factory=DependencyGraphConfig
+    )
+
 
 @dataclass(slots=True)
 class RulesConfig:
