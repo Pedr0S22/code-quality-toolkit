@@ -214,7 +214,15 @@ def _apply_linter_wrapper_config(
         target_config.fail_on_severity = value
 
 
-def load_config(path: str | Path | None) -> ToolkitConfig:
+def _apply_analyze_section(config: ToolkitConfig, analyze: dict[str, Any]) -> None:
+    include = analyze.get("include")
+    exclude = analyze.get("exclude")
+    if isinstance(include, list) and include:
+        config.analyze.include = [str(item) for item in include]
+    if isinstance(exclude, list) and exclude:
+        config.analyze.exclude = [str(item) for item in exclude]
+
+def load_config(path: str | Path | None) -> ToolkitConfig:  # noqa: C901
     """Load configuration from a TOML file or return defaults."""
     config = ToolkitConfig()
 
@@ -236,7 +244,6 @@ def load_config(path: str | Path | None) -> ToolkitConfig:
         config.strict = strict_value
 
     # === Plugins sections ===
-
     plugins_configs(data, config)
 
     # === Rules Section ===
@@ -258,12 +265,8 @@ def load_config(path: str | Path | None) -> ToolkitConfig:
     # === Analyze Section ===
     analyze = data.get("analyze", {})
     if isinstance(analyze, dict):
-        include = analyze.get("include")
-        exclude = analyze.get("exclude")
-        if isinstance(include, list) and include:
-            config.analyze.include = [str(item) for item in include]
-        if isinstance(exclude, list) and exclude:
-            config.analyze.exclude = [str(item) for item in exclude]
+        _apply_analyze_section(config, analyze)
+
 
     return config
 
@@ -289,3 +292,10 @@ def plugins_configs(data, config):
                 # Update the SimpleNamespace with values from TOML
                 if hasattr(target_obj, "__dict__"):
                     target_obj.__dict__.update(section_data)
+
+    # style_data = plugins.get("style_checker")
+    # if isinstance(style_data, dict):
+    #     target = config.plugins.style_checker
+    #     for key, value in style_data.items():
+    #         if hasattr(target, key):
+    #             setattr(target, key, value)
