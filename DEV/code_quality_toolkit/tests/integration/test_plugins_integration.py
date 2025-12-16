@@ -26,7 +26,7 @@ def test_integration_all_plugins_success(tmp_path: Path):
     # 1. Setup: Create a file with mixed content to give plugins something to do
     project_dir = tmp_path / "project"
     project_dir.mkdir()
-    
+
     # Triggers breakdown:
     # - BasicMetrics: Low comment density (High Severity < 2%)
     # - CommentDensity: Density < 10% (High Severity)
@@ -90,37 +90,41 @@ def test_integration_all_plugins_success(tmp_path: Path):
         "very long to ensure that it exceeds the default maximum "
         "line length limit of eighty-eight "
         "characters set by the StyleChecker plugin.'\n",
-        encoding="utf-8" # pylint: disable=line-too-long
-    ) # pylint: disable=line-too-long
-    
+        encoding="utf-8",  # pylint: disable=line-too-long
+    )  # pylint: disable=line-too-long
+
     output_file = tmp_path / "report_all.json"
 
     # 1.1 Setup: Create a temporary config file that enables ALL plugins
-    # We include 'BasicMetrics' here because the test expects it, 
+    # We include 'BasicMetrics' here because the test expects it,
     # even though it was missing from your main toolkit.toml.
     config_file = tmp_path / "toolkit.toml"
     config_file.write_text(
-        '[plugins]\n'
+        "[plugins]\n"
         'enabled = ["BasicMetrics", "StyleChecker", "CyclomaticComplexity", '
         '"SecurityChecker", "DuplicationChecker", "CommentDensity", '
         '"DeadCodeDetector", "DependencyGraph", "LinterWrapper"]\n'
-        '\n'
-        '[plugins.linter_wrapper]\n'
-        'enabled = true\n'
+        "\n"
+        "[plugins.linter_wrapper]\n"
+        "enabled = true\n"
         'linters = ["pylint"]\n'
         'pylint_args = ["--disable=C0114,C0115,C0116"]\n',
-        encoding="utf-8"
+        encoding="utf-8",
     )
 
     # 2. Execution: Run with the specific config file
-    exit_code = main([
-        "analyze",
-        str(project_dir),
-        "--out",
-        str(output_file),
-        "--plugins", "all",
-        "--config", str(config_file)  # <--- CRITICAL FIX
-    ])
+    exit_code = main(
+        [
+            "analyze",
+            str(project_dir),
+            "--out",
+            str(output_file),
+            "--plugins",
+            "all",
+            "--config",
+            str(config_file),  # <--- CRITICAL FIX
+        ]
+    )
 
     # 3. Verification
     assert exit_code == EXIT_SUCCESS
@@ -132,13 +136,20 @@ def test_integration_all_plugins_success(tmp_path: Path):
     # Check that known plugins are in the executed list
     executed = data["analysis_metadata"]["plugins_executed"]
     expected_plugins = {
-        "BasicMetrics", "CyclomaticComplexity", "DeadCodeDetector",
-        "DependencyGraph", "DuplicationChecker", "LinterWrapper",
-        "SecurityChecker", "StyleChecker", "CommentDensity"
+        "BasicMetrics",
+        "CyclomaticComplexity",
+        "DeadCodeDetector",
+        "DependencyGraph",
+        "DuplicationChecker",
+        "LinterWrapper",
+        "SecurityChecker",
+        "StyleChecker",
+        "CommentDensity",
     }
 
     # We verify that at least our core set was executed
     assert expected_plugins.issubset(set(executed))
+
 
 def test_integration_managed_error_exit(tmp_path: Path):
     """
@@ -147,14 +158,12 @@ def test_integration_managed_error_exit(tmp_path: Path):
     """
     project_dir = tmp_path / "project"
     project_dir.mkdir()
-    
+
     # 1. Execution: Request a plugin that definitely doesn't exist
     # This raises PluginLoadError internally, which is caught by main()
-    exit_code = main([
-        "analyze",
-        str(project_dir),
-        "--plugins", "NonExistentPlugin,AnotherFakeOne"
-    ])
+    exit_code = main(
+        ["analyze", str(project_dir), "--plugins", "NonExistentPlugin,AnotherFakeOne"]
+    )
 
     # 2. Verification
     assert exit_code == EXIT_MANAGED_ERROR
@@ -174,10 +183,7 @@ def test_integration_unexpected_error_exit(tmp_path: Path):
         mock_run.side_effect = Exception("Catastrophic engine failure")
 
         # 2. Execution
-        exit_code = main([
-            "analyze",
-            str(project_dir)
-        ])
+        exit_code = main(["analyze", str(project_dir)])
 
     # 3. Verification
     assert exit_code == EXIT_UNEXPECTED_ERROR
@@ -194,34 +200,37 @@ def test_integration_severity_threshold_exit(tmp_path: Path):
     project_dir = tmp_path / "project"
     project_dir.mkdir()
     (project_dir / "critical.py").write_text(
-        "import os\n"
-        "os.chmod('critical_file.txt', 0o777)\n",
-        encoding="utf-8"
+        "import os\n" "os.chmod('critical_file.txt', 0o777)\n", encoding="utf-8"
     )
     output_file = tmp_path / "report_sev.json"
-    
+
     # 1.1 Setup: Create a temporary config file
     # Explicitly enable SecurityChecker and set the reporting level
     config_file = tmp_path / "toolkit.toml"
     config_file.write_text(
-        '[plugins]\n'
+        "[plugins]\n"
         'enabled = ["SecurityChecker"]\n'
-        '\n'
-        '[rules]\n'
+        "\n"
+        "[rules]\n"
         'security_report_level = "LOW"\n',
-        encoding="utf-8"
+        encoding="utf-8",
     )
 
     # 2. Execution: Run with --fail-on-severity low AND the config file
-    exit_code = main([
-        "analyze",
-        str(project_dir),
-        "--out",
-        str(output_file),
-        "--plugins", "SecurityChecker",
-        "--fail-on-severity", "low",
-        "--config", str(config_file)  # Ensure config is loaded
-    ])
+    exit_code = main(
+        [
+            "analyze",
+            str(project_dir),
+            "--out",
+            str(output_file),
+            "--plugins",
+            "SecurityChecker",
+            "--fail-on-severity",
+            "low",
+            "--config",
+            str(config_file),  # Ensure config is loaded
+        ]
+    )
 
     # 3. Verification
     assert exit_code == EXIT_SEVERITY_ERROR
@@ -233,9 +242,10 @@ def test_integration_severity_threshold_exit(tmp_path: Path):
 
     # Ensure the issue was actually found (validation of the test setup)
     found_high = data["summary"]["issues_by_severity"].get("high", 0)
-    
+
     # Add data to error message for easier debugging if it fails again
     assert found_high > 0, f"Test failed. Summary: {data['summary']}"
+
 
 def test_dead_code_detector_integration(tmp_path: Path):
     """
@@ -246,8 +256,9 @@ def test_dead_code_detector_integration(tmp_path: Path):
     project_dir = tmp_path / "project_dead"
     project_dir.mkdir()
     code_file = project_dir / "dead_complex.py"
-    
-    source_code = textwrap.dedent("""
+
+    source_code = textwrap.dedent(
+        """
         import math
         # Import não usado, mas imports geralmente são ignorados ou
         # tratados diferentemente
@@ -281,10 +292,11 @@ def test_dead_code_detector_integration(tmp_path: Path):
             
         if __name__ == "__main__":
             main()
-    """)
-    
+    """
+    )
+
     code_file.write_text(source_code, encoding="utf-8")
-    
+
     output_file = tmp_path / "report_dead.json"
 
     # 2. Execution: Run CLI targeting this folder with DeadCodeDetector enabled
@@ -315,39 +327,36 @@ def test_dead_code_detector_integration(tmp_path: Path):
 
     results = plugin_report["results"]
     messages = [r["message"] for r in results]
-    
+
     # DEBUG: Print messages se falhar
     print(f"Dead Code Results: {messages}")
 
     # A. Verificar Deteções Esperadas (Dead Code)
     # Dependendo da implementação do Visitor (escopo módulo vs local),
     # alguns podem não aparecer. Assumindo Visitor padrão de módulo:
-    assert (
-        any("unused_function" in m for m in messages)
+    assert any(
+        "unused_function" in m for m in messages
     ), "Failed to detect unused_function"
-    assert (
-        any("UnusedClass" in m for m in messages)
-    ), "Failed to detect UnusedClass"
-    assert (
-        any("UNUSED_GLOBAL" in m for m in messages)
-    ), "Failed to detect UNUSED_GLOBAL"
-    
+    assert any("UnusedClass" in m for m in messages), "Failed to detect UnusedClass"
+    assert any("UNUSED_GLOBAL" in m for m in messages), "Failed to detect UNUSED_GLOBAL"
+
     # B. Verificar Falsos Positivos (Code Used)
     # 'used_function' e 'main' são usados, não devem aparecer
     assert not any(
         "'used_function'" in m for m in messages
     ), "False positive: used_function reported"
-    assert not any(
-        "'main'" in m for m in messages
-    ), "False positive: main reported"
-    
+    assert not any("'main'" in m for m in messages), "False positive: main reported"
+
     # C. Verificar Severidade
     # O default é 'low', mas verificamos se está dentro dos permitidos
     for issue in results:
         assert issue["severity"] in [
-            "low", "medium", "high"
+            "low",
+            "medium",
+            "high",
         ], f"Invalid severity: {issue['severity']}"
-    
+
+
 def test_cyclomatic_complexity_integration(tmp_path):
     """
     Integration test for CyclomaticComplexity plugin.
@@ -382,7 +391,7 @@ def very_complex_function(x):
     # Or rely on defaults if the plugin is auto-enabled.
     # The error showed "issues: 0", meaning the plugin ran but didn't find anything.
     # Increasing code complexity should fix it.
-    
+
     exit_code = main(
         [
             "analyze",
@@ -405,18 +414,19 @@ def very_complex_function(x):
     # Check details for the file
     # Only proceed if we actually have details
     assert len(report.get("details", [])) > 0, "No file details found in report"
-    
+
     file_report = next(f for f in report["details"] if "complex.py" in f["file"])
-    
+
     # Check if plugin ran on this file
     plugin = next(
         (p for p in file_report["plugins"] if p["plugin"] == "CyclomaticComplexity"),
-        None
+        None,
     )
-    
+
     assert plugin is not None, "CyclomaticComplexity plugin not found in file report"
-    assert plugin["summary"]["issues_found"] >= 1,\
-    f"Expected issues, found 0. Report: {plugin}"
+    assert (
+        plugin["summary"]["issues_found"] >= 1
+    ), f"Expected issues, found 0. Report: {plugin}"
 
 
 def test_security_checker_integration(tmp_path: Path):
@@ -929,15 +939,16 @@ def disconnect():
         data = json.load(f)
 
     file_report = next(f for f in data["details"] if "good_comments.py" in f["file"])
-    
+
     plugin_report = next(
         p for p in file_report["plugins"] if p["plugin"] == "CommentDensity"
     )
 
     results = plugin_report["results"]
-    
-    assert len(results) == 0, f"Expected 0 violations for well-commented code" \
-        f", found: {results}"
+
+    assert len(results) == 0, (
+        f"Expected 0 violations for well-commented code" f", found: {results}"
+    )
     assert plugin_report["summary"]["issues_found"] == 0
 
 
