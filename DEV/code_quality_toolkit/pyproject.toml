@@ -39,6 +39,10 @@ dev = [
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+# This tells setuptools: for any package, include all files inside 'templates' folders
+"*" = ["templates/*", "templates/**/*"]
+
 [tool.black]
 target-version = ["py311"]
 line-length = 88
