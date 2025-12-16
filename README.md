@@ -1,112 +1,151 @@
-Software Engineering Classes
-School Year 2025 - 2026
+# Code Quality Toolkit
 
-Getting started
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? Use the template at the bottom!
+O Code Quality Toolkit é um MVP de um motor de análise baseado em plugins, capaz de produzir relatórios de qualidade de código unificados em JSON e consumidos por uma CLI e uma Web UI leve.
 
-Add your files
+## Instalação rápida
 
+```bash
+make setup
+```
 
- Create or upload files
+Este comando cria um ambiente virtual `.venv` e instala as dependências.
 
- Add files using the command line or push an existing Git repository with the following command:
+## Como executar uma análise
 
+```bash
+make run
+```
 
-cd existing_repo
-git remote add origin ...
-git branch -M main
-git push -uf origin main
+ou diretamente com a CLI:
 
+```bash
+python -m toolkit.core.cli analyze examples/sample_project --out report.json
+```
+Para um guia detalhado sobre todas as opções e como interpretar os resultados, consulte o ficheiro HOWTO.md.
 
+## Usando a app do Code Quality Toolkit
 
-Integrate with your tools
+Para usar a app, o servidor backend deve ser ligado para que a app (fronted) possa ser usada.
 
+- **Corra o Server**: Corra o ficheiro server.py usando o comando:
 
- Set up project integrations
+  ```txt
+    make run_server
+    ```
 
+- **Corra o Client**: Corra o ficheiro client.py usando o comando:
 
+    ```txt
+    make run_client
+    ```
 
-Collaborate with your team
+A aplicação irá abrir uma GUI que permite a execução da análise, bem como a configuração de cada plugin.
 
+### Opções da CLI
 
- Invite team members and collaborators
+1. Ao usar o comando
+```bash
+make run
+```
+utilizar um dos argumentos (optional):
 
+```
+make run arg=
+  "--plugins all | StyleChecker,CyclomaticComplexity"
+  "--out report.json"
+  "--include-glob "**/*.py" (repetível)"
+  "--exclude-glob "tests/**" (repetível)"
+  "--config toolkit.toml"
+  "--fail-on-severity low|medium|high"
+  "--log-level DEBUG|INFO|WARNING|ERROR"
+  "-v | --verbose"
+```
 
- Create a new merge request
+2. Usando o CLI com: 
 
+```bash
+python -m toolkit.core.cli analyze examples/sample_project --out report.json
+```
+utilizar um dos argumentos (optional):
+```
+toolkit analyze <path>
+  --plugins all | StyleChecker,CyclomaticComplexity
+  --out report.json
+  --include-glob "**/*.py" (repetível)
+  --exclude-glob "tests/**" (repetível)
+  --config toolkit.toml
+  --fail-on-severity low|medium|high
+  --log-level DEBUG|INFO|WARNING|ERROR
+  -v | --verbose
+```
 
- Automatically close issues from merge requests
+Exit codes:
 
+- `0` análise concluída e sem violações acima do limiar configurado;
+- `1` erro de execução (ex.: falha ao carregar plugin);
+- `2` severidade encontrada igual ou superior ao limiar definido.
 
- Enable merge request approvals
+## Estrutura
 
+```
+src/toolkit/
+  core/        # infraestrutura do motor e CLI
+  plugins/     # plugins descobertos dinamicamente
+  utils/       # utilitários partilhados (config, fs)
+```
 
- Automatically merge when pipeline succeeds
+Os relatórios são gravados como `report.json`, contendo um resumo global e
+resultados detalhados por ficheiro e plugin.
 
+## Descoberta e ciclo de vida dos plugins
 
+1. **Descoberta:** `toolkit.core.loader.discover_plugins()` percorre dinamicamente o diretório `src/toolkit/plugins` através de `_iter_plugin_modules()` e identifica cada subpasta que contenha um `plugin.py`.
+2. **Carregamento:** `toolkit.core.loader.load_plugins()` importa os módulos com `_import_module_from_path()`, instância a classe `Plugin` exposta por cada módulo e valida o contrato via `_validate_metadata()`. O contrato básico exigido está documentado em `toolkit.plugins.base.BasePlugin`.
+3. **Execução:** `toolkit.core.engine.run_analysis()` recebe o mapa de instâncias carregadas, configura cada plugin (caso exponha `configure`) e executa `analyze()` para cada ficheiro descoberto por `toolkit.utils.fs.discover_files()`. Exceções são transformadas em relatórios estruturados, registando o estado `partial` em `plugin_status`.
+4. **Agregação:** `toolkit.core.aggregator.aggregate()` consolida os relatórios por ficheiro e o estado final de cada plugin, calcula métricas (por severidade, por plugin, top offenders) e valida a estrutura final com `validate_unified_report()`.
+5. **Integração na CLI:** `toolkit.core.cli._run_analyze()` orquestra o fluxo chamando `load_plugins()`, `run_analysis()` e `aggregate()`, produzindo o `report.json` com data, versão da ferramenta e estatísticas de execução.
 
-Test and Deploy
-Use the built-in continuous integration in GitLab.
+## Arquitetura de Tratamento de Erros
+O sistema foi desenhado com uma arquitetura de resiliência robusta, assegurando que a falha individual de qualquer plugin não comprometa a conclusão da análise do projeto.
 
+### 1. Camada da Interface de Linha de Comandos (CLI - `cli.py`)
 
- Get started with GitLab CI/CD
+A CLI funciona como a principal linha de defesa externa para o sistema:
+  * **Gestão de Erros Previstos:** Captura e trata exceções operacionais esperadas (`ConfigurationError`, `PluginLoadError`, `AnalysisExecutionError`), terminando a execução com o código de saída `1`.
+  * **Gestão de Erros Imprevistos (Crashes):** Inclui um bloco `except Exception` genérico para intercetar falhas inesperadas. Estes erros são registados detalhadamente antes do sistema terminar com o código de saída `2`.
 
+### 2. Camada do Motor de Análise (`engine.py`)
 
- Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)
+A lógica principal de resiliência reside no motor, especificamente na função `run_analysis`, que garante o isolamento da execução:
 
+**Isolamento e Continuidade dos Plugins:**
 
- Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy
+* A execução de cada plugin é encapsulada num bloco `try...except`.
+* **Em caso de acontecer o except no `analyze()`:**
+    * O erro é capturado e registado (etiqueta `plugin.failure`).
+    * O plugin que falhou é assinalado como `"partial"` no relatório final.
+    * É gerado um relatório de erro sintético no JSON de saída com nível de severidade `high` e o código `PLUGIN_ERROR`.
+* **Continuidade:** O motor ignora a falha do plugin e prossegue com a execução dos plugins que faltam e o processamento de outros ficheiros. Isto garante que o utilizador receba um relatório parcial útil, em vez de uma falha completa e vazia.
 
+## Criar um novo plugin
 
- Use pull-based deployments for improved Kubernetes management
+1. Crie um diretório em `src/toolkit/plugins/<nome_do_plugin>` com um ficheiro
+   `plugin.py`.
+2. Implemente uma classe ou objeto com as funções `get_metadata()` e
+   `analyze(source_code: str, file_path: str | None)` seguindo o contrato em
+   `plugins/base.py`.
+3. Registe qualquer configuração necessária em `toolkit.toml`.
+4. Utilize `# EXTENSION-POINT:` para documentar pontos de expansão.
 
+Teste o plugin com `pytest` e execute a CLI para gerar relatórios que o incluam.
 
- Set up protected environments
+## Documentação adicional
 
+Veja toda a documentação para usuários na pasta PROD. Veja mais também:
 
+- [`web/SPEC.md`](web/SPEC.md): proposta de interface Web que consome o
+  `report.json`.
 
+## Licença
 
-Editing this README
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to makeareadme.com for this template.
-
-Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-Name
-Choose a self-explaining name for your project.
-
-Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-License
-For open source projects, say how it is licensed.
-
-Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+Distribuído sob licença MIT. Consulte `LICENSE` para detalhes.
