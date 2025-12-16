@@ -20,7 +20,7 @@ JINJA_ENV = Environment(
 class Plugin:
     def __init__(self) -> None:
         self.max_complexity = 10
-        self.name: str = "plugin_duplicate_code_checker"
+        self.name: str = "duplicate_code_checker"
 
     def configure(self, config: ToolkitConfig) -> None:
         """Recebe parâmetros de [plugins.duplicate_code_checker] do toolkit.toml."""
