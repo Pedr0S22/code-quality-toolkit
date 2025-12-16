@@ -1,4 +1,3 @@
-import os
 from textwrap import dedent
 
 import pytest
@@ -87,17 +86,17 @@ def test_metrics_with_multiline_docstring() -> None:
 
 def test_render_html():
 
-    fake_results = { 
-     "results": [],
-     "summary": {
-         "issues_found": 0,
-         "status": "completed",
-         "metrics": {
-             "total_lines": 10,
-             "logical_lines": 5,
-             },
-         },
-     }
+    fake_results = {
+        "results": [],
+        "summary": {
+            "issues_found": 0,
+            "status": "completed",
+            "metrics": {
+                "total_lines": 10,
+                "logical_lines": 5,
+            },
+        },
+    }
 
     plugin = Plugin()
     html_output = plugin.render_html(fake_results)

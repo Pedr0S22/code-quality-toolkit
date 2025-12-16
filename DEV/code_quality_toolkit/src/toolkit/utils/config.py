@@ -40,20 +40,24 @@ class LinterWrapperConfig:
     # "none", "low", "medium", "high"
     fail_on_severity: str = "high"
 
+
 @dataclass(slots=True)
 class SecurityCheckerConfig:
     report_severity_level: str = "LOW"
+
 
 @dataclass(slots=True)
 class CommentDensityConfig:
     min_density: float = 0.1
     max_density: float = 0.5
 
+
 @dataclass(slots=True)
 class DependencyGraphConfig:
     warn_wildcard_imports: bool = True
     max_relative_import_level: int = 1
     track_stdlib_modules: bool = True
+
 
 @dataclass(slots=True)
 class PluginsConfig:
@@ -104,7 +108,7 @@ class PluginsConfig:
                 "indent_style": "spaces",
                 "indent_size": 4,
                 "allow_mixed_indentation": False,
-                "check_naming": False
+                "check_naming": False,
             }
         )
     )

@@ -82,9 +82,8 @@ class Plugin:
 
     def configure(self, config: ToolkitConfig) -> None:
         sect = getattr(getattr(config, "plugins", None), "basic_metrics", None)
-        self.report_level = getattr(
-            sect, "report_level", self.report_level
-        )
+        self.report_level = getattr(sect, "report_level", self.report_level)
+
     # ------------------------------------------------------------------
     # Dashboard
     # ------------------------------------------------------------------
