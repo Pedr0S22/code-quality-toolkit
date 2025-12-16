@@ -1,5 +1,5 @@
 """
-Integration tests for specific real plugins (DeadCode, Security, Style).
+Integration tests for specific real plugins (All available).
 Verifies that the CLI correctly loads these plugins, analyzes code,
 and reports specific issues in the final JSON output.
 """
