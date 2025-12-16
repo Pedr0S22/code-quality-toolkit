@@ -7,14 +7,23 @@ import sys
 from pathlib import Path
 from typing import Any
 
+# Import ValueError explicitly to catch the specific package loader error
 from jinja2 import Environment, PackageLoader, select_autoescape
 
 from ...utils.config import ToolkitConfig
 
-JINJA_ENV = Environment(
-    loader=PackageLoader("toolkit.plugins.duplication_checker"),
-    autoescape=select_autoescape(["html", "xml"]),
-)
+# --- FIX: Wrap Jinja initialization in try/except ---
+# This prevents the CLI from crashing on import if templates are missing.
+try:
+    JINJA_ENV = Environment(
+        loader=PackageLoader("toolkit.plugins.duplication_checker"),
+        autoescape=select_autoescape(["html", "xml"]),
+    )
+except ValueError:
+    # This happens if the 'templates' folder is not included in the package.
+    # We set it to None so the plugin loads, but html generation will fallback.
+    JINJA_ENV = None
+# ----------------------------------------------------
 
 
 class Plugin:
@@ -42,6 +51,10 @@ class Plugin:
     # ------------------------------------------------------------------
 
     def render_html(self, results) -> str:
+        # --- FIX: Check if JINJA_ENV exists ---
+        if JINJA_ENV is None:
+            return "<html><body>Error: Templates not found (packaging issue).</body></html>"
+            
         template = JINJA_ENV.get_template("dashboard.html")
         return template.render(results=results)
 
@@ -82,7 +95,7 @@ class Plugin:
             }
 
         # Run pylint on all files at once
-        proc = subprocess.run(  # nosec B603 - chamada a pylint com argumentos fixos, sem dados não confiáveis
+        proc = subprocess.run(  # nosec B603
             [
                 sys.executable,
                 "-m",
