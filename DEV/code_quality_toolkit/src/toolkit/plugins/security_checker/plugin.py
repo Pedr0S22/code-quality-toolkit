@@ -132,10 +132,10 @@ class Plugin:
         # 1. Agregação Robusta
         dashboard_data = self._aggregate_data_for_dashboard(aggregated_results)
 
-        print(
-            f"[SecurityChecker] Dashboard: "
-            f"{dashboard_data['metrics']['total_issues']} vulnerabilidades."
-        )
+        # print(
+        #     f"[SecurityChecker] Dashboard: "
+        #     f"{dashboard_data['metrics']['total_issues']} vulnerabilidades."
+        # )
 
         # 2. Geração do HTML
         data_json = json.dumps(dashboard_data)
@@ -155,7 +155,7 @@ class Plugin:
             return str(output_file.absolute())
 
         except Exception as e:
-            print(f"[SecurityChecker] Erro ao salvar dashboard: {e}")
+            # print(f"[SecurityChecker] Erro ao salvar dashboard: {e}")
             return ""
 
     def _aggregate_data_for_dashboard(self, results: list[dict]) -> dict:
