@@ -23,15 +23,17 @@ The StyleChecker plugin analyzes Python files and reports basic style issues suc
 It helps maintain cleaner and more consistent code.
 
 ## How to Enable the Plugin
-The StyleChecker is enabled automatically.
-To configure it, edit the TOML configuration file under the rules table:
-   [rules]
-   max_line_length = 100
-   check_whitespace = true
-   indent_style = "spaces"
-   indent_size = 4
-   allow_mixed_indentation = false
-   check_naming = true
+To configure it, edit the rules described below in your toolkit.toml configuration file. The plugin reads its settings from the [`plugins.dead_code_detector`] section (**note**: this is not under [`rules`]):
+
+```
+[plugins.style_checker]
+max_line_length = 88
+check_whitespace = true
+indent_style = "spaces"
+indent_size = 4
+allow_mixed_indentation = false
+check_naming = true
+```
 
 ## How to Use It
 1. Run your toolkit's CLI command (depends on your project).
