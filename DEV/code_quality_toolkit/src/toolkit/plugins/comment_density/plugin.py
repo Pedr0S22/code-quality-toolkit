@@ -199,7 +199,7 @@ class Plugin:
             output_file.parent.mkdir(parents=True, exist_ok=True)
             output_file.write_text(html_content, encoding="utf-8")
             return str(output_file.absolute())
-        except Exception as e:
+        except Exception:
             # print(f"[CommentDensity] Erro ao salvar dashboard: {e}")
             return ""
 

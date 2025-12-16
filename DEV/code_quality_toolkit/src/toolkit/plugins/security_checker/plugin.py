@@ -154,7 +154,7 @@ class Plugin:
             output_file.write_text(html_content, encoding="utf-8")
             return str(output_file.absolute())
 
-        except Exception as e:
+        except Exception:
             # print(f"[SecurityChecker] Erro ao salvar dashboard: {e}")
             return ""
 
