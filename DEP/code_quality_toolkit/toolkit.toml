@@ -1,0 +1,52 @@
+[plugins]
+enabled = ["StyleChecker","CyclomaticComplexity", "SecurityChecker", "DuplicationChecker", "BasicMetrics", "CommentDensity", "DeadCodeDetector","DependencyGraph", "LinterWrapper"]
+
+[plugins.dead_code_detector]
+ignore_patterns = ["^__", "^test_"]
+min_name_length = 2
+severity = "low"
+
+[plugins.cyclomatic_complexity]
+max_complexity = 10
+max_function_length = 50
+max_arguments = 5
+
+[plugins.linter_wrapper]
+enabled = true
+linters = ["pylint"]
+timeout_seconds = 60
+max_issues = 500
+pylint_args = [
+  "--disable=C0114,C0115,C0116",
+]
+fail_on_severity = "high"
+
+[plugins.style_checker]
+max_line_length = 88
+check_whitespace = true
+indent_style = "spaces"
+indent_size = 4
+allow_mixed_indentation = false
+check_naming = false
+
+[plugins.security_checker]
+report_severity_level = "LOW"
+
+[plugins.comment_density]
+min_density = 0.1
+max_density = 0.5
+
+[plugins.dependency_graph]
+warn_wildcard_imports = true
+max_relative_import_level = 1
+track_stdlib_modules = true
+
+[plugins.basic_metrics]
+report_level = "low"
+
+[plugins.duplication_checker]
+min_name_length = 10
+
+[analyze]
+include = ["**/*.py"]
+exclude = ["venv/**", "tests/**"]
