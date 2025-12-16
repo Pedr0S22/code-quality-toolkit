@@ -327,10 +327,10 @@ class Plugin:
         # 1. Agregação Robusta
         dashboard_data = self._aggregate_data_for_dashboard(aggregated_results)
 
-        print(
-            f"[DependencyGraph] Dashboard: "
-            f"{dashboard_data['metrics']['total_imports']} imports processados."
-        )
+        # print(
+        #     f"[DependencyGraph] Dashboard: "
+        #     f"{dashboard_data['metrics']['total_imports']} imports processados."
+        # )
 
         # 2. Geração do HTML
         data_json = json.dumps(dashboard_data)
@@ -349,8 +349,8 @@ class Plugin:
             output_file.write_text(html_content, encoding="utf-8")
             return str(output_file.absolute())
 
-        except Exception as e:
-            print(f"[DependencyGraph] Erro ao salvar dashboard: {e}")
+        except Exception:
+            # print(f"[DependencyGraph] Erro ao salvar dashboard: {e}")
             return ""
 
     def _aggregate_data_for_dashboard(self, results: list[dict]) -> dict:

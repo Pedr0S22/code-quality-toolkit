@@ -87,12 +87,11 @@ O relatório contém:
 
 ## 5. Integração e Configuração
 
-O plugin lê da configuração (`toolkit.toml`):
+O plugin lê da configuração (`toolkit.toml`) na secção `[plugins.basic_metrics]`:
 
 ```toml
-[rules]
+[plugins.basic_metrics]
 metrics_report_level = "LOW"
-```
 
 O valor é armazenado mas ainda **não altera thresholds** → reservado para iterações futuras.
 

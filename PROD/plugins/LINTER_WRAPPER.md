@@ -22,14 +22,18 @@ It enables users to:
 - Avoid crashes thanks to robust error handling (timeouts, missing tools, etc.)
 
 ## How to Enable the Plugin
-Enable and configure the plugin inside your toolkit.toml:
-    [plugins.LintWrapper]
-    enabled = true
-    linters = ["pylint"]
-    timeout_seconds = 60
-    max_issues = 500
-    pylint_args = ["--disable=C0114,C0115,C0116"]
-    fail_on_severity = "high"
+To configure it, edit the rules described below in your toolkit.toml configuration file. The plugin reads its settings from the [`plugins.linter_wrapper`] section (**note**: this is not under [`rules`]):
+
+```toml
+[plugins.linter_wrapper]
+enabled = true
+linters = ["pylint"]
+timeout_seconds = 60
+max_issues = 500
+pylint_args = ["--disable=C0114,C0115,C0116",
+]
+fail_on_severity = "high"
+```
 
 Configuration Meaning
 - enabled – toggles the plugin on/off

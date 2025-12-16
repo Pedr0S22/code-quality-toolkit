@@ -180,10 +180,10 @@ class Plugin:
             "max": f"{self.max_density:.0%}",
         }
 
-        print(
-            f"[CommentDensity] Dashboard: "
-            f"{dashboard_data['metrics']['total_issues']} violações encontradas."
-        )
+        # print(
+        #     f"[CommentDensity] Dashboard: "
+        #     f"{dashboard_data['metrics']['total_issues']} violações encontradas."
+        # )
 
         data_json = json.dumps(dashboard_data)
         html_content = self._get_html_template(data_json)
@@ -199,8 +199,8 @@ class Plugin:
             output_file.parent.mkdir(parents=True, exist_ok=True)
             output_file.write_text(html_content, encoding="utf-8")
             return str(output_file.absolute())
-        except Exception as e:
-            print(f"[CommentDensity] Erro ao salvar dashboard: {e}")
+        except Exception:
+            # print(f"[CommentDensity] Erro ao salvar dashboard: {e}")
             return ""
 
     def _aggregate_data_for_dashboard(self, results: list[dict]) -> dict:
