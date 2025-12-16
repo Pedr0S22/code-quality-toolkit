@@ -20,10 +20,16 @@ JINJA_ENV = Environment(
 class Plugin:
     def __init__(self) -> None:
         self.max_complexity = 10
-        self.name:str = "plugin_duplicate_code_checker"
+        self.name: str = "plugin_duplicate_code_checker"
 
     def configure(self, config: ToolkitConfig) -> None:
-        self.max_line_length = config.rules.max_line_length
+        """Recebe parâmetros de [plugins.duplicate_code_checker] do toolkit.toml."""
+        sect = getattr(getattr(config, "plugins", None), "duplicate_code_checker", None)
+        if not sect:
+            return
+        self.min_name_length = int(
+            getattr(sect, "min_name_length", self.min_name_length)
+        )
 
     def get_metadata(self) -> dict[str, str]:
         return {

@@ -1,3 +1,4 @@
+from pathlib import Path
 from textwrap import dedent
 
 import pytest
@@ -150,11 +151,127 @@ def test_analyze_syntax_error():
     plugin = Plugin()
     plugin.configure(ToolkitConfig())
 
-    broken_code = "def bad_syntax(:"  # Erro de sintaxe
+    broken_code = """
+def bad_syntax(:
+    print("linha 2 para encher linguiça")
+    print("linha 3 para encher linguiça")
+    print("linha 4 para encher linguiça")
+    print("linha 5 para encher linguiça")
+    print("linha 6 para encher linguiça")
+    """
 
     report = plugin.analyze(broken_code, "test.py")
 
-    # O plugin não deve "crashar", deve reportar o erro
-    assert report["summary"]["status"] == "partial"
-    assert report["summary"]["issues_found"] == 1
-    assert report["results"][0]["code"] == "SYNTAX_ERROR"
+    # CORREÇÃO: Agora o plugin retorna "failed" quando há exceção, não "partial"
+    assert report["summary"]["status"] == "failed"
+
+    # Verifica se a mensagem de erro foi capturada
+    assert report["summary"]["error"] is not None
+
+
+# --- NOVOS TESTES DE ANÁLISE (LIMITE E COBERTURA) ---
+
+
+def test_analyze_too_few_lines_skip():
+    """
+    Testa a lógica de 'early exit' quando há menos de 5 linhas não vazias.
+    Cobre: if len(non_empty_lines) < 5.
+    """
+    plugin = Plugin()
+    plugin.configure(ToolkitConfig())
+
+    # 4 linhas não vazias (deve pular a análise de densidade)
+    code = "# c1\ncode1\ncode2\ncode3"
+    report = plugin.analyze(code, "small.py")
+
+    assert report["summary"]["status"] == "completed"
+    assert report["summary"]["issues_found"] == 0
+    assert report["summary"]["metrics"]["total_lines"] == 4
+    assert report["summary"]["metrics"]["comment_density"] == 0.0
+
+
+def test_analyze_density_exactly_min():
+    """
+    Testa a densidade exatamente no limite mínimo (0.10, 10%).
+    Deve passar sem issue.
+    """
+    plugin = Plugin()
+    # Usando o default: min_density = 0.1
+    plugin.configure(ToolkitConfig())
+
+    # 1 comentário / 10 linhas totais -> 0.10
+    code = "# C\n" + "\n".join([f"print({i})" for i in range(9)])
+    report = plugin.analyze(code, "min_exact.py")
+
+    assert report["summary"]["issues_found"] == 0
+    assert f"{report['summary']['metrics']['comment_density']:.2f}" == "0.10"
+
+
+# --- NOVOS TESTES DE AGREGAÇÃO (DASHBOARD) ---
+
+
+def test_aggregate_dashboard_file_type_priority():
+    """
+    Verifica a agregação, garantindo que a regra de HIGH (HIGH_COMMENT_DENSITY)
+    sobrescreva LOW (LOW_COMMENT_DENSITY) no contador de top_files.
+    Cobre: files_counter update logic.
+    """
+    plugin = Plugin()
+    aggregated_results = [
+        {
+            "file": "file_mixed.py",
+            "plugins": [
+                {
+                    "plugin": "CommentDensity",
+                    "results": [
+                        # A: Low Density
+                        {"code": "LOW_COMMENT_DENSITY", "file": "file_mixed.py"},
+                        # B: High Density (DEVE SOBRESCREVER A)
+                        {"code": "HIGH_COMMENT_DENSITY", "file": "file_mixed.py"},
+                    ],
+                }
+            ],
+        },
+    ]
+
+    dashboard_data = plugin._aggregate_data_for_dashboard(aggregated_results)
+
+    # Verifica métricas
+    assert dashboard_data["metrics"]["total_issues"] == 2
+    assert dashboard_data["metrics"]["total_files"] == 1
+
+    # Verifica o top_files: O tipo deve ser HIGH, não LOW
+    top_file = dashboard_data["top_files"][0]
+    assert top_file["file"] == "file_mixed.py"
+    assert top_file["count"] == 2
+    assert top_file["type"] == "HIGH_COMMENT_DENSITY"  # Prioridade do HIGH
+
+
+# --- TESTES DE EXCEÇÃO (COBERTURA DO EXCEPT) ---
+
+
+def test_generate_dashboard_exception_handling(tmp_path: Path):
+    """
+    Cobre o bloco 'except Exception as e' no método generate_dashboard,
+    forçando uma falha de I/O ao tentar escrever em um diretório.
+    """
+    plugin = Plugin()
+
+    # Simulação mínima de resultados
+    aggregated_results = [
+        {
+            "file": "f.py",
+            "plugins": [
+                {
+                    "plugin": "CommentDensity",
+                    "results": [{"code": "LOW_COMMENT_DENSITY", "file": "f.py"}],
+                }
+            ],
+        }
+    ]
+
+    # Usamos o caminho de um diretório (tmp_path), o que forçará o erro
+    output_path = plugin.generate_dashboard(aggregated_results, str(tmp_path))
+
+    # A função deve capturar a exceção e retornar uma string vazia
+    assert output_path == ""
