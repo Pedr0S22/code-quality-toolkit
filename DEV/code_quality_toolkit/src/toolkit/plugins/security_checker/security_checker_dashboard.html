@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SecurityChecker Dashboard</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0; padding: 20px;
+            background-color: #f4f4f4;
+            display: flex; justify-content: center;
+        }
+        .chart-container {
+            /* CORREÇÃO RESPONSIVA */
+            width: 100%;
+            max-width: 1066px;
+            aspect-ratio: 1066 / 628;
+            background: white; border: 1px solid #ccc;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+<div id="app" class="chart-container"></div>
+<script>
+    const data = {"metrics": {"total_files": 1, "total_issues": 1}, "severity_counts": [{"severity": "medium", "count": 1}], "rule_counts": [{"code": "B307", "count": 1}], "top_files": [{"file": "C:\\Users\\pedro\\AppData\\Local\\Temp\\pytest-of-pedro\\pytest-156\\test_security_checker_integrat0\\project\\vulnerable.py", "count": 1}]};
+    const width = 1066; const height = 628;
+
+    // CORREÇÃO: viewBox para escalar o SVG automaticamente
+    const svg = d3.select("#app").append("svg")
+        .attr("viewBox", `0 0 ${width} ${height}`)
+        .attr("preserveAspectRatio", "xMidYMid meet")
+        .style("width", "100%")
+        .style("height", "100%")
+        .style("background-color", "#fff");
+
+    // HEADER
+    svg.append("rect")
+        .attr("x", 0).attr("y", 0)
+        .attr("width", width).attr("height", 70)
+        .attr("fill", "#dc3545");
+
+    svg.append("text")
+        .attr("x", 20).attr("y", 45)
+        .attr("fill", "white")
+        .style("font-size", "24px").style("font-weight", "bold")
+        .text("SecurityChecker Analysis");
+
+    // METRICS
+    const mGroup = svg.append("g").attr("transform", "translate(750, 20)");
+    mGroup.append("rect")
+        .attr("x", 0).attr("width", 140).attr("height", 30).attr("rx", 5)
+        .attr("fill", "rgba(255,255,255,0.2)");
+    mGroup.append("text")
+        .attr("x", 70).attr("y", 20).attr("text-anchor", "middle")
+        .attr("fill", "white").style("font-weight", "bold")
+        .text(`Files: ${data.metrics.total_files}`);
+
+    mGroup.append("rect")
+        .attr("x", 150).attr("width", 140).attr("height", 30).attr("rx", 5)
+        .attr("fill", "rgba(255,255,255,0.2)");
+    mGroup.append("text")
+        .attr("x", 220).attr("y", 20).attr("text-anchor", "middle")
+        .attr("fill", "white").style("font-weight", "bold")
+        .text(`Issues: ${data.metrics.total_issues}`);
+
+    const col1X = 50; const col2X = 550; const contentY = 120;
+
+    // CHART 1: SEVERITY
+    svg.append("text")
+        .attr("x", col1X).attr("y", contentY - 10)
+        .style("font-size", "18px").style("font-weight", "bold")
+        .text("Issues by Severity");
+
+    const sevWidth = 450; const sevHeight = 200;
+    const sevGroup = svg.append("g")
+        .attr("transform", `translate(${col1X}, ${contentY})`);
+
+    const sevData = data.severity_counts || [];
+    if (sevData.length > 0) {
+        const xSev = d3.scaleBand()
+            .domain(sevData.map(d => d.severity))
+            .range([0, sevWidth]).padding(0.3);
+
+        const maxVal = d3.max(sevData, d => d.count);
+        const ySev = d3.scaleLinear()
+            .domain([0, maxVal * 1.2]).range([sevHeight, 0]);
+
+        sevGroup.append("g")
+            .attr("transform", `translate(0,${sevHeight})`).call(d3.axisBottom(xSev));
+        sevGroup.append("g").call(d3.axisLeft(ySev).ticks(5));
+
+        const colorMap = {
+            "high": "#dc3545", "medium": "#ffc107",
+            "low": "#17a2b8", "info": "#6c757d"
+        };
+
+        sevGroup.selectAll("rect").data(sevData).enter().append("rect")
+            .attr("x", d => xSev(d.severity))
+            .attr("y", d => ySev(d.count))
+            .attr("width", xSev.bandwidth())
+            .attr("height", d => sevHeight - ySev(d.count))
+            .attr("fill", d => colorMap[d.severity] || "steelblue");
+
+        sevGroup.selectAll(".label").data(sevData).enter().append("text")
+            .attr("x", d => xSev(d.severity) + xSev.bandwidth()/2)
+            .attr("y", d => ySev(d.count) - 5)
+            .attr("text-anchor", "middle")
+            .style("font-size", "12px").style("font-weight", "bold")
+            .text(d => d.count);
+    } else {
+         sevGroup.append("text").attr("y", 100).text("No data available");
+    }
+
+    // CHART 2: RULES
+    const rulesY = contentY + sevHeight + 60;
+    svg.append("text")
+        .attr("x", col1X).attr("y", rulesY - 10)
+        .style("font-size", "18px").style("font-weight", "bold")
+        .text("Top Vulnerabilities");
+
+    const ruleGroup = svg.append("g")
+        .attr("transform", `translate(${col1X}, ${rulesY})`);
+    const ruleData = (data.rule_counts || []).slice(0, 5);
+
+    if(ruleData.length > 0) {
+        const maxCount = d3.max(ruleData, d => d.count);
+        const xRule = d3.scaleLinear()
+            .domain([0, maxCount * 1.2]).range([0, sevWidth - 50]);
+        const yRule = d3.scaleBand()
+            .domain(ruleData.map(d => d.code)).range([0, 150]).padding(0.2);
+
+        ruleGroup.append("g").call(d3.axisLeft(yRule));
+        ruleGroup.selectAll("rect").data(ruleData).enter().append("rect")
+            .attr("x", 1).attr("y", d => yRule(d.code))
+            .attr("width", d => xRule(d.count))
+            .attr("height", yRule.bandwidth()).attr("fill", "#6610f2");
+
+        ruleGroup.selectAll("text.val").data(ruleData).enter().append("text")
+            .attr("x", d => xRule(d.count) + 5)
+            .attr("y", d => yRule(d.code) + yRule.bandwidth()/2 + 4)
+            .style("font-size", "11px").style("font-weight", "bold")
+            .text(d => d.count);
+    } else {
+        ruleGroup.append("text").attr("y", 50).text("No data available");
+    }
+
+    // LIST: TOP OFFENDERS
+    svg.append("text")
+        .attr("x", col2X).attr("y", contentY - 10)
+        .style("font-size", "18px").style("font-weight", "bold")
+        .text("Top Risky Files");
+
+    const listGroup = svg.append("g")
+        .attr("transform", `translate(${col2X}, ${contentY})`);
+    listGroup.append("rect")
+        .attr("width", 450).attr("height", 420)
+        .attr("fill", "#fafafa").attr("stroke", "#eee");
+
+    const offenders = data.top_files || [];
+
+    if (offenders.length > 0) {
+        offenders.forEach((file, i) => {
+            const yPos = 30 + (i * 40);
+            if (i > 0) listGroup.append("line")
+                .attr("x1", 10).attr("y1", yPos - 25)
+                .attr("x2", 440).attr("y2", yPos - 25).attr("stroke", "#eee");
+
+            let fileName = file.file;
+            if (fileName.length > 50) fileName = "..." + fileName.slice(-47);
+
+            listGroup.append("text")
+                .attr("x", 15).attr("y", yPos)
+                .style("font-family", "monospace").style("font-size", "12px")
+                .text(`${i+1}. ${fileName}`);
+
+            listGroup.append("rect")
+                .attr("x", 400).attr("y", yPos - 12)
+                .attr("width", 30).attr("height", 18).attr("rx", 4)
+                .attr("fill", "#dc3545");
+
+            listGroup.append("text")
+                .attr("x", 415).attr("y", yPos + 1).attr("text-anchor", "middle")
+                .attr("fill", "white").style("font-size", "11px")
+                .style("font-weight", "bold").text(file.count);
+        });
+    } else {
+        if (data.metrics.total_issues > 0) {
+             listGroup.append("text")
+                .attr("x", 225).attr("y", 210).attr("text-anchor", "middle")
+                .attr("fill", "#dc3545").text("⚠️ Issues found (Files unavailable)");
+        } else {
+             listGroup.append("text")
+                .attr("x", 225).attr("y", 210).attr("text-anchor", "middle")
+                .attr("fill", "#28a745").style("font-size", "16px")
+                .text("✅ No vulnerabilities found!");
+        }
+    }
+</script>
+</body>
+</html>

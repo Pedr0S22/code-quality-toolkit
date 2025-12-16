@@ -1,10 +1,15 @@
 [plugins]
 enabled = ["StyleChecker","CyclomaticComplexity", "SecurityChecker", "DuplicationChecker", "BasicMetrics", "CommentDensity", "DeadCodeDetector","DependencyGraph", "LinterWrapper"]
 
-[plugins.dead_code]
+[plugins.dead_code_detector]
 ignore_patterns = ["^__", "^test_"]
 min_name_length = 2
 severity = "low"
+
+[plugins.cyclomatic_complexity]
+max_complexity = 10
+max_function_length = 50
+max_arguments = 5
 
 [plugins.linter_wrapper]
 enabled = true
@@ -16,11 +21,18 @@ pylint_args = [
 ]
 fail_on_severity = "high"
 
+[plugins.style_checker]
+max_line_length = 88
+check_whitespace = true
+indent_style = "spaces"
+indent_size = 4
+allow_mixed_indentation = false
+check_naming = true
+
 [rules]
 max_line_length = 88
 max_complexity = 10
-max_function_length = 50
-max_arguments = 5
+
 check_whitespace = true
 indent_style = "spaces"
 indent_size = 4
@@ -28,14 +40,23 @@ allow_mixed_indentation = false
 check_naming = true
 metrics_report_level = "MEDIUM"
 
-security_report_level="LOW"
+[plugins.security_checker]
+report_severity_level = "LOW"
 
-min_density = 0.1  
-max_density = 0.5  
+[plugins.comment_density]
+min_density = 0.1
+max_density = 0.5
 
+[plugins.dependency_graph]
 warn_wildcard_imports = true
 max_relative_import_level = 1
 track_stdlib_modules = true
+
+[plugins.basic_metrics]
+report_level = "low"
+
+[plugins.duplicate_code_checker]
+min_name_length = 3
 
 [analyze]
 include = ["**/*.py"]
