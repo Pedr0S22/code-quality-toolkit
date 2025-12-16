@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from toolkit.plugins.duplicate_code_checker.plugin import Plugin
+from toolkit.plugins.duplication_checker.plugin import Plugin
 
 
 class MockRulesConfig:

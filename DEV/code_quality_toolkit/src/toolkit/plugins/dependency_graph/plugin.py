@@ -226,8 +226,6 @@ class Plugin:
         self.warn_wildcard_imports = True
         self.max_relative_import_level = 1
         self.track_stdlib_modules = True
-        self.dashboard_output_format = "html"
-        self.dashboard_show_stdlib = True
 
     def get_metadata(self) -> dict[str, str]:
         return {

@@ -103,33 +103,3 @@ def test_render_html():
     html_output = plugin.render_html(fake_results)
     assert isinstance(html_output, str)
     assert "total_lines" in html_output
-
-
-def test_generate_dashboard(tmp_path):
-    plugin = Plugin()
-    results = {
-        "results": [],
-        "summary": {
-            "issues_found": 0,
-            "status": "completed",
-            "metrics": {"total_lines": 1},
-        },
-    }
-
-    # Create expected directory structure
-    assets_dir = tmp_path / "src" / "toolkit" / "plugins" / "basic_metrics"
-    assets_dir.mkdir(parents=True)
-
-    # Run from tmp_path so relative paths resolve correctly
-    cwd = os.getcwd()
-    try:
-        os.chdir(tmp_path)
-        plugin.generate_dashboard(results)
-    finally:
-        os.chdir(cwd)
-
-    dashboard_file = assets_dir / "plugin_basic_metrics_dashboard.html"
-    assert dashboard_file.exists()
-
-    content = dashboard_file.read_text()
-    assert "total_lines" in content

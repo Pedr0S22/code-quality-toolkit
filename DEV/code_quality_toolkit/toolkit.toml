@@ -27,18 +27,7 @@ check_whitespace = true
 indent_style = "spaces"
 indent_size = 4
 allow_mixed_indentation = false
-check_naming = true
-
-[rules]
-max_line_length = 88
-max_complexity = 10
-
-check_whitespace = true
-indent_style = "spaces"
-indent_size = 4
-allow_mixed_indentation = false
-check_naming = true
-metrics_report_level = "MEDIUM"
+check_naming = false
 
 [plugins.security_checker]
 report_severity_level = "LOW"
@@ -55,8 +44,8 @@ track_stdlib_modules = true
 [plugins.basic_metrics]
 report_level = "low"
 
-[plugins.duplicate_code_checker]
-min_name_length = 3
+[plugins.duplication_checker]
+min_name_length = 10
 
 [analyze]
 include = ["**/*.py"]

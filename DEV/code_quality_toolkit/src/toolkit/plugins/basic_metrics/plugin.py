@@ -69,8 +69,6 @@ class Plugin:
     def __init__(self) -> None:
         # Nível de detalhe configurável via ToolkitConfig.rules.metrics_report_level
         self.report_level: str = "LOW"
-        self.metrics_report_level: str = "LOW"
-        self.name: str = "plugin_basic_metrics"
 
     def get_metadata(self) -> dict[str, str]:
         return {
@@ -84,11 +82,9 @@ class Plugin:
 
     def configure(self, config: ToolkitConfig) -> None:
         sect = getattr(getattr(config, "plugins", None), "basic_metrics", None)
-        self.metrics_report_level = getattr(
-            sect, "metrics_report_level", self.metrics_report_level
+        self.report_level = getattr(
+            sect, "report_level", self.report_level
         )
-        self.report_level = self.metrics_report_level
-
     # ------------------------------------------------------------------
     # Dashboard
     # ------------------------------------------------------------------
@@ -101,8 +97,8 @@ class Plugin:
         """
         Generates the D3.js dashboard HTML file.
         """
-        dashboard_file = "src/toolkit/plugins/basic_metrics/" 
-        dashboard_file += f"{self.name}_dashboard.html"
+        dashboard_file = "src/toolkit/plugins/basic_metrics/"
+        dashboard_file += "basic_metrics_dashboard.html"
         html_content = self.render_html(results)
 
         with open(dashboard_file, "w", encoding="utf-8") as f:

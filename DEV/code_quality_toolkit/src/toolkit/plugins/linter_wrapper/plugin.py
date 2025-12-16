@@ -27,7 +27,7 @@ class Plugin:
 
     def __init__(self) -> None:
         self.enabled: bool = True
-        self.enabled_linters: list[str] = ["pylint"]
+        self.linters: list[str] = ["pylint"]
         self.timeout_seconds: int = 60
         self.max_issues: int = 500
         self.pylint_args: list[str] = []
@@ -39,7 +39,7 @@ class Plugin:
 
         if lw is not None:
             self.enabled = getattr(lw, "enabled", self.enabled)
-            self.enabled_linters = list(getattr(lw, "linters", self.enabled_linters))
+            self.linters = list(getattr(lw, "linters", self.linters))
             self.timeout_seconds = int(
                 getattr(lw, "timeout_seconds", self.timeout_seconds)
             )
@@ -132,7 +132,7 @@ class Plugin:
         highest_severity: str | None = None
         order = {"low": 0, "medium": 1, "high": 2}
 
-        for linter in self.enabled_linters:
+        for linter in self.linters:
             if linter == "pylint":
                 lint_results = self._run_pylint(file_path)
             else:

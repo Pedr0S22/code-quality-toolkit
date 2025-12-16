@@ -40,24 +40,20 @@ class LinterWrapperConfig:
     # "none", "low", "medium", "high"
     fail_on_severity: str = "high"
 
-
 @dataclass(slots=True)
 class SecurityCheckerConfig:
     report_severity_level: str = "LOW"
-
 
 @dataclass(slots=True)
 class CommentDensityConfig:
     min_density: float = 0.1
     max_density: float = 0.5
 
-
 @dataclass(slots=True)
 class DependencyGraphConfig:
     warn_wildcard_imports: bool = True
     max_relative_import_level: int = 1
     track_stdlib_modules: bool = True
-
 
 @dataclass(slots=True)
 class PluginsConfig:
@@ -74,12 +70,41 @@ class PluginsConfig:
         )
     )
 
+    basic_metrics: Any = field(
+        default_factory=lambda: SimpleNamespace(
+            **{
+                "report_level": "low",
+            }
+        )
+    )
+
+    duplication_checker: Any = field(
+        default_factory=lambda: SimpleNamespace(
+            **{
+                "min_name_length": 10,
+            }
+        )
+    )
+
     cyclomatic_complexity: Any = field(
         default_factory=lambda: SimpleNamespace(
             **{
                 "max_complexity": 10,
                 "max_function_length": 50,
                 "max_arguments": 5,
+            }
+        )
+    )
+
+    style_checker: Any = field(
+        default_factory=lambda: SimpleNamespace(
+            **{
+                "max_line_length": 88,
+                "check_whitespace": True,
+                "indent_style": "spaces",
+                "indent_size": 4,
+                "allow_mixed_indentation": False,
+                "check_naming": False
             }
         )
     )

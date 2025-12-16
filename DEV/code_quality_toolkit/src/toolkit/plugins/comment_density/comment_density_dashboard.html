@@ -27,7 +27,7 @@
 <div id="app" class="chart-container"></div>
 
 <script>
-    const data = {"metrics": {"total_files": 0, "total_issues": 0}, "rule_counts": [], "top_files": [], "thresholds": {"min": "10%", "max": "50%"}};
+    const data = {"metrics": {"total_files": 4, "total_issues": 4}, "rule_counts": [{"code": "LOW_COMMENT_DENSITY", "count": 4}], "top_files": [{"file": "C:\\Users\\pedro\\AppData\\Local\\Temp\\toolkit_sessions\\aea37e32-5dfd-4c9f-b453-d8dc729391b4\\source\\sample_project\\import.py", "count": 1, "type": "LOW_COMMENT_DENSITY"}, {"file": "C:\\Users\\pedro\\AppData\\Local\\Temp\\toolkit_sessions\\aea37e32-5dfd-4c9f-b453-d8dc729391b4\\source\\sample_project\\plugins\\linter_wrapper\\pylint\\Mix_All\\all_2.py", "count": 1, "type": "LOW_COMMENT_DENSITY"}, {"file": "C:\\Users\\pedro\\AppData\\Local\\Temp\\toolkit_sessions\\aea37e32-5dfd-4c9f-b453-d8dc729391b4\\source\\sample_project\\plugins\\linter_wrapper\\pylint\\Mix_L1_L2\\mix_12_b.py", "count": 1, "type": "LOW_COMMENT_DENSITY"}, {"file": "C:\\Users\\pedro\\AppData\\Local\\Temp\\toolkit_sessions\\aea37e32-5dfd-4c9f-b453-d8dc729391b4\\source\\sample_project\\utils.py", "count": 1, "type": "LOW_COMMENT_DENSITY"}], "thresholds": {"min": "10%", "max": "50%"}};
     const width = 1066; const height = 628;
     const minThreshold = data.thresholds ? data.thresholds.min : "10%";
     const maxThreshold = data.thresholds ? data.thresholds.max : "50%";
