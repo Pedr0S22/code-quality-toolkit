@@ -2,6 +2,12 @@
 #   Basic metrics plugin   #
 # ------------------------ #
 
+# Imports antigos mantidos como comentário para histórico (pedido do enunciado):
+# import os
+# import tempfile
+# from radon.raw import analyze as raw_analyze
+# from radon.metrics import h_visit, HalsteadReport
+
 from __future__ import annotations
 
 import ast
@@ -91,11 +97,12 @@ class Plugin:
         template = JINJA_ENV.get_template("dashboard.html")
         return template.render(results=results)
 
-    def generate_dashboard(self, results, output_dir="out"):
+    def generate_dashboard(self, results):
         """
         Generates the D3.js dashboard HTML file.
         """
-        dashboard_file = output_dir + "/" + f"{self.name}_dashboard.html"
+        dashboard_file = "src/toolkit/plugins/basic_metrics/" 
+        dashboard_file += f"{self.name}_dashboard.html"
         html_content = self.render_html(results)
 
         with open(dashboard_file, "w", encoding="utf-8") as f:
