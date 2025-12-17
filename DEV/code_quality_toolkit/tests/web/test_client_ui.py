@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import json
 import zipfile
 
 import pytest
@@ -28,6 +29,12 @@ def app():
     if qt_app is None:
         qt_app = QApplication([])
     return qt_app
+
+
+class Dummy:
+    _normalize_path = MainWindow._normalize_path
+    _fix_json_paths = MainWindow._fix_json_paths
+    _fix_html_paths = MainWindow._fix_html_paths
 
 
 class DummyResponse:
@@ -201,3 +208,172 @@ def test_export_without_running_analysis_shows_message(main_window):
 
     # UI message when results_dir doesn't exist
     assert "Run analysis first" in main_window.lbl_path.text()
+
+
+def test_windows_path():
+    mw = Dummy()
+    p = r"C:\tmp\toolkit\source\proj\a.py"
+    assert mw._normalize_path(p) == "./proj/a.py"
+
+
+def test_linux_path():
+    mw = Dummy()
+    p = "/tmp/toolkit/source/proj/a.py"
+    assert mw._normalize_path(p) == "./proj/a.py"
+
+
+def test_macos_path():
+    mw = Dummy()
+    p = "/Users/me/dev/source/app/main.py"
+    assert mw._normalize_path(p) == "./app/main.py"
+
+
+def test_no_source():
+    mw = Dummy()
+    p = "/Users/me/dev/app/main.py"
+    assert mw._normalize_path(p) == p
+
+
+def test_url_untouched():
+    mw = Dummy()
+    url = "https://example.com/source/app.js"
+    assert mw._normalize_path(url) == url
+
+
+def test_json_report_paths_are_normalized(tmp_path):
+    mw = Dummy()
+
+    report = {
+        "summary": {
+            "top_offenders": [
+                {
+                    "file": "C:\\tmp\\toolkit\\"
+                    + "source\\examples\\sample_project\\import.py",
+                    "issues": 21,
+                }
+            ]
+        },
+        "details": [
+            {
+                "file": "/tmp/toolkit/source/examples/sample_project/utils.py",
+                "plugins": [],
+            }
+        ],
+    }
+
+    json_path = tmp_path / "report.json"
+    json_path.write_text(json.dumps(report), encoding="utf-8")
+
+    mw._fix_json_paths(json_path)
+
+    fixed = json.loads(json_path.read_text(encoding="utf-8"))
+
+    assert (
+        fixed["summary"]["top_offenders"][0]["file"]
+        == "./examples/sample_project/import.py"
+    )
+    assert fixed["details"][0]["file"] == "./examples/sample_project/utils.py"
+
+
+def test_json_paths_without_source_are_untouched(tmp_path):
+    mw = Dummy()
+
+    report = {"file": "examples/sample_project/import.py", "count": 10}
+
+    json_path = tmp_path / "report.json"
+    json_path.write_text(json.dumps(report), encoding="utf-8")
+
+    mw._fix_json_paths(json_path)
+
+    fixed = json.loads(json_path.read_text(encoding="utf-8"))
+
+    assert fixed["file"] == "examples/sample_project/import.py"
+    assert fixed["count"] == 10
+
+
+def test_json_urls_are_not_modified(tmp_path):
+    mw = Dummy()
+
+    report = {"docs": "https://example.com/source/help.html"}
+
+    json_path = tmp_path / "report.json"
+    json_path.write_text(json.dumps(report), encoding="utf-8")
+
+    mw._fix_json_paths(json_path)
+
+    fixed = json.loads(json_path.read_text(encoding="utf-8"))
+
+    assert fixed["docs"] == "https://example.com/source/help.html"
+
+
+def test_html_windows_paths_are_normalized(tmp_path):
+    mw = Dummy()
+
+    html = """
+    <li><strong>
+    C:\\tmp\\toolkit\\source\\examples\\sample_project\\import.py
+    </strong>
+    </li>
+    """
+
+    html_path = tmp_path / "report.html"
+    html_path.write_text(html, encoding="utf-8")
+
+    mw._fix_html_paths(html_path)
+
+    fixed = html_path.read_text(encoding="utf-8")
+
+    assert "./examples/sample_project/import.py" in fixed
+    assert "source" not in fixed
+    assert "C:\\" not in fixed
+
+
+def test_html_unix_paths_are_normalized(tmp_path):
+    mw = Dummy()
+
+    html = """
+    <h3>File: /tmp/toolkit/source/examples/sample_project/utils.py</h3>
+    """
+
+    html_path = tmp_path / "report.html"
+    html_path.write_text(html, encoding="utf-8")
+
+    mw._fix_html_paths(html_path)
+
+    fixed = html_path.read_text(encoding="utf-8")
+
+    assert "./examples/sample_project/utils.py" in fixed
+
+
+def test_html_without_paths_is_unchanged(tmp_path):
+    mw = Dummy()
+
+    html = "<h1>Code Quality Toolkit Report</h1>"
+
+    html_path = tmp_path / "report.html"
+    html_path.write_text(html, encoding="utf-8")
+
+    mw._fix_html_paths(html_path)
+
+    fixed = html_path.read_text(encoding="utf-8")
+
+    assert fixed == html
+
+
+def test_html_urls_and_assets_not_modified(tmp_path):
+    mw = Dummy()
+
+    html = """
+    <script src="/static/app.js"></script>
+    <a href="https://example.com/source/docs.html">Docs</a>
+    """
+
+    html_path = tmp_path / "report.html"
+    html_path.write_text(html, encoding="utf-8")
+
+    mw._fix_html_paths(html_path)
+
+    fixed = html_path.read_text(encoding="utf-8")
+
+    assert "/static/app.js" in fixed
+    assert "https://example.com/source/docs.html" in fixed

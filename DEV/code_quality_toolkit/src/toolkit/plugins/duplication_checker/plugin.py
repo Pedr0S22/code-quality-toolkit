@@ -53,9 +53,11 @@ class Plugin:
     def render_html(self, results) -> str:
         # --- FIX: Check if JINJA_ENV exists ---
         if JINJA_ENV is None:
-            return "<html><body>Error: Templates not found " \
-            "(packaging issue).</body></html>"
-            
+            return (
+                "<html><body>Error: Templates not found "
+                "(packaging issue).</body></html>"
+            )
+
         template = JINJA_ENV.get_template("dashboard.html")
         return template.render(results=results)
 
