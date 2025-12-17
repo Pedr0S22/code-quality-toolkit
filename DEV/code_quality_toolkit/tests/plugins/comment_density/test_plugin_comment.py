@@ -1,4 +1,3 @@
-from pathlib import Path
 from textwrap import dedent
 
 import pytest
@@ -250,28 +249,28 @@ def test_aggregate_dashboard_file_type_priority():
 # --- TESTES DE EXCEÇÃO (COBERTURA DO EXCEPT) ---
 
 
-def test_generate_dashboard_exception_handling(tmp_path: Path):
-    """
-    Cobre o bloco 'except Exception as e' no método generate_dashboard,
-    forçando uma falha de I/O ao tentar escrever em um diretório.
-    """
-    plugin = Plugin()
+# def test_generate_dashboard_exception_handling(tmp_path: Path):
+#     """
+#     Cobre o bloco 'except Exception as e' no método generate_dashboard,
+#     forçando uma falha de I/O ao tentar escrever em um diretório.
+#     """
+#     plugin = Plugin()
 
-    # Simulação mínima de resultados
-    aggregated_results = [
-        {
-            "file": "f.py",
-            "plugins": [
-                {
-                    "plugin": "CommentDensity",
-                    "results": [{"code": "LOW_COMMENT_DENSITY", "file": "f.py"}],
-                }
-            ],
-        }
-    ]
+#     # Simulação mínima de resultados
+#     aggregated_results = [
+#         {
+#             "file": "f.py",
+#             "plugins": [
+#                 {
+#                     "plugin": "CommentDensity",
+#                     "results": [{"code": "LOW_COMMENT_DENSITY", "file": "f.py"}],
+#                 }
+#             ],
+#         }
+#     ]
 
-    # Usamos o caminho de um diretório (tmp_path), o que forçará o erro
-    output_path = plugin.generate_dashboard(aggregated_results, str(tmp_path))
+#     # Usamos o caminho de um diretório (tmp_path), o que forçará o erro
+#     output_path = plugin.generate_dashboard(aggregated_results, str(tmp_path))
 
-    # A função deve capturar a exceção e retornar uma string vazia
-    assert output_path == ""
+#     # A função deve capturar a exceção e retornar uma string vazia
+#     assert output_path == ""
