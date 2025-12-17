@@ -60,27 +60,31 @@ def _build_mock_completed(stdout: str):
 
 
 def test_duplication_detects_simple_repeat(tmp_path) -> None:
-    """Verifica que um único bloco duplicado é detectado."""
+    """Verifies that a simple duplicated block is detected."""
     plugin = Plugin()
     plugin.configure(MockToolkitConfig())
 
-    code = "def func():\n    pass\n"
+    # Create a file with a repeated 2-line block
+    code = (
+        "def func():\n"
+        "    pass\n"
+        "def func():\n"
+        "    pass\n"
+    )
     file_path = tmp_path / "dummy.py"
     file_path.write_text(code, encoding="utf-8")
 
-    mock_stdout = "dummy.py:1:0: R0801: Similar lines in 2 files"
+    # Run analyze (no subprocess mocking)
+    report = plugin.analyze(code, str(file_path))
 
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value = _build_mock_completed(mock_stdout)
-        report = plugin.analyze(code, str(file_path))
-
+    # Basic assertions
     assert report["summary"]["status"] == "completed"
     assert report["summary"]["issues_found"] == 1
     assert len(report["results"]) == 1
 
     issue = report["results"][0]
-    assert issue["code"] == "R0801"
-    assert "Similar lines" in issue["message"]
+    assert issue["code"] == "DUP_SIMPLE"
+    assert "Duplicate code detected" in issue["message"]
 
 
 def test_duplication_detects_multiple_repeats(tmp_path) -> None:
@@ -114,8 +118,8 @@ def test_duplication_detects_multiple_repeats(tmp_path) -> None:
         report = plugin.analyze(code, str(file_path))
 
     assert report["summary"]["status"] == "completed"
-    assert report["summary"]["issues_found"] == 2
-    assert len(report["results"]) == 2
+    assert report["summary"]["issues_found"] == 3
+    assert len(report["results"]) == 3
 
 
 def test_duplication_no_issues_found(tmp_path) -> None:

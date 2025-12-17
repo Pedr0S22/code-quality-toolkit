@@ -369,14 +369,15 @@ class Plugin:
         Converts plugin results into a JSON-ready dashboard structure.
         """
         items = results.get("results", []) if isinstance(results, dict) else results
-
         metrics = results.get(
                 "summary",
-                {}).get("metrics", {}) if isinstance(results, dict) else {}
+                {}
+                ).get("metrics", {}) if isinstance(results, dict) else {}
 
+        # If items have no 'severity', just count total as "TOTAL"
         severity_counts = {}
         for item in items:
-            sev = item.get("severity", "UNKNOWN")
+            sev = item.get("severity", "TOTAL")
             severity_counts[sev] = severity_counts.get(sev, 0) + 1
 
         return {

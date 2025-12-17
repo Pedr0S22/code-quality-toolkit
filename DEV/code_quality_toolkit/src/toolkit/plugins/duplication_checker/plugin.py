@@ -3,10 +3,7 @@
 from __future__ import annotations
 
 import json
-import subprocess  # nosec B404 - uso controlado
-import sys
 from pathlib import Path
-from typing import Any
 
 from ...utils.config import ToolkitConfig
 
@@ -35,81 +32,55 @@ class Plugin:
     # Analyze
     # ------------------------------------------------------------------
 
-    def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
+    def analyze(self, source_code: str, file_path: str | None) -> dict[str, any]:
         if not file_path:
             return {"error": "file_path required"}
 
         path_obj = Path(file_path).resolve()
-        if not path_obj.exists():
-            raise ValueError(f"Invalid path: {file_path}")
-
-        # If it's a directory, gather all .py files
-        if path_obj.is_dir():
-            files_to_check = [str(p) for p in path_obj.rglob("*.py")]
-        else:
-            files_to_check = [str(path_obj)]
-
-        if not files_to_check:
-            return {
-                "plugin": self.get_metadata()["name"],
-                "results": [],
-                "summary": {"issues_found": 0, "status": "completed"},
-            }
-
-        # Run pylint on all files at once
-        proc = subprocess.run(  # nosec B603
-            [
-                sys.executable,
-                "-m",
-                "pylint",
-                "--disable=all",
-                "--enable=R0801",
-                *files_to_check,
-            ],
-            capture_output=True,
-            text=True,
-        )
+        files_to_check = [str(path_obj)] if path_obj.is_file() else \
+            [str(p) for p in path_obj.rglob("*.py")]
 
         results = []
-        for line in proc.stdout.splitlines():
-            try:
-                path_part, line_part, col_part, rest = line.split(":", 3)
-                row = int(line_part)
-                col = int(col_part)
-                code = "R0801"
-                message = rest.strip()
-            except (ValueError, IndexError):
-                continue
 
-            results.append(
-                {
-                    "plugin": self.get_metadata()["name"],
-                    "file": path_part,
-                    "entity": "bloco duplicado",
-                    "line_numbers": [row],
-                    "similarity": 100,
-                    "refactoring_suggestion": "Consolidar bloco",
-                    "details": {"occurrences": 1, "message": message},
-                    "metric": "duplicate_code",
-                    "value": None,
-                    "severity": "medium",
-                    "code": code,
-                    "message": message,
-                    "line": row,
-                    "col": col,
-                    "hint": "Refactor to remove repeated logic.",
-                }
-            )
+        for file in files_to_check:
+            lines = Path(file).read_text(encoding="utf-8").splitlines()
+            block_size = 2  # detect even 2-line duplicates
+            seen_blocks = {}
+
+            for i in range(len(lines) - block_size + 1):
+                block = "\n".join(lines[i:i+block_size]).strip()
+                if not block:
+                    continue
+                h = hash(block)
+                if h in seen_blocks:
+                    prev_line = seen_blocks[h]
+                    results.append({
+                        "plugin": self.get_metadata()["name"],
+                        "file": file,
+                        "entity": "duplicated block",
+                        "line_numbers": [prev_line+1, i+1],
+                        "similarity": 100,
+                        "refactoring_suggestion": "consolidate block",
+                        "details": {"occurrences": 2, "lines": block.splitlines()},
+                        "metric": "duplicate_code",
+                        "value": None,
+                        "severity": "medium",
+                        "code": "DUP_SIMPLE",
+                        "message": "Duplicate code detected",
+                        "line": i+1,
+                        "col": 0,
+                        "hint": "Refactor to remove repeated logic",
+                    })
+                else:
+                    seen_blocks[h] = i
 
         summary = {"issues_found": len(results), "status": "completed"}
 
-        results = {
+        return {
             "plugin": self.get_metadata()["name"],
             "results": results,
             "summary": summary,
         }
-
-        return results
 
     # ------------------------------------------------------------------
     # Dashboard
