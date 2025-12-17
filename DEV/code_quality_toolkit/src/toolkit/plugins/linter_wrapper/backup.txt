@@ -1,96 +1,316 @@
-# ------------------------ #
-#   Basic metrics plugin   #
-# ------------------------ #
-
-# Imports antigos mantidos como comentário para histórico (pedido do enunciado):
-# import os
-# import tempfile
-# from radon.raw import analyze as raw_analyze
-# from radon.metrics import h_visit, HalsteadReport
+"""Lint wrapper plugin using pylint."""
 
 from __future__ import annotations
 
-import ast
-import io
-import tokenize
+import json
+import os
+import subprocess  # nosec B404
+import sys
+import tempfile
+from pathlib import Path
 from typing import Any
-
-from jinja2 import Environment, PackageLoader, select_autoescape
 
 from ...core.contracts import IssueResult
 from ...utils.config import ToolkitConfig
 
-JINJA_ENV = Environment(
-    loader=PackageLoader("toolkit.plugins.basic_metrics"),
-    autoescape=select_autoescape(["html", "xml"]),
-)
-
-
-# Import opcional do radon: se não estiver instalado, o plugin continua a funcionar .
-try:
-    from radon.metrics import h_visit
-    from radon.raw import analyze as raw_analyze
-
-    RADON_AVAILABLE = True
-except Exception:  # pragma: no cover - ambiente sem radon
-    raw_analyze = None
-    h_visit = None
-    RADON_AVAILABLE = False
-
-# Imports antigos mantidos como comentário para histórico (pedido do enunciado):
-# import os
-# import tempfile
-# from radon.raw import analyze as raw_analyze
-# from radon.metrics import h_visit, HalsteadReport
-
-
-def issue() -> None:
-    """
-    Função dummy mantida por compatibilidade com versões antigas do carregador
-    de plugins. Não é usada nos testes atuais.
-    """
-    return None
+_PYLINT_TYPE_TO_SEVERITY = {
+    "convention": "low",
+    "refactor": "low",
+    "warning": "medium",
+    "error": "high",
+    "fatal": "high",
+}
 
 
 class Plugin:
-    """
-    Basic Metrics Plugin
-
-    Calcula métricas simples:
-        - total_lines
-        - logical_lines
-        - comment_lines
-        - blank_lines
-        - docstring_lines
-    e algumas métricas de Halstead (volume, dificuldade, esforço, bugs).
-    As métricas ficam em summary["metrics"].
-    """
+    """Plugin que envuelve linters externos (inicialmente pylint)."""
 
     def __init__(self) -> None:
-        # Nível de detalhe configurável via ToolkitConfig.rules.metrics_report_level
-        self.report_level: str = "LOW"
+        self.enabled: bool = True
+        self.linters: list[str] = ["pylint"]
+        self.timeout_seconds: int = 60
+        self.max_issues: int = 500
+        self.pylint_args: list[str] = []
+        self.fail_on_severity: str = "high"
+
+    def configure(self, config: ToolkitConfig) -> None:
+        """Configure o plugin a partir do ToolkitConfig."""
+        lw = getattr(config, "linter_wrapper", None)
+
+        if lw is not None:
+            self.enabled = getattr(lw, "enabled", self.enabled)
+            self.linters = list(getattr(lw, "linters", self.linters))
+            self.timeout_seconds = int(
+                getattr(lw, "timeout_seconds", self.timeout_seconds)
+            )
+            self.max_issues = int(getattr(lw, "max_issues", self.max_issues))
+            self.pylint_args = list(getattr(lw, "pylint_args", self.pylint_args))
+            self.fail_on_severity = str(
+                getattr(lw, "fail_on_severity", self.fail_on_severity)
+            )
 
     def get_metadata(self) -> dict[str, str]:
         return {
-            "name": "BasicMetrics",
-            "version": "1.0.0",
+            "name": "LinterWrapper",
+            "version": "0.1.0",
             "description": (
-                "Reports basic code metrics like LOC, comments, blanks "
-                "and Halstead metrics."
+                "Executa linters externos (como pylint) e normaliza os resultados "
+                "para o relatório do toolkit."
             ),
         }
 
-    def configure(self, config: ToolkitConfig) -> None:
-        sect = getattr(getattr(config, "plugins", None), "basic_metrics", None)
-        self.report_level = getattr(sect, "report_level", self.report_level)
+    def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
+        """Analisa um único ficheiro com os linters configurados."""
+        try:
+            if not self.enabled:
+                return {
+                    "results": [],
+                    "summary": {
+                        "issues_found": 0,
+                        "status": "completed",
+                        "highest_severity": None,
+                        "issues_by_severity": {},
+                        "fail_build": False,
+                    },
+                }
 
-    # ------------------------------------------------------------------
-    # Dashboard
-    # ------------------------------------------------------------------
+            temp_path: str | None = None
+            if file_path:
+                target_path = file_path
+            else:
+                fd, temp_path = tempfile.mkstemp(suffix=".py", text=True)
+                os.close(fd)
+                with open(temp_path, "w", encoding="utf-8") as tmp:
+                    tmp.write(source_code)
+                target_path = temp_path
 
-    def render_html(self, results) -> str:
-        template = JINJA_ENV.get_template("dashboard.html")
-        return template.render(results=results)
+            try:
+                results, highest_severity = self._run_linters_on_file(target_path)
+            finally:
+                if temp_path and os.path.exists(temp_path):
+                    os.remove(temp_path)
+
+            issues_by_severity: dict[str, int] = {}
+            for issue in results:
+                sev = issue.get("severity", "low")
+                issues_by_severity[sev] = issues_by_severity.get(sev, 0) + 1
+
+            fail_build = self._should_fail_build(highest_severity)
+
+            # --- NOTE ---
+            # We REMOVED the self.generate_dashboard() call from here.
+            # It must be called by the Engine after collecting ALL results
+            # to calculate the correct number of affected files.
+
+            return {
+                "results": results,
+                "summary": {
+                    "issues_found": len(results),
+                    "status": "completed",
+                    "highest_severity": highest_severity,
+                    "issues_by_severity": issues_by_severity,
+                    "fail_build": fail_build,
+                },
+            }
+
+        except Exception as exc:
+            return {
+                "results": [],
+                "summary": {
+                    "issues_found": 0,
+                    "status": "failed",
+                    "error": str(exc),
+                },
+            }
+
+    def _run_linters_on_file(
+        self,
+        file_path: str,
+    ) -> tuple[list[IssueResult], str | None]:
+        """Executa todos os linters configurados num único ficheiro."""
+        all_results: list[IssueResult] = []
+        highest_severity: str | None = None
+        order = {"low": 0, "medium": 1, "high": 2}
+
+        for linter in self.linters:
+            if linter == "pylint":
+                lint_results = self._run_pylint(file_path)
+            else:
+                lint_results = [
+                    {
+                        "severity": "medium",
+                        "code": "LINTER_UNSUPPORTED",
+                        "message": (
+                            f"Linter '{linter}' não é suportado pelo LinterWrapper."
+                        ),
+                        "file": file_path,
+                        "line": 1,
+                        "col": 1,
+                        "hint": (
+                            "Remover o linter não suportado da configuração "
+                            "ou implementar suporte."
+                        ),
+                    }
+                ]
+
+            all_results.extend(lint_results)
+
+            for issue in lint_results:
+                sev = issue.get("severity", "low")
+                val = order.get(sev, -1)
+                cur = order.get(highest_severity, -1) if highest_severity else -1
+                if val > cur:
+                    highest_severity = sev
+
+            if len(all_results) >= self.max_issues:
+                all_results = all_results[: self.max_issues]
+                break
+
+        return all_results, highest_severity
+
+    def _run_pylint(self, file_path: str) -> list[IssueResult]:
+        """Executa pylint no ficheiro dado e converte a saída JSON em IssueResult."""
+        timeout_seconds = self.timeout_seconds
+        extra_args = list(self.pylint_args)
+
+        cmd: list[str] = [
+            sys.executable,
+            "-m",
+            "pylint",
+            "--output-format=json",
+            *extra_args,
+            file_path,
+        ]
+
+        try:
+            proc = subprocess.run(  # nosec B603
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=timeout_seconds,
+            )
+        except FileNotFoundError:
+            return [
+                {
+                    "severity": "high",
+                    "code": "LINTER_NOT_FOUND",
+                    "message": "Python interpreter not found.",
+                    "file": file_path,
+                    "line": 1,
+                    "col": 1,
+                    "hint": "Check your python installation.",
+                }
+            ]
+        except subprocess.TimeoutExpired:
+            return [
+                {
+                    "severity": "high",
+                    "code": "LINTER_TIMEOUT",
+                    "message": (
+                        f"'pylint' não terminou dentro de {timeout_seconds} segundos."
+                    ),
+                    "file": file_path,
+                    "line": 1,
+                    "col": 1,
+                    "hint": (
+                        "Simplifique o ficheiro ou aumente o timeout "
+                        "em [plugins.linter_wrapper]."
+                    ),
+                }
+            ]
+
+        stdout = proc.stdout.strip()
+        stderr = proc.stderr.strip()
+
+        if proc.returncode != 0 and "No module named" in stderr and "pylint" in stderr:
+            return [
+                {
+                    "severity": "high",
+                    "code": "LINTER_NOT_FOUND",
+                    "message": "O módulo 'pylint' não foi encontrado.",
+                    "file": file_path,
+                    "line": 1,
+                    "col": 1,
+                    "hint": "Instale pylint (pip install pylint).",
+                }
+            ]
+
+        if not stdout:
+            if proc.returncode != 0:
+                return [
+                    {
+                        "severity": "high",
+                        "code": "LINTER_ERROR",
+                        "message": (
+                            "pylint terminou com erro e não produziu saída JSON."
+                        ),
+                        "file": file_path,
+                        "line": 1,
+                        "col": 1,
+                        "hint": f"Verifique stderr: {stderr or 'sem stderr'}.",
+                    }
+                ]
+            return []
+
+        try:
+            messages = json.loads(stdout)
+        except json.JSONDecodeError:
+            return [
+                {
+                    "severity": "high",
+                    "code": "LINTER_OUTPUT_INVALID",
+                    "message": "Saída do pylint não é JSON válido.",
+                    "file": file_path,
+                    "line": 1,
+                    "col": 1,
+                    "hint": "Verifique plugins/customizações do pylint.",
+                }
+            ]
+
+        results: list[IssueResult] = []
+
+        for msg in messages:
+            msg_type = str(msg.get("type", "") or "")
+            severity = _PYLINT_TYPE_TO_SEVERITY.get(msg_type, "low")
+
+            line = int(msg.get("line", 0) or 0)
+            col = int(msg.get("column", 0) or 0)
+            msg_id = (
+                str(msg.get("message-id", "")) or str(msg.get("symbol", "")) or "PYLINT"
+            )
+            text = str(msg.get("message", "")) or ""
+
+            # --- FIX: CAPTURE FILENAME ---
+            # We must explicitly capture the path here so the dashboard knows it.
+            msg_file = str(msg.get("path", file_path))
+
+            results.append(
+                {
+                    "severity": severity,
+                    "code": msg_id,
+                    "message": text,
+                    "file": msg_file,  # Added Key
+                    "line": line,
+                    "col": col,
+                    "hint": f"Reveja a regra '{msg_id}'.",
+                }
+            )
+
+            if len(results) >= self.max_issues:
+                break
+
+        return results
+
+    def _should_fail_build(self, highest_severity: str | None) -> bool:
+        if not highest_severity:
+            return False
+        if self.fail_on_severity == "none":
+            return False
+
+        order = {"low": 0, "medium": 1, "high": 2}
+        threshold = order.get(self.fail_on_severity, 2)
+        max_seen = order.get(highest_severity, -1)
+        return max_seen >= threshold
 
     def generate_dashboard(self, results, output_dir=None):
         # 1. Determine Output Directory & Filename
@@ -374,8 +594,8 @@ class Plugin:
         </div>
 
         <div class="card chart-container">
-            <h4 style="margin: 0 0 5px 0; color: #555
-            ; font-size: 14px;">Severity Distribution</h4>
+            <h4 style="margin: 0 0 5px 0; color: #555; 
+            font-size: 14px;">Severity Distribution</h4>
             <div id="chart-area" style="width: 100%; height: 100%;"></div>
         </div>
     </div>
@@ -471,10 +691,11 @@ class Plugin:
                 .range([height - margin.top - margin.bottom, 0]);
 
             svg.append("g")
-                .attr("transform",
+                .attr("transform", 
                 `translate(0, ${height - margin.top - margin.bottom})`)
                 .call(d3.axisBottom(x).tickSize(0))
-                .selectAll("text").style("font-size", "11px")
+                .selectAll("text")
+                .style("font-size", "11px")
                 .style("font-weight", "bold");
 
             svg.append("g").call(d3.axisLeft(y).ticks(5));
@@ -510,8 +731,8 @@ class Plugin:
 
         window.handleSort = function(column) {
             if (currentSort.column === column) {
-                currentSort.direction = currentSort.direction === 'asc' 
-                ? 'desc' : 'asc';
+                currentSort.direction = currentSort.direction 
+                === 'asc' ? 'desc' : 'asc';
             } else {
                 currentSort.column = column; currentSort.direction = 'asc';
             }
@@ -534,8 +755,8 @@ class Plugin:
         };
 
         function updateSortIcons() {
-            document.querySelectorAll('.sort-icon')
-            .forEach(icon => icon.textContent = '↕');
+            document.querySelectorAll('.sort-icon').forEach(
+            icon => icon.textContent = '↕');
             const activeHeader = document.querySelector(
             `th[onclick="handleSort('${currentSort.column}')"]`);
             if (activeHeader) {
@@ -548,16 +769,16 @@ class Plugin:
             const tbody = document.querySelector("#issues-table tbody");
             tbody.innerHTML = '';
             if (!issues.length) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;\
-                  padding:20px;">No issues found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; ~
+                padding:20px;">No issues found.</td></tr>';
                 return;
             }
             issues.forEach(issue => {
                 const tr = document.createElement("tr");
                 const sev = (issue.severity || 'low').toLowerCase();
                 const sevClass = sev === 'fatal' ? 'high' : sev;
-                const sevColor = sevClass === 'high' ?
-                  '#dc3545' : sevClass === 'medium' ? '#ffc107' : '#0d6efd';
+                const sevColor = sevClass === 'high' ? '#dc3545' : sevClass === 'medium'
+                  ? '#ffc107' : '#0d6efd';
 
                 tr.innerHTML = `
                     <td class="no-wrap" style="font-weight:bold; color: ${sevColor}">
@@ -578,8 +799,8 @@ class Plugin:
 
     } catch (e) {
         console.error(e);
-        document.body.innerHTML = `<h3 style="color:red">
-        Error rendering dashboard: ${e.message}</h3>`;
+        document.body.innerHTML = `<h3 style="color:red">Error rendering dashboard: 
+        ${e.message}</h3>`;
     }
 </script>
 </body>
@@ -590,267 +811,3 @@ class Plugin:
         final_html = final_html.replace("{{PLUGIN_NAME}}", pretty_name)
 
         dashboard_file.write_text(final_html, encoding="utf-8")
-        
-    # ------------------------------------------------------------------
-    # Helpers para descobrir docstrings, comentários e linhas em branco
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _docstring_line_numbers(source_code: str) -> set[int]:
-        """
-        Devolve o conjunto de números de linha físicos que pertencem a docstrings.
-        Usa AST para encontrar docstrings de módulo, classe e função.
-        """
-        doc_lines: set[int] = set()
-        try:
-            tree = ast.parse(source_code)
-        except SyntaxError:
-            return doc_lines
-
-        for node in ast.walk(tree):
-            if isinstance(
-                node,
-                (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef),
-            ):
-                if not node.body:
-                    continue
-
-                first_stmt = node.body[0]
-                if (
-                    isinstance(first_stmt, ast.Expr)
-                    and isinstance(first_stmt.value, ast.Constant)
-                    and isinstance(first_stmt.value.value, str)
-                ):
-                    lineno = first_stmt.lineno
-                    end_lineno = getattr(first_stmt, "end_lineno", lineno)
-                    for line_no in range(lineno, end_lineno + 1):
-                        doc_lines.add(line_no)
-
-        return doc_lines
-
-    @staticmethod
-    def _count_comments_and_blanks(
-        source_code: str, docstring_lines: set[int]
-    ) -> tuple[int, int]:
-        """
-        Conta:
-          - linhas de comentário (excluindo linhas de docstring)
-          - linhas em branco
-        """
-        comment_lines: set[int] = set()
-
-        try:
-            for token in tokenize.generate_tokens(io.StringIO(source_code).readline):
-                if token.type == tokenize.COMMENT:
-                    line_no = token.start[0]
-                    if line_no not in docstring_lines:
-                        comment_lines.add(line_no)
-        except tokenize.TokenError:
-            # Código possivelmente incompleto – faz-se o melhor possível.
-            pass
-
-        lines = source_code.splitlines()
-        blank_count = sum(1 for line in lines if not line.strip())
-
-        return len(comment_lines), blank_count
-
-    # ------------------------------------------------------------------
-    # Helpers para calcular métricas numéricas
-    # ------------------------------------------------------------------
-
-    def _compute_raw_metrics(self, source_code: str) -> dict[str, int]:
-        """
-        Calcula:
-            - total_lines
-            - logical_lines
-            - comment_lines
-            - blank_lines
-            - docstring_lines
-
-        Se `radon` existir, usa radon.raw.analyze para ter valores consistentes
-        com o resto do toolkit. Se não existir, usa um fallback textual simples.
-        """
-        doc_lines = self._docstring_line_numbers(source_code)
-        comment_count, blank_count = self._count_comments_and_blanks(
-            source_code, doc_lines
-        )
-
-        if RADON_AVAILABLE and raw_analyze is not None:
-            raw = raw_analyze(source_code)
-            return {
-                "total_lines": raw.loc,
-                "logical_lines": raw.lloc,
-                "comment_lines": comment_count,
-                "blank_lines": blank_count,
-                "docstring_lines": len(doc_lines),
-            }
-
-        # Fallback sem radon: aproximação razoável.
-        lines = source_code.splitlines()
-        total = len(lines)
-        logical = total - blank_count
-
-        return {
-            "total_lines": total,
-            "logical_lines": logical,
-            "comment_lines": comment_count,
-            "blank_lines": blank_count,
-            "docstring_lines": len(doc_lines),
-        }
-
-    def _compute_halstead_metrics(self, source_code: str) -> dict[str, float]:
-        """
-        Calcula algumas métricas de Halstead via radon.metrics.h_visit.
-        Se radon não estiver disponível, devolve zeros estáveis.
-        """
-        if not (RADON_AVAILABLE and h_visit is not None):
-            return {
-                "h_volume": 0.0,
-                "h_difficulty": 0.0,
-                "h_effort": 0.0,
-                "h_bugs": 0.0,
-            }
-
-        reports = list(h_visit(source_code))
-        if not reports:
-            return {
-                "h_volume": 0.0,
-                "h_difficulty": 0.0,
-                "h_effort": 0.0,
-                "h_bugs": 0.0,
-            }
-
-        rep = reports[0]
-        return {
-            "h_volume": float(getattr(rep, "volume", 0.0)),
-            "h_difficulty": float(getattr(rep, "difficulty", 0.0)),
-            "h_effort": float(getattr(rep, "effort", 0.0)),
-            "h_bugs": float(getattr(rep, "bugs", 0.0)),
-        }
-
-    def _compute_basic_metrics(self, source_code: str) -> dict[str, Any]:
-        """
-        Junta métricas "raw" e Halstead num só dicionário.
-        """
-        raw_metrics = self._compute_raw_metrics(source_code)
-        halstead_metrics = self._compute_halstead_metrics(source_code)
-        metrics: dict[str, Any] = {**raw_metrics, **halstead_metrics}
-        return metrics
-
-    # ------------------------------------------------------------------
-    # Helpers para gerar issues a partir das métricas
-    # ------------------------------------------------------------------
-
-    def _maybe_build_issue(
-        self, metric_name: str, value: int | float, total_lines: int
-    ) -> IssueResult | None:
-        """
-        Cria um IssueResult simples para algumas métricas.
-
-        Mantemos esta função pequena em termos de decisões para não rebentar a
-        análise de complexidade do Xenon (limite C).
-        """
-        # 1) total_lines – ficheiros muito grandes
-        if metric_name == "total_lines":
-            if value <= 1000:
-                return None
-
-            severity = "low"
-            if value > 3000:
-                severity = "high"
-            elif value > 2000:
-                severity = "medium"
-
-            return {
-                "severity": severity,
-                "code": "total_lines",
-                "message": f"File has {int(value)} total lines.",
-                "hint": (
-                    "Large files are harder to navigate; consider splitting the "
-                    "module."
-                ),
-            }
-
-        # 2) logical_lines – blocos lógicos muito extensos
-        if metric_name == "logical_lines":
-            if value <= 100:
-                return None
-
-            severity = "low"
-            if value > 300:
-                severity = "high"
-            elif value > 200:
-                severity = "medium"
-
-            return {
-                "severity": severity,
-                "code": "logical_lines",
-                "message": f"File has {int(value)} logical lines.",
-                "hint": (
-                    "Long logical blocks can often be split into smaller functions."
-                ),
-            }
-
-        # 3) comment_lines – poucas linhas de comentário
-        if metric_name == "comment_lines" and total_lines > 0:
-            percent = (value / total_lines) * 100
-            if percent >= 10:
-                return None
-
-            severity = "low"
-            if percent < 2:
-                severity = "high"
-            elif percent < 5:
-                severity = "medium"
-
-            return {
-                "severity": severity,
-                "code": "comment_lines",
-                "message": f"Only {percent:.1f}% of lines are comments.",
-                "hint": "Consider adding more explanatory comments and docstrings.",
-            }
-
-        # blank_lines e docstring_lines não geram issues explícitos aqui.
-        return None
-
-    # ------------------------------------------------------------------
-    # Entry-point principal exigido pelo engine
-    # ------------------------------------------------------------------
-
-    def analyze(self, source_code: str, file_path: str | None) -> dict[str, Any]:
-        """
-        Analisa um ficheiro fonte e devolve:
-            - lista de issues em "results"
-            - métricas numéricas em "summary['metrics']"
-        """
-        results = {}
-        try:
-            metrics = self._compute_basic_metrics(source_code)
-            total = int(metrics.get("total_lines", 0))
-
-            issues: list[IssueResult] = []
-            for name, val in metrics.items():
-                issue_obj = self._maybe_build_issue(name, val, total)
-                if issue_obj is not None:
-                    issues.append(issue_obj)
-
-            results = {
-                "results": issues,
-                "summary": {
-                    "issues_found": len(issues),
-                    "status": "completed",
-                    "metrics": metrics,
-                },
-            }
-        except Exception as exc:
-            # Defesa: o plugin nunca deve mandar o engine abaixo.
-            results = {
-                "results": [],
-                "summary": {
-                    "issues_found": 0,
-                    "status": "failed",
-                    "error": f"Internal error in BasicMetrics: {exc}",
-                },
-            }
-
-        return results
