@@ -5,6 +5,8 @@ from __future__ import annotations
 import sys
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 # --- FIX: Mock Jinja2 before importing the plugin ---
 # We mock this BEFORE the import because the Plugin module initializes
 # jinja2.PackageLoader immediately upon import.
@@ -179,3 +181,55 @@ def test_duplication_render_html() -> None:
     }
     html = plugin.render_html(results)
     assert len(html) > 0
+
+
+@pytest.fixture
+def plugin():
+    return Plugin()
+
+
+@pytest.fixture
+def mock_results():
+    """Simulates the results structure for Duplication violations."""
+    return [
+        {
+            "file": "C:\\Users\\pedro\\AppData\\Local\\Temp\\source\\app\\main.py",
+            "plugin": "DuplicationChecker",
+            "code": "DUP_SIMPLE",
+            "line": 10,
+            "message": "Duplicate code detected",
+        },
+        {
+            "file": "/home/user/project/source/utils/helper.py",
+            "plugin": "DuplicationChecker",
+            "code": "DUP_SIMPLE",
+            "line": 50,
+            "message": "Duplicate code detected",
+        },
+    ]
+
+
+def test_duplication_aggregation_logic(plugin, mock_results):
+    """Tests if metrics and file counts are aggregated correctly for the UI."""
+    aggregated = plugin._aggregate_data_for_dashboard(mock_results)
+
+    # Check general metrics
+    assert aggregated["metrics"]["total_files"] == 2
+    assert aggregated["metrics"]["total_issues"] == 2
+
+    # Check rule counts
+    assert aggregated["rule_counts"][0]["code"] == "DUPLICATED_CODE"
+    assert aggregated["rule_counts"][0]["count"] == 2
+
+    # Verify Top Files list contains the paths
+    top_files = [f["file"] for f in aggregated["top_files"]]
+    assert any("main.py" in f for f in top_files)
+    assert any("helper.py" in f for f in top_files)
+
+
+def test_aggregation_with_dictionary_input(plugin):
+    """Ensures the aggregator can handle results wrapped in a 'results' dictionary."""
+    wrapped_results = {"results": [{"file": "source/test.py", "code": "DUP_SIMPLE"}]}
+    aggregated = plugin._aggregate_data_for_dashboard(wrapped_results)
+    assert aggregated["metrics"]["total_issues"] == 1
+    assert aggregated["metrics"]["total_files"] == 1
