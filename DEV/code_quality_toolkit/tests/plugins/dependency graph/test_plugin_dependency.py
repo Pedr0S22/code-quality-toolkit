@@ -482,7 +482,7 @@ def test_dashboard_aggregation_logic(tmp_path: Path):
 #                 {
 #                     "plugin": "DependencyGraph",
 #                     "results": [
-#                         {"message": "Import: os", 
+#                         {"message": "Import: os",
 # "severity": "info", "type": "stdlib"},
 #                     ],
 #                 }

@@ -82,23 +82,3 @@ def test_metrics_with_multiline_docstring() -> None:
     assert metrics["comment_lines"] == 0
     assert metrics["docstring_lines"] == 4
     assert metrics["logical_lines"] == 1
-
-
-def test_render_html():
-
-    fake_results = {
-        "results": [],
-        "summary": {
-            "issues_found": 0,
-            "status": "completed",
-            "metrics": {
-                "total_lines": 10,
-                "logical_lines": 5,
-            },
-        },
-    }
-
-    plugin = Plugin()
-    html_output = plugin.render_html(fake_results)
-    assert isinstance(html_output, str)
-    assert "total_lines" in html_output

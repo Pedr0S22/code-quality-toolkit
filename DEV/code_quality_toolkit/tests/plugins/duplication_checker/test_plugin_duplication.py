@@ -65,12 +65,7 @@ def test_duplication_detects_simple_repeat(tmp_path) -> None:
     plugin.configure(MockToolkitConfig())
 
     # Create a file with a repeated 2-line block
-    code = (
-        "def func():\n"
-        "    pass\n"
-        "def func():\n"
-        "    pass\n"
-    )
+    code = "def func():\n" "    pass\n" "def func():\n" "    pass\n"
     file_path = tmp_path / "dummy.py"
     file_path.write_text(code, encoding="utf-8")
 
@@ -183,4 +178,4 @@ def test_duplication_render_html() -> None:
         "summary": {"issues_found": 0, "status": "completed"},
     }
     html = plugin.render_html(results)
-    assert len(html) > 0 
+    assert len(html) > 0

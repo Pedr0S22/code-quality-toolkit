@@ -260,11 +260,11 @@ class Plugin:
             output_dir = Path(__file__).parent
 
         # Dynamic naming: 'linter_wrapper' -> 'Linter Wrapper'
-        current_folder_name = Path(__file__).parent.name 
-        
+        current_folder_name = Path(__file__).parent.name
+
         # Create a "Pretty" Title for the UI
         pretty_name = current_folder_name.replace("_", " ").title()
-        
+
         filename = f"{current_folder_name}_dashboard.html"
         dashboard_file = Path(output_dir) / filename
 
@@ -287,19 +287,19 @@ class Plugin:
                     relative_part = parts[-1]
                     clean_rel = relative_part.replace("/", "\\")
                     new_issue["file"] = f".\\{clean_rel}"
-            
+
             clean_issues.append(new_issue)
 
         all_issues = clean_issues
 
         # 4. Aggregation Logic
         total_issues = len(all_issues)
-        
+
         files_map = {}
         for issue in all_issues:
             f_path = issue.get("file", "unknown")
             files_map[f_path] = files_map.get(f_path, 0) + 1
-        
+
         unique_files_list = sorted(list(files_map.keys()))
 
         severity_counts_map = {}

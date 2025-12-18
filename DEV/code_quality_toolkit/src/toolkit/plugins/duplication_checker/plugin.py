@@ -37,8 +37,11 @@ class Plugin:
             return {"error": "file_path required"}
 
         path_obj = Path(file_path).resolve()
-        files_to_check = [str(path_obj)] if path_obj.is_file() else \
-            [str(p) for p in path_obj.rglob("*.py")]
+        files_to_check = (
+            [str(path_obj)]
+            if path_obj.is_file()
+            else [str(p) for p in path_obj.rglob("*.py")]
+        )
 
         results = []
 
@@ -48,29 +51,31 @@ class Plugin:
             seen_blocks = {}
 
             for i in range(len(lines) - block_size + 1):
-                block = "\n".join(lines[i:i+block_size]).strip()
+                block = "\n".join(lines[i : i + block_size]).strip()
                 if not block:
                     continue
                 h = hash(block)
                 if h in seen_blocks:
                     prev_line = seen_blocks[h]
-                    results.append({
-                        "plugin": self.get_metadata()["name"],
-                        "file": file,
-                        "entity": "duplicated block",
-                        "line_numbers": [prev_line+1, i+1],
-                        "similarity": 100,
-                        "refactoring_suggestion": "consolidate block",
-                        "details": {"occurrences": 2, "lines": block.splitlines()},
-                        "metric": "duplicate_code",
-                        "value": None,
-                        "severity": "medium",
-                        "code": "DUP_SIMPLE",
-                        "message": "Duplicate code detected",
-                        "line": i+1,
-                        "col": 0,
-                        "hint": "Refactor to remove repeated logic",
-                    })
+                    results.append(
+                        {
+                            "plugin": self.get_metadata()["name"],
+                            "file": file,
+                            "entity": "duplicated block",
+                            "line_numbers": [prev_line + 1, i + 1],
+                            "similarity": 100,
+                            "refactoring_suggestion": "consolidate block",
+                            "details": {"occurrences": 2, "lines": block.splitlines()},
+                            "metric": "duplicate_code",
+                            "value": None,
+                            "severity": "medium",
+                            "code": "DUP_SIMPLE",
+                            "message": "Duplicate code detected",
+                            "line": i + 1,
+                            "col": 0,
+                            "hint": "Refactor to remove repeated logic",
+                        }
+                    )
                 else:
                     seen_blocks[h] = i
 
@@ -92,11 +97,11 @@ class Plugin:
             output_dir = Path(__file__).parent
 
         # Dynamic naming: 'linter_wrapper' -> 'Linter Wrapper'
-        current_folder_name = Path(__file__).parent.name 
-        
+        current_folder_name = Path(__file__).parent.name
+
         # Create a "Pretty" Title for the UI
         pretty_name = current_folder_name.replace("_", " ").title()
-        
+
         filename = f"{current_folder_name}_dashboard.html"
         dashboard_file = Path(output_dir) / filename
 
@@ -119,19 +124,19 @@ class Plugin:
                     relative_part = parts[-1]
                     clean_rel = relative_part.replace("/", "\\")
                     new_issue["file"] = f".\\{clean_rel}"
-            
+
             clean_issues.append(new_issue)
 
         all_issues = clean_issues
 
         # 4. Aggregation Logic
         total_issues = len(all_issues)
-        
+
         files_map = {}
         for issue in all_issues:
             f_path = issue.get("file", "unknown")
             files_map[f_path] = files_map.get(f_path, 0) + 1
-        
+
         unique_files_list = sorted(list(files_map.keys()))
 
         severity_counts_map = {}
@@ -619,9 +624,8 @@ class Plugin:
                 "type": rule_code,
             }
             for path, count in sorted(
-                file_counts.items(),
-                key=lambda x: x[1],
-                reverse=True)
+                file_counts.items(), key=lambda x: x[1], reverse=True
+            )
         ][:10]
 
         return {
@@ -629,9 +633,7 @@ class Plugin:
                 "total_files": len(file_counts),
                 "total_issues": total_issues,
             },
-            "rule_counts": [
-                {"code": rule_code, "count": total_issues}
-            ],
+            "rule_counts": [{"code": rule_code, "count": total_issues}],
             "top_files": top_files,
         }
 
