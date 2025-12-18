@@ -1,53 +1,59 @@
 Membros:
 
-João Neto  2023234004  @Imajellyfish
-João Eduardo Duarte  2011187848  @jeduarteldm
-Bernardo Fonseca  2021239253  @jF202 
-Diogo Delvivo  2021150174  @delvivo.diogo1 
-Catarina Vieira 2023218473  @27634982
+João Neto 2023234004 @Imajellyfish
 
-Análise do código do plugin dependency_graph:
+João Eduardo Duarte 2011187848 @jeduarteldm
 
+Bernardo Fonseca 2021239253 @jF202
+
+Diogo Delvivo 2021150174 @delvivo.diogo1
+
+Catarina Vieira 2023218473 @27634982
+
+Análise do código do plugin DependencyGraph
 1. Propósito e Utilidade Geral
+Este código implementa um plugin chamado DependencyGraph, cuja função é analisar e mapear estaticamente todas as dependências (imports) de código Python. O plugin utiliza o módulo nativo ast (Abstract Syntax Tree) para fazer o parsing do código-fonte e extrair informação estruturada sobre declarações de importação.
 
-Este código implementa um plugin chamado Dependency Graph, cuja função é analisar e mapear todas as dependênias(imports) de código Python. O plugin utiliza o módulo "ast", Abstract Syntax Tree, da biblioteca padrão do Python para fazer parsing do código-fonte e extrair informação estruturada sobre todas as declarações de importação. A utilidade prática é significativa: permite identificar todas as dependências de um projeto, categorizá-las(biblioteca padrão, pacotes externos, módulos locais), detetar padrões problemáticos (como wildcard imports ou importações relativas excessivas) e fornecer dados estruturados para visualização de grafos de dependência. Este tipo de plugin é essencial em gestão de projetos, documentação automatizada, análise de acoplamento, auditorias de dependências e processos de manutenção de código.
+A utilidade prática foi expandida nesta versão: além de identificar dependências e detetar padrões problemáticos (como wildcard imports ou importações relativas profundas), o plugin agora gera automaticamente uma visualização gráfica (Dashboard). Isso é essencial para arquitetos de software e líderes técnicos visualizarem o acoplamento do sistema, documentarem a arquitetura automaticamente e facilitarem auditorias de dependências externas.
 
-2. Funcionamento do Plugin:
+2. Funcionamento do Plugin
+O plugin é inicializado com listas de categorização (biblioteca padrão) e lê as regras de negócio a partir do arquivo TOML global (ex: nível máximo de importação relativa, rastreio de módulos stdlib).
 
-O plugin é inicializado definindo uma lista de módulos da biblioteca padrão do Python, para categorização, e configurações padrão relacionadas com avisos sobre padrões problemáticos. Possui um método para fornecer metadados básicos e um método de configuração que lê regras do arquivo TOML global, especialmente configurações sobre wildcard import, nível máximo de importações relativas e se deve rastrear módulos stdlib.
+O método principal é o analyze, que orquestra um fluxo robusto:
 
-O método principal é o "analyze", que segue uma estratégia robusta e estruturada:
+Parsing AST Seguro: Tenta converter o código-fonte numa árvore sintática usando ast.parse(). Se houver erros de sintaxe (código inválido), o processo é interrompido graciosamente, reportando a falha sem derrubar a ferramenta.
 
-- Parsing AST: primeiro tenta fazer o parsing do código-fonte usando ast.parse(). Se o código contiver erros de sintaxe, o processo é interrompido de forma controlada e devolve um relatório de erro.
+Extração de Imports (_extract_imports): Percorre a árvore AST (via ast.walk), identificando nós ast.Import e ast.ImportFrom. Extrai metadados cruciais: linha, módulo alvo, alias e nível relativo (0=absoluto, 1+=relativo).
 
-- Extração de Imports: o método _extract_imports() percorre toda a árvore AST usando ast.walk(), identificando nós do tipo sat.import e as.ImportFrom. Para cada import encontrado, extrai informações como: tipo de informação, nome do módulo, alias se existir, linha no código, nível de importação relativa (0= absoluta, 1+= relativa), e nomes específicos importados (no caso de from-import).
+Categorização (_categorize_imports): Classifica cada dependência em três baldes:
 
-- Categorização: o método _categorize_imports() classifica cada import em 3 categorias: stdlib (módulos da biblioteca padrão do Python), third_party (pacotes externos instalados via pip), local (módulos locais do projeto, incluindo imports relativos). A categorização usa heurísticas como verificação contra lista de módulos conhecidos, análise de importações relativas (level>0), e padrões de nomenclatura.
+stdlib: Biblioteca padrão do Python (ex: os, json).
 
-- Avaliação de Severidade: o método _assess_severity() analisa cada import para determinar o seu nível de importância/risco. Importações relativas profundas (level>1) são marcadas como "medium". Wildcard imports (from x import *) são marcados como "medium" se configurado. Importações normais são marcados como "info".
+third_party: Pacotes externos (ex: requests, pandas).
 
-- Geração de Mensagens: o método _genetate_message() cria mensagens descritivas para cada import, incluindo informação sobre categoria, avisos para padrões problemáticos,e conttexto adicional.
+local: Módulos internos do projeto.
 
-- Criação de Sumário: o método _create_summary() agrega estatísticas como total de imports, distribuição por categoria, número de módulos únicos, e contrói uma estrutura de dados, dependency_graph, adequada para visualização.
+Avaliação de Severidade (_assess_severity): Aplica regras de linting:
 
-- Contrução de grafo: o méotodo _build_graph_data() organiza os dados numa estrutura facilita a criação de visualizações de grafos de dependência, separando nós por categoria.
+Importações relativas profundas (level > 1) -> MEDIUM.
 
-Após todo o process, o étodo devlve um relatório JSON contendo todos os imports encontrados com suas classificações, mensagens e estatísticas agregadas. Em caso de erro, como SyntaxError, devolve um relatório de falha controlado sem propagrar exceções.
+Wildcard imports (from x import *) -> MEDIUM (configurável).
 
+Importações normais -> INFO.
 
-3. Qualidade da Implementação:
+Agregação e Dashboard (generate_dashboard): Após processar os ficheiros, o plugin utiliza o método _aggregate_data_for_dashboard para compilar métricas globais e gera um ficheiro HTML independente. Este dashboard utiliza D3.js para apresentar gráficos sobre a distribuição de tipos de dependência e os ficheiros com maior número de imports externos.
 
-O código demostra várias boas práticas de engenharia de software:
- - Robustez: o uso de try-except garante que erros de sintaxe sejam tratados graciosamente, devolvendo relatórios de erros estruturados em vez de crashar. Isto segue o princípio da "Golden Rule" de nunca lançar execeções fora do plugin.
+3. Qualidade da Implementação
+O código demonstra maturidade em engenharia de software e adesão aos requisitos do projeto:
 
- - Modularização: o c´doigo está bem organizado em métodos privados com responsabilidades claras (_extract_imports, _categorize_imports, _assess_severity, etc.), facilitando manutenção e testes.
+Independência de Dependências: Ao contrário de outros plugins, o DependencyGraph utiliza apenas a biblioteca padrão (ast), não exigindo instalação de pacotes extra (como bandit ou pylint), o que simplifica o deployment.
 
- - Configurabilidade: o plugin aceita configuração via TOML, mas funciona com valores padrão razoáveis se a configuração não existir, tornando-o resiliente a diferentes ambientes.
+Robustez ("Golden Rule"): O uso extensivo de tratamento de exceções garante que erros de parsing em ficheiros individuais não abortem a análise global. O plugin falha apenas no escopo do ficheiro problemático.
 
- - Sem Dependências Externas: ao usar apenas o módulo ast da stdlib, o plugin não requer instalação de pacotes adicionais, simplificando deployment.
+Modularização: A lógica é dividida em métodos privados com responsabilidades únicas (_extract, _categorize, _assess), facilitando a manutenção e os testes unitários.
 
- - Informação Rica: o plugin não só identifica imports, mas também os categoriza, avalia severidade, gera mensagens contextuais e cria estruturas de dados para visualização.
+Visualização de Dados: A inclusão de um gerador de Dashboard HTML/D3.js eleva o nível da ferramenta, transformando dados brutos JSON em informação gerencial visualizável (Theme Green).
 
- - Type Hints: o uso de type hints melhora a legibilidade e permite deteção de erros estáticos.
+Configurabilidade: O plugin é flexível, permitindo que o utilizador defina via TOML se quer ser avisado sobre wildcards ou se quer ignorar módulos da biblioteca padrão, adaptando-se a diferentes estilos de projeto.
 
- - Documentação: Docstrings claras explicam o propósito de cada método e os seus parâmetro/returns.
+Type Hints e Documentação: O código está totalmente tipado e documentado com docstrings, facilitando a leitura e a prevenção de erros de tipo durante o desenvolvimento.
