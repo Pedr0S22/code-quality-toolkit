@@ -32,7 +32,7 @@ class CheckBoxXStyle(QProxyStyle):
             painter.save()
             painter.setRenderHint(painter.RenderHint.Antialiasing)
             
-            # 1. Define the box area (slightly smaller than full rect for padding)
+            # 1. Define the box area
             rect = option.rect.adjusted(1, 1, -1, -1)
             
             if option.state & QStyle.StateFlag.State_On:
@@ -41,33 +41,30 @@ class CheckBoxXStyle(QProxyStyle):
                 painter.setPen(QPen(QColor("#007ACC"), 1))
                 painter.drawRoundedRect(rect, 3, 3)
                 
-                # 3. Draw BOLD White X
-                # Increased width to 2.5 for better visibility
+                # 3. Draw BOLD White Check Mark (V)
                 pen = QPen(QColor("white"), 2.5)
                 pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+                pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
                 painter.setPen(pen)
-                
-                # Margin controls how much space is around the X inside the blue box
-                m = 3.7  # Large float margin
-                rect = option.rect
 
-                # We use rect.width() and rect.height() to ensure perfect centering
-                # This prevents the lines from shifting as m increases
-                w = float(rect.width())
-                h = float(rect.height())
+                # Get base coordinates
                 x = float(rect.x())
                 y = float(rect.y())
+                w = float(rect.width())
+                h = float(rect.height())
 
-                # Line 1: \ (Top-Left to Bottom-Right)
-                p1 = QPointF(x + m, y + m)
-                p2 = QPointF(x + w - m, y + h - m)
+                # Coordinates for a classic check mark
+                # p1: Start (Left middle)
+                # p2: Pivot (Bottom center-left)
+                # p3: End (Top right)
+                p1 = QPointF(x + w * 0.25, y + h * 0.5)
+                p2 = QPointF(x + w * 0.45, y + h * 0.75)
+                p3 = QPointF(x + w * 0.8,  y + h * 0.25)
 
-                # Line 2: / (Bottom-Left to Top-Right)
-                p3 = QPointF(x + m, y + h - m)
-                p4 = QPointF(x + w - m, y + m)
-
+                # Draw the two segments of the 'V'
                 painter.drawLine(p1, p2)
-                painter.drawLine(p3, p4)
+                painter.drawLine(p2, p3)
+                
             else:
                 # 4. Draw Empty Dark Box (Unchecked)
                 painter.setBrush(QColor("#1e1e1e"))
@@ -76,7 +73,6 @@ class CheckBoxXStyle(QProxyStyle):
                 
             painter.restore()
         else:
-            # Use default for everything else
             super().drawPrimitive(element, option, painter, widget)
 
 class PluginItemWidget(QWidget):
