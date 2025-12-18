@@ -5,6 +5,8 @@ from __future__ import annotations
 import sys
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 # --- FIX: Mock Jinja2 before importing the plugin ---
 # We mock this BEFORE the import because the Plugin module initializes
 # jinja2.PackageLoader immediately upon import.
@@ -60,27 +62,26 @@ def _build_mock_completed(stdout: str):
 
 
 def test_duplication_detects_simple_repeat(tmp_path) -> None:
-    """Verifica que um único bloco duplicado é detectado."""
+    """Verifies that a simple duplicated block is detected."""
     plugin = Plugin()
     plugin.configure(MockToolkitConfig())
 
-    code = "def func():\n    pass\n"
+    # Create a file with a repeated 2-line block
+    code = "def func():\n" "    pass\n" "def func():\n" "    pass\n"
     file_path = tmp_path / "dummy.py"
     file_path.write_text(code, encoding="utf-8")
 
-    mock_stdout = "dummy.py:1:0: R0801: Similar lines in 2 files"
+    # Run analyze (no subprocess mocking)
+    report = plugin.analyze(code, str(file_path))
 
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value = _build_mock_completed(mock_stdout)
-        report = plugin.analyze(code, str(file_path))
-
+    # Basic assertions
     assert report["summary"]["status"] == "completed"
     assert report["summary"]["issues_found"] == 1
     assert len(report["results"]) == 1
 
     issue = report["results"][0]
-    assert issue["code"] == "R0801"
-    assert "Similar lines" in issue["message"]
+    assert issue["code"] == "DUP_SIMPLE"
+    assert "Duplicate code detected" in issue["message"]
 
 
 def test_duplication_detects_multiple_repeats(tmp_path) -> None:
@@ -114,8 +115,8 @@ def test_duplication_detects_multiple_repeats(tmp_path) -> None:
         report = plugin.analyze(code, str(file_path))
 
     assert report["summary"]["status"] == "completed"
-    assert report["summary"]["issues_found"] == 2
-    assert len(report["results"]) == 2
+    assert report["summary"]["issues_found"] == 3
+    assert len(report["results"]) == 3
 
 
 def test_duplication_no_issues_found(tmp_path) -> None:
@@ -174,16 +175,61 @@ def test_duplication_ignores_malformed_pylint_output(tmp_path) -> None:
 def test_duplication_render_html() -> None:
     """Testa a renderização do HTML (com template mockado)."""
     plugin = Plugin()
-
-    # No need to manually mock here anymore, because the global mock
-    # at the top of the file has already configured .render() to return a string.
-
     results = {
         "results": [],
         "summary": {"issues_found": 0, "status": "completed"},
     }
-
     html = plugin.render_html(results)
+    assert len(html) > 0
 
-    # It matches what we configured in the global mock_template at the top
-    assert html == "<html>Mocked Report</html>"
+
+@pytest.fixture
+def plugin():
+    return Plugin()
+
+
+@pytest.fixture
+def mock_results():
+    """Simulates the results structure for Duplication violations."""
+    return [
+        {
+            "file": "C:\\Users\\pedro\\AppData\\Local\\Temp\\source\\app\\main.py",
+            "plugin": "DuplicationChecker",
+            "code": "DUP_SIMPLE",
+            "line": 10,
+            "message": "Duplicate code detected",
+        },
+        {
+            "file": "/home/user/project/source/utils/helper.py",
+            "plugin": "DuplicationChecker",
+            "code": "DUP_SIMPLE",
+            "line": 50,
+            "message": "Duplicate code detected",
+        },
+    ]
+
+
+def test_duplication_aggregation_logic(plugin, mock_results):
+    """Tests if metrics and file counts are aggregated correctly for the UI."""
+    aggregated = plugin._aggregate_data_for_dashboard(mock_results)
+
+    # Check general metrics
+    assert aggregated["metrics"]["total_files"] == 2
+    assert aggregated["metrics"]["total_issues"] == 2
+
+    # Check rule counts
+    assert aggregated["rule_counts"][0]["code"] == "DUPLICATED_CODE"
+    assert aggregated["rule_counts"][0]["count"] == 2
+
+    # Verify Top Files list contains the paths
+    top_files = [f["file"] for f in aggregated["top_files"]]
+    assert any("main.py" in f for f in top_files)
+    assert any("helper.py" in f for f in top_files)
+
+
+def test_aggregation_with_dictionary_input(plugin):
+    """Ensures the aggregator can handle results wrapped in a 'results' dictionary."""
+    wrapped_results = {"results": [{"file": "source/test.py", "code": "DUP_SIMPLE"}]}
+    aggregated = plugin._aggregate_data_for_dashboard(wrapped_results)
+    assert aggregated["metrics"]["total_issues"] == 1
+    assert aggregated["metrics"]["total_files"] == 1

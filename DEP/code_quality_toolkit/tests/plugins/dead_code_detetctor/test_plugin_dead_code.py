@@ -1,5 +1,9 @@
 import ast
+from pathlib import Path
 from textwrap import dedent
+from unittest.mock import patch
+
+import pytest
 
 # I001: Bloco de importações locais/do projeto
 from toolkit.plugins.dead_code_detector.plugin import Plugin, _DefUseVisitor
@@ -253,7 +257,7 @@ def test_analyze_no_false_positive_on_used_name() -> None:
     """Garante que código usado não é sinalizado."""
     src = dedent(
         """
-        def called_func(): 
+        def called_func():
             return 1
         
         CONSTANT_VALUE = called_func()
@@ -269,3 +273,108 @@ def test_analyze_no_false_positive_on_used_name() -> None:
 
     assert out["summary"]["status"] == "completed"
     assert out["summary"]["issues_found"] == 0
+
+
+@pytest.fixture
+def plugin():
+    p = Plugin()
+    # Reset internal stats for clean testing
+    p._stats = {
+        "total_issues": 0,
+        "severity_counts": {"high": 0, "medium": 0, "low": 0, "info": 0},
+        "affected_files": set(),
+        "symbol_names": [],
+    }
+    return p
+
+
+@pytest.fixture
+def mock_results():
+    """Simulates the results structure for Dead Code violations."""
+    return [
+        {
+            "file": "C:\\Users\\pedro\\AppData\\Local\\Temp\\source\\app\\unused.py",
+            "plugins": [
+                {
+                    "plugin": "DeadCodeDetector",
+                    "results": [
+                        {
+                            "code": "DEAD_CODE",
+                            "message": "'calculate_tax' defined and never used.",
+                            "severity": "low",
+                            "line": 10,
+                        }
+                    ],
+                }
+            ],
+        },
+        {
+            "file": "/home/user/project/source/main.py",
+            "plugins": [
+                {
+                    "plugin": "DeadCodeDetector",
+                    "results": [
+                        {
+                            "code": "DEAD_CODE",
+                            "message": "'temp_var' defined and never used.",
+                            "severity": "low",
+                            "line": 5,
+                        }
+                    ],
+                }
+            ],
+        },
+    ]
+
+
+def test_dead_code_path_normalization(plugin, mock_results):
+    """Verifies absolute paths are converted to relative .
+    \\ paths in the dashboard HTML."""
+    with patch.object(Path, "write_text") as mock_write:
+        # We pass a Path object for output_dir
+        plugin.generate_dashboard(mock_results, output_dir=Path("."))
+
+        # Capture the written HTML content
+        written_html = mock_write.call_args[0][0]
+
+        # Check for normalized paths (Acceptance Criteria: .\folder\file)
+        # Note: In JSON injected into HTML, backslashes are often escaped
+        assert "app\\\\unused.py" in written_html or "app\\unused.py" in written_html
+        assert "main.py" in written_html
+
+        # Ensure absolute roots are removed
+        assert "C:\\\\Users" not in written_html
+        assert "/home/user" not in written_html
+
+
+def test_dead_code_stats_update_during_analyze(plugin):
+    """Verifies that internal _stats are updated correctly when analyze is called."""
+    source = "x = 10\ny = 20\nprint(x)"  # y is dead code
+    file_path = "C:\\source\\test.py"
+
+    plugin.analyze(source, file_path)
+
+    assert plugin._stats["total_issues"] == 1
+    assert "y" in plugin._stats["symbol_names"]
+    assert any("test.py" in f for f in plugin._stats["affected_files"])
+
+
+def test_generate_dashboard_total_counts(plugin, mock_results):
+    """Checks if the dashboard correctly calculates the total number of issues found."""
+    with patch.object(Path, "write_text") as mock_write:
+        plugin.generate_dashboard(mock_results, output_dir=Path("."))
+
+        written_html = mock_write.call_args[0][0]
+
+        # Verify the total_issues metric in the injected JSON
+        assert '"total_issues": 2' in written_html
+        assert '"total_files": 2' in written_html
+
+
+def test_dead_code_aggregation_empty(plugin):
+    """Ensures generate_dashboard handles empty results without crashing."""
+    with patch.object(Path, "write_text") as mock_write:
+        plugin.generate_dashboard([], output_dir=Path("."))
+
+        written_html = mock_write.call_args[0][0]
+        assert '"total_issues": 0' in written_html

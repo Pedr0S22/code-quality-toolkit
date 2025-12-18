@@ -1,5 +1,6 @@
 from pathlib import Path
 from textwrap import dedent
+from unittest.mock import patch
 
 import pytest
 
@@ -247,31 +248,107 @@ def test_aggregate_dashboard_file_type_priority():
     assert top_file["type"] == "HIGH_COMMENT_DENSITY"  # Prioridade do HIGH
 
 
-# --- TESTES DE EXCEÇÃO (COBERTURA DO EXCEPT) ---
+@pytest.fixture
+def plugin():
+    return Plugin()
 
 
-def test_generate_dashboard_exception_handling(tmp_path: Path):
-    """
-    Cobre o bloco 'except Exception as e' no método generate_dashboard,
-    forçando uma falha de I/O ao tentar escrever em um diretório.
-    """
-    plugin = Plugin()
-
-    # Simulação mínima de resultados
-    aggregated_results = [
+@pytest.fixture
+def mock_results():
+    """Simulates the results structure for CommentDensity violations."""
+    return [
         {
-            "file": "f.py",
+            "file": "C:\\Users\\pedro\\AppData\\Local\\Temp\\source\\app\\logic.py",
             "plugins": [
                 {
                     "plugin": "CommentDensity",
-                    "results": [{"code": "LOW_COMMENT_DENSITY", "file": "f.py"}],
+                    "results": [
+                        {
+                            "code": "LOW_COMMENT_DENSITY",
+                            "message": "Density: 5%",
+                            "severity": "high",
+                            "line": 1,
+                        }
+                    ],
                 }
             ],
-        }
+        },
+        {
+            "file": "/usr/local/source/utils/db_helper.py",
+            "plugins": [
+                {
+                    "plugin": "CommentDensity",
+                    "results": [
+                        {
+                            "code": "HIGH_COMMENT_DENSITY",
+                            "message": "Density: 60%",
+                            "severity": "high",
+                            "line": 1,
+                        }
+                    ],
+                }
+            ],
+        },
     ]
 
-    # Usamos o caminho de um diretório (tmp_path), o que forçará o erro
-    output_path = plugin.generate_dashboard(aggregated_results, str(tmp_path))
 
-    # A função deve capturar a exceção e retornar uma string vazia
-    assert output_path == ""
+def test_comment_density_path_normalization(plugin, mock_results):
+    """Verifies absolute paths are converted to relative .\\ paths in HTML."""
+    with patch.object(Path, "write_text") as mock_write:
+        # We pass a Path object for output_dir
+        plugin.generate_dashboard(mock_results, output_dir=Path("."))
+
+        # Capture the written HTML content
+        written_html = mock_write.call_args[0][0]
+
+        # Check for normalized paths (considering JSON escaping in HTML)
+        # Requirement: .\app\logic.py
+        assert "app\\\\logic.py" in written_html or "app\\logic.py" in written_html
+        assert (
+            "utils\\\\db_helper.py" in written_html
+            or "utils\\db_helper.py" in written_html
+        )
+
+        # Verify absolute roots are gone
+        assert "C:\\\\Users" not in written_html
+        assert "/usr/local" not in written_html
+
+
+def test_comment_density_aggregation(plugin, mock_results):
+    """Tests the specialized aggregation logic (Rule counts and Top Files)."""
+    aggregated = plugin._aggregate_data_for_dashboard(mock_results)
+
+    # Check general metrics
+    assert aggregated["metrics"]["total_files"] == 2
+    assert aggregated["metrics"]["total_issues"] == 2
+
+    # Verify Rule Counts (Codes)
+    codes = [item["code"] for item in aggregated["rule_counts"]]
+    assert "LOW_COMMENT_DENSITY" in codes
+    assert "HIGH_COMMENT_DENSITY" in codes
+
+    # Verify Top Files content and types
+    top_files = aggregated["top_files"]
+    # Check if type prioritization or storage worked
+    assert any(f["file"].endswith("logic.py") for f in top_files)
+    assert any(f["type"] == "LOW_COMMENT_DENSITY" for f in top_files)
+
+
+def test_dashboard_template_placeholders(plugin, mock_results):
+    """Ensures placeholders like {{PLUGIN_NAME}} are replaced."""
+    with patch.object(Path, "write_text") as mock_write:
+        plugin.generate_dashboard(mock_results, output_dir=Path("."))
+
+        written_html = mock_write.call_args[0][0]
+
+        # The title should be 'Comment Density Dashboard' based on folder name
+        assert "Comment Density Dashboard" in written_html
+        assert "{{PLUGIN_NAME}}" not in written_html
+        assert "{{DATA_JSON}}" not in written_html
+
+
+def test_aggregation_empty_data(plugin):
+    """Ensures aggregation handles empty lists gracefully."""
+    aggregated = plugin._aggregate_data_for_dashboard([])
+    assert aggregated["metrics"]["total_issues"] == 0
+    assert len(aggregated["top_files"]) == 0

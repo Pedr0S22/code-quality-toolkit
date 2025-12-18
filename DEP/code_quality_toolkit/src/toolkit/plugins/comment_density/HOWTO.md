@@ -1,32 +1,83 @@
 Membros:
 
-João Neto  2023234004  @Imajellyfish
-João Eduardo Duarte  2011187848  @jeduarteldm
-Bernardo Fonseca  2021239253  @jF202 
-Diogo Delvivo  2021150174  @delvivo.diogo1 
-Catarina Vieira 2023218473  @27634982
+João Neto 2023234004 @Imajellyfish
 
-Como usar e configurar o plugin:
+João Eduardo Duarte 2011187848 @jeduarteldm
 
-1. Instalação e Disponibilização do Plugin
+Bernardo Fonseca 2021239253 @jF202
 
-O utilizador não precisa fazer nenhuma configuração especial para tornar o plugin utilizável — basta que o sistema de análise de código (o "Toolkit") carregue automaticamente todos os plugins disponíveis. O ficheiro Python contendo esta classe deve estar localizado dentro da pasta de plugins do Toolkit. Assim que o Toolkit arrancar, ele identifica o plugin através do método get_metadata(), que fornece o nome, versão e descrição, tornando-o pronto para ser usado na análise.
+Diogo Delvivo 2021150174 @delvivo.diogo1
 
-2. Configuração dos Limites de Densidade de Comentários
+Catarina Vieira 2023218473 @27634982
 
-O utilizador pode configurar o plugin alterando os valores de densidade mínima e máxima permitidos para comentários no código. Esta configuração é feita através de um ficheiro ou objeto ToolkitConfig, no qual o utilizador define regras como min_comment_density e max_comment_density. Quando o Toolkit inicializa os plugins, ele chama automaticamente plugin.configure(config), e esses valores são carregados.
-Caso o utilizador não configure nada, o plugin usa os valores por defeito: mínimo 10% e máximo 50% de linhas de comentário.
+Como usar e configurar o plugin CommentDensity
+1. Visão Geral do Uso
+O CommentDensity foi desenhado para ser uma ferramenta de métrica de qualidade "zero-configuração" inicial. Assim que o Toolkit de análise de código é executado, o plugin entra em ação automaticamente para verificar todos os ficheiros Python do projeto.
 
-3. Processo de Utilização Durante a Análise de Código 
+O utilizador não precisa de instalar dependências externas nem executar comandos manuais de contagem. O plugin integra-se no fluxo padrão de análise, devolvendo alertas sempre que um ficheiro viola as regras de documentação estipuladas pela equipa.
 
-Quando o utilizador solicita uma análise normal ao Toolkit—por exemplo, ao pedir que um ficheiro ou projeto seja verificado—o sistema chama automaticamente o método analyze() do plugin. O utilizador não precisa interagir diretamente com o plugin; ele funciona de forma transparente no fluxo normal de análise. O plugin começa por verificar que o ficheiro tem uma sintaxe válida usando ast.parse(). Se a sintaxe estiver incorreta, o utilizador recebe imediatamente um erro claro na saída da análise.
+2. Como a Análise é Executada
+O processo ocorre de forma transparente em quatro etapas:
 
-Caso o ficheiro seja válido, o plugin calcula a quantidade de linhas de código e de comentários através do seu método interno _count_lines(). O utilizador não vê esse processo, mas recebe no final os resultados num formato standard do Toolkit: uma lista de problemas encontrados e um sumário de métricas. Se a densidade de comentários estiver abaixo ou acima dos limites configurados, o utilizador recebe uma recomendação explícita indicando se há poucos comentários ou demasiados, com percentagens calculadas e sugestões sobre o que melhorar. Se não houver problemas, o utilizador simplesmente vê que o ficheiro foi analisado com sucesso e pode consultar as métricas de densidade.
+Validação: O plugin verifica primeiro se o ficheiro é código Python válido (usando ast.parse). Se houver erros de sintaxe, o utilizador é notificado imediatamente no relatório de erros.
 
-4. Interpretação dos Resultados da Análise
+Filtragem: Ficheiros muito pequenos (menos de 5 linhas) são ignorados automaticamente para evitar ruído (ex: ficheiros __init__.py vazios).
 
-Após a análise, o utilizador obtém um relatório estruturado. Nele, surgem os problemas detetados — como densidade demasiado baixa ou demasiado alta — juntamente com sugestões de melhoria. O sumário inclui dados úteis: total de linhas, número de comentários, número de linhas de código e densidade exata. Estes valores permitem ao utilizador compreender rapidamente se o nível de comentários no ficheiro é adequado.
+Contagem Inteligente: O plugin conta as linhas de código lógico versus linhas de comentários (incluindo docstrings e comentários inline).
 
-5. Experiência de Uso em Diferentes Cenários
+Relatórios:
 
-Em desenvolvimento local, o utilizador pode recorrer ao plugin para verificar rapidamente se está a documentar de forma equilibrada. Em ambientes corporativos ou de equipas maiores, o plugin permite reforçar padrões internos, ajudando a manter boa legibilidade e consistência entre ficheiros. Em pipelines de CI, torna-se particularmente útil para impedir commits que não cumpram os critérios mínimos de documentação, ou para alertar sobre ficheiros excessivamente comentados, que podem dificultar a leitura.
+JSON: Gera um relatório técnico com a densidade calculada (ex: 0.15 para 15%) e, se necessário, emite um aviso (LOW_COMMENT_DENSITY ou HIGH_COMMENT_DENSITY).
+
+Dashboard HTML: Gera um gráfico visual para análise macro do projeto.
+
+3. Configuração do Plugin
+O utilizador pode ajustar a rigorosidade do plugin através do ficheiro global toolkit.toml (na secção rules ou na secção específica do plugin, dependendo da versão do Core).
+
+Parâmetros Configuráveis:
+
+min_density (Float): A percentagem mínima de comentários exigida. (Padrão: 0.1 = 10%).
+
+max_density (Float): A percentagem máxima de comentários permitida antes de ser considerado excessivo. (Padrão: 0.5 = 50%).
+
+Exemplo de Configuração (toolkit.toml):
+
+Ini, TOML
+
+[rules]
+# Exige que pelo menos 20% do código seja documentado,
+# mas permite até 60% antes de alertar sobre excesso.
+min_density = 0.2
+max_density = 0.6
+Nota: Se o utilizador não configurar estes valores, o plugin utiliza os padrões seguros (10% a 50%).
+
+4. Visualização dos Resultados (Novo Dashboard)
+Para além dos logs no terminal, o utilizador tem agora acesso ao ficheiro comment_density_dashboard.html.
+
+Como interpretar o Dashboard:
+
+Cabeçalho: Mostra o total de ficheiros analisados e quantas violações foram encontradas.
+
+Gráfico de Violações (Blue Theme): Exibe visualmente quantas violações são por "Falta de Comentários" (Low Density) versus "Excesso de Comentários" (High Density).
+
+Top Offenders: Uma lista dos ficheiros que mais se desviam dos padrões, permitindo ao utilizador focar a refatoração nos piores casos.
+
+5. Interpretação dos Resultados da Análise
+No relatório final (JSON ou Terminal), o utilizador encontrará métricas claras para cada ficheiro analisado:
+
+Code Lines: Quantidade de linhas de código executável.
+
+Comment Lines: Quantidade de linhas identificadas como documentação.
+
+Density: O valor calculado.
+
+Se Density < min_density: O plugin sugere "Add documentation".
+
+Se Density > max_density: O plugin sugere "Simplify comments".
+
+6. Experiência de Uso em Diferentes Cenários
+Desenvolvimento Local: O programador corre o Toolkit antes de submeter o código. Se o plugin reclamar de "Low Density", o programador sabe que deve adicionar docstrings às suas funções antes de fazer o commit.
+
+Code Reviews: Em equipas grandes, o plugin serve como um árbitro imparcial. Em vez de discutir subjetivamente se "o código está bem documentado", a equipa define um valor no TOML (ex: 15%) e o plugin garante o cumprimento desse padrão.
+
+Manutenção de Legado: Ao pegar num projeto antigo, o Dashboard permite identificar rapidamente quais os módulos que são "caixas pretas" (sem comentários) para priorizar a criação de documentação técnica.

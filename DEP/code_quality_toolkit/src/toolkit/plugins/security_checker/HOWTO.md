@@ -1,43 +1,81 @@
 Membros:
 
-João Neto  2023234004  @Imajellyfish
-João Eduardo Duarte  2011187848  @jeduarteldm
-Bernardo Fonseca  2021239253  @jF202 
-Diogo Delvivo  2021150174  @delvivo.diogo1 
-Catarina Vieira 2023218473  @27634982
+João Neto 2023234004 @Imajellyfish
 
-Como usar e configurar o plugin:
+João Eduardo Duarte 2011187848 @jeduarteldm
 
+Bernardo Fonseca 2021239253 @jF202
+
+Diogo Delvivo 2021150174 @delvivo.diogo1
+
+Catarina Vieira 2023218473 @27634982
+
+Como usar e configurar o plugin SecurityChecker
 1. Visão Geral do Uso
+O SecurityChecker funciona como um módulo de segurança integrado ao Toolkit, atuando como uma camada de abstração sobre a ferramenta Bandit. O seu objetivo é simplificar a análise de segurança: o utilizador fornece o código-fonte e o plugin encarrega-se de orquestrar a verificação, filtrar os resultados e, agora, gerar visualizações gráficas.
 
-O SecurityChecker foi concebido para ser usado como parte do Toolkit de análise de código, funcionando como um módulo de segurança que deteta vulnerabilidades através do Bandit. O utilizador não interage diretamente com o Bandit, mas sim com o plugin, que serve como camada de abstração. Na prática, o utilizador apenas fornece código-fonte para análise, e o plugin devolve um relatório estruturado com os problemas de segurança encontrados. O processo de utilização é simples e totalmente integrado no fluxo normal de execução da ferramenta maior onde o plugin está inserido.
+O utilizador obtém dois tipos de saída:
+
+Um relatório estruturado (JSON) para processamento automático (ex: CI/CD).
+
+Um Dashboard Interativo (HTML) para análise visual humana.
 
 2. Como a Análise é Executada
+A utilização é transparente e automática. Ao acionar o comando de análise do Toolkit (ex: toolkit analyze):
 
-Para usar o plugin, o utilizador precisa apenas de acionar a análise de um ficheiro ou de um bloco de código através da aplicação que integra o SecurityChecker. O plugin receberá o código como texto e, de forma transparente, criará um ficheiro temporário onde esse conteúdo será guardado. Em seguida, o Bandit é executado internamente, analisando o ficheiro para procurar padrões de vulnerabilidades conhecidos. Quando o processo termina, o plugin devolve um relatório JSON contendo uma lista de resultados, como o número da linha onde a vulnerabilidade aparece, o tipo de problema, uma mensagem descritiva e a severidade associada.
+Ingestão: O plugin recebe o código como texto.
 
-Este fluxo é completamente automático: o utilizador não precisa de instalar, executar ou conhecer o Bandit diretamente, o que simplifica muito o uso e torna o plugin acessível mesmo para quem não está familiarizado com ferramentas de segurança.
+Preparação: Cria um ficheiro temporário seguro com o conteúdo do código.
 
-3. Configuração do Plugin pelo Utilizador
+Execução do Motor: Invoca o motor do Bandit internamente para varrer o ficheiro à procura de padrões de vulnerabilidade (ex: B307 para eval, B102 para exec).
 
-A configuração do SecurityChecker é feita exclusivamente através do ficheiro TOML global do Toolkit, por meio de uma secção rules. O parâmetro mais importante é o nível mínimo de severidade que o plugin deve reportar. O plugin suporta três níveis: LOW, MEDIUM e HIGH. O valor por defeito é LOW, o que significa que todos os problemas — desde os mais leves até aos mais graves — são registados.
+Geração de Artefactos:
 
-Para alterar essa configuração, o utilizador precisa apenas de editar o ficheiro toolkit.toml (ou equivalente) e acrescentar, por exemplo:
+Compila os resultados no JSON global do Toolkit.
+
+Gera automaticamente o ficheiro security_checker_dashboard.html no diretório de saída.
+
+Limpeza: Remove o ficheiro temporário, garantindo que nenhum código sensível persista no disco desnecessariamente.
+
+3. Configuração do Plugin
+A configuração do SecurityChecker é realizada através do ficheiro global toolkit.toml. O principal parâmetro de controlo é o nível de severidade.
+
+Parâmetros Suportados:
+
+security_report_level: Define o nível mínimo de severidade para que uma vulnerabilidade seja reportada.
+
+Valores aceites: "LOW", "MEDIUM", "HIGH".
+
+Valor por defeito: "LOW" (Reporta tudo).
+
+Exemplo de Configuração (toolkit.toml):
+
+Ini, TOML
 
 [rules]
+# Apenas vulnerabilidades críticas (High) e médias (Medium) aparecerão no relatório e dashboard.
 security_report_level = "MEDIUM"
+Nota: Se a configuração for omitida, o plugin assume o nível "LOW" para garantir a máxima visibilidade dos problemas.
 
+4. Visualização dos Resultados (Novo Dashboard)
+Uma das grandes vantagens desta versão é o Dashboard de Segurança. Após a execução, o utilizador deve abrir o ficheiro security_checker_dashboard.html no seu navegador.
 
-Com isso, problemas classificados como “LOW” deixam de ser incluídos no relatório, e apenas vulnerabilidades mais significativas passam a ser exibidas. O utilizador não necessita de modificar código e não precisa de saber detalhes internos do Bandit; a configuração é simples, declarativa e centralizada.
+O que o Dashboard oferece:
 
-Além disso, se o campo não existir no TOML, o plugin continua a funcionar normalmente, recorrendo ao valor padrão configurado no __init__, o que evita falhas e torna o sistema mais resiliente.
+Métricas de Topo: Contagem total de vulnerabilidades e ficheiros afetados.
 
-4. Pré-requisitos e Considerações Práticas
+Gráfico de Severidade (Red Theme): Um gráfico de barras que mostra a distribuição de riscos (quantos são HIGH, MEDIUM ou LOW).
 
-Antes de utilizar o plugin, é necessário garantir que a dependência Bandit está instalada. Se o plugin for executado sem esse pacote, ele não funciona e devolve uma resposta de erro controlada. O próprio código imprime um aviso visível, explicando o motivo da falha, e a mensagem de erro no relatório final orienta o utilizador a instalar a dependência necessária. Normalmente, esta instalação faz parte do processo make setup do projeto, simplificando ainda mais a preparação do ambiente.
+Lista de Infratores: Uma lista ordenada dos ficheiros com maior número de vulnerabilidades, permitindo priorizar a refatoração.
 
-Do ponto de vista prático, o utilizador não precisa de se preocupar com caminhos de ficheiros temporários, limpeza de artefactos ou chamadas diretas ao Bandit, pois o plugin gere tudo automaticamente. O uso é, portanto, altamente conveniente e adequado tanto para fluxos manuais quanto automáticos.
+5. Pré-requisitos e Dependências
+O plugin possui uma dependência estrita do pacote bandit.
 
-5. Experiência de Uso para Diferentes Cenários
+O ambiente Python onde o Toolkit corre deve ter o Bandit instalado (pip install bandit).
 
-Em ambientes de desenvolvimento local, o utilizador pode simplesmente executar a análise de segurança sempre que quiser verificar rapidamente se um ficheiro contém vulnerabilidades óbvias. Em pipelines CI/CD, o plugin integra-se naturalmente como uma etapa de validação, impedindo que código inseguro seja integrado no repositório. O utilizador final não precisa ajustar nada além do nível de severidade desejado, sendo que todo o restante — desde a análise até ao formato final do relatório — é gerido automaticamente pelo plugin.
+Caso o Bandit não esteja presente, o plugin não iniciará e emitirá um erro explícito no log, garantindo que o utilizador não tenha uma falsa sensação de segurança por uma análise silenciosa ou incompleta.
+
+6. Experiência de Uso para Diferentes Cenários
+Auditoria Local: O desenvolvedor corre a ferramenta e abre imediatamente o Dashboard HTML para ver "onde está o fogo" (vulnerabilidades críticas) através dos gráficos vermelhos de alerta.
+
+Pipelines CI/CD: O sistema de integração contínua lê o output JSON. Se o plugin detetar vulnerabilidades com severidade acima do configurado, o pipeline pode ser configurado para bloquear o merge ou o deployment, agindo como um Quality Gate de segurança.

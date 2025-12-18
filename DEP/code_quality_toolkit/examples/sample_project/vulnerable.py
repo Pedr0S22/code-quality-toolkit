@@ -27,3 +27,34 @@ class Apple:
     def eaten_by_animal(self, animal):
         self.remaining_bites = 0
         print("The apple has been eaten by an animal.")
+
+
+def number_to_name2() -> None:
+    number = input()
+    if not number.isdigit():
+        print("Enter a valid number")
+        return
+
+    number = int(number)
+    if number >= 10:
+        print("Number is too big")
+        return
+
+    if number == 1:
+        print("one")
+    elif number == 2:
+        print("two")
+    elif number == 3:
+        print("three")
+    elif number == 4:
+        print("four")
+    elif number == 5:
+        print("five")
+    elif number == 6:
+        print("six")
+    elif number == 7:
+        print("seven")
+    elif number == 8:
+        print("eight")
+    elif number == 9:
+        print("nine")
