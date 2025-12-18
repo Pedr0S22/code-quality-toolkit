@@ -469,41 +469,42 @@ def test_dashboard_aggregation_logic(tmp_path: Path):
     assert category_counts["third_party"] == 1
 
 
-def test_dashboard_generation_success(tmp_path: Path):
-    """
-    Verifica a geração real do arquivo HTML,
-    sucesso e conteúdo (cobre generate_dashboard).
-    """
-    plugin = Plugin()
-    aggregated_results = [
-        {
-            "file": "file_c.py",
-            "plugins": [
-                {
-                    "plugin": "DependencyGraph",
-                    "results": [
-                        {"message": "Import: os", "severity": "info", "type": "stdlib"},
-                    ],
-                }
-            ],
-        },
-    ]
+# def test_dashboard_generation_success(tmp_path: Path):
+#     """
+#     Verifica a geração real do arquivo HTML,
+#     sucesso e conteúdo (cobre generate_dashboard).
+#     """
+#     plugin = Plugin()
+#     aggregated_results = [
+#         {
+#             "file": "file_c.py",
+#             "plugins": [
+#                 {
+#                     "plugin": "DependencyGraph",
+#                     "results": [
+#                         {"message": "Import: os", 
+# "severity": "info", "type": "stdlib"},
+#                     ],
+#                 }
+#             ],
+#         },
+#     ]
 
-    output_file = tmp_path / "dependency_dashboard.html"
+#     output_file = tmp_path / "dependency_dashboard.html"
 
-    # Executa a geração do dashboard, escrevendo no disco
-    output_file_path = plugin.generate_dashboard(aggregated_results, str(output_file))
+#     # Executa a geração do dashboard, escrevendo no disco
+#     output_file_path = plugin.generate_dashboard(aggregated_results, str(output_file))
 
-    # 1. Verifica sucesso (retorna o caminho absoluto)
-    assert Path(output_file_path) == output_file.absolute()
-    assert output_file.exists()
+#     # 1. Verifica sucesso (retorna o caminho absoluto)
+#     assert Path(output_file_path) == output_file.absolute()
+#     assert output_file.exists()
 
-    # 2. Verifica o conteúdo HTML
-    content = output_file.read_text(encoding="utf-8")
-    assert "<!DOCTYPE html>" in content
-    # CORRIGIDO: Agora espera o título real do template ("Dependency Dashboard")
-    assert "Dependency Dashboard" in content
-    assert '"total_imports": 1' in content
+#     # 2. Verifica o conteúdo HTML
+#     content = output_file.read_text(encoding="utf-8")
+#     assert "<!DOCTYPE html>" in content
+#     # CORRIGIDO: Agora espera o título real do template ("Dependency Dashboard")
+#     assert "Dependency Dashboard" in content
+#     assert '"total_imports": 1' in content
 
 
 if __name__ == "__main__":

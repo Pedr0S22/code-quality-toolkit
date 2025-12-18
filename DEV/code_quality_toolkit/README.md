@@ -23,6 +23,24 @@ python -m toolkit.core.cli analyze examples/sample_project --out report.json
 ```
 Para um guia detalhado sobre todas as opções e como interpretar os resultados, consulte o ficheiro HOWTO.md.
 
+## Usando a app do Code Quality Toolkit
+
+Para usar a app, o servidor backend deve ser ligado para que a app (fronted) possa ser usada.
+
+- **Corra o Server**: Corra o ficheiro server.py usando o comando:
+
+  ```txt
+    make run_server
+    ```
+
+- **Corra o Client**: Corra o ficheiro client.py usando o comando:
+
+    ```txt
+    make run_client
+    ```
+
+A aplicação irá abrir uma GUI que permite a execução da análise, bem como a configuração de cada plugin.
+
 ### Opções da CLI
 
 1. Ao usar o comando
@@ -122,6 +140,8 @@ A lógica principal de resiliência reside no motor, especificamente na função
 Teste o plugin com `pytest` e execute a CLI para gerar relatórios que o incluam.
 
 ## Documentação adicional
+
+Veja toda a documentação para usuários na pasta PROD. Veja mais também:
 
 - [`web/SPEC.md`](web/SPEC.md): proposta de interface Web que consome o
   `report.json`.

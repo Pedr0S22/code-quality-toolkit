@@ -7,52 +7,74 @@ import zipfile
 import shutil
 import tempfile
 from pathlib import Path
+
 from markdownify import markdownify as md
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QHBoxLayout, QPushButton, QLabel, QStackedWidget,
                             QFileDialog, QFrame, QCheckBox, QScrollArea,
                             QLineEdit, QFormLayout)
-from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtGui import QPen, QColor
+from PyQt6.QtWidgets import QProxyStyle, QStyle
+from PyQt6.QtCore import Qt, QUrl, QPointF
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 
 # --- CONFIG ---
 API_BASE_URL = "http://127.0.0.1:8000/api/v1"
 
-# --- WEB ENGINE CHECK (Required for D3.js/HTML Rendering) ---W
+# --- WEB ENGINE CHECK (Required for D3.js/HTML Rendering) ---
 HAS_WEBENGINE = True
 
-# --- MOCK API RESPONSE (Simulating GET /api/v1/plugins/configs) ---
-def mock_fetch_plugins():
-    return {
-        "CyclomaticComplexity": {
-            "enabled": True,
-            "threshold": 10,
-            "exclude_tests": True
-        },
-        "DuplicationHunter": {
-            "enabled": True,
-            "min_lines": 5,
-            "ignore_imports": False
-        },
-        "DeadCodeFinder": {
-            "enabled": True,
-            "deep_scan": True
-        },
-        "SecurityScanner": {
-            "enabled": True,
-            "level": "high"
-        },
-        "StyleChecker": {
-            "enabled": True,
-            "standard": "pep8"
-        },
-        "DependencyGraph": {
-            "enabled": True,
-            "depth": 3
-        }
-    }
-
 # --- CUSTOM PLUGIN WIDGET ---
+
+class CheckBoxXStyle(QProxyStyle):
+    def drawPrimitive(self, element, option, painter, widget=None):
+        if element == QStyle.PrimitiveElement.PE_IndicatorCheckBox:
+            painter.save()
+            painter.setRenderHint(painter.RenderHint.Antialiasing)
+            
+            # 1. Define the box area
+            rect = option.rect.adjusted(1, 1, -1, -1)
+            
+            if option.state & QStyle.StateFlag.State_On:
+                # 2. Draw Blue Background
+                painter.setBrush(QColor("#007ACC"))
+                painter.setPen(QPen(QColor("#007ACC"), 1))
+                painter.drawRoundedRect(rect, 3, 3)
+                
+                # 3. Draw BOLD White Check Mark (V)
+                pen = QPen(QColor("white"), 2.5)
+                pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+                pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+                painter.setPen(pen)
+
+                # Get base coordinates
+                x = float(rect.x())
+                y = float(rect.y())
+                w = float(rect.width())
+                h = float(rect.height())
+
+                # Coordinates for a classic check mark
+                # p1: Start (Left middle)
+                # p2: Pivot (Bottom center-left)
+                # p3: End (Top right)
+                p1 = QPointF(x + w * 0.25, y + h * 0.5)
+                p2 = QPointF(x + w * 0.45, y + h * 0.75)
+                p3 = QPointF(x + w * 0.8,  y + h * 0.25)
+
+                # Draw the two segments of the 'V'
+                painter.drawLine(p1, p2)
+                painter.drawLine(p2, p3)
+                
+            else:
+                # 4. Draw Empty Dark Box (Unchecked)
+                painter.setBrush(QColor("#1e1e1e"))
+                painter.setPen(QPen(QColor("#555555"), 1))
+                painter.drawRoundedRect(rect, 3, 3)
+                
+            painter.restore()
+        else:
+            super().drawPrimitive(element, option, painter, widget)
+
 class PluginItemWidget(QWidget):
     """
     Represents a single plugin row in the sidebar.
@@ -81,19 +103,7 @@ class PluginItemWidget(QWidget):
         self.checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
         self.checkbox.stateChanged.connect(self.on_checkbox_changed)
 
-        # --- FIX: Custom Style to ensure checkbox is visible in Dark Mode ---
-        self.checkbox.setStyleSheet("""
-            QCheckBox::indicator {
-                width: 14px; height: 14px;
-                border: 1px solid #555; border-radius: 3px;
-                background: #1e1e1e;
-            }
-            QCheckBox::indicator:checked {
-                background: #007ACC;
-                border: 1px solid #AAAAAA; /* grey frame when selected */
-            }
-            QCheckBox::indicator:hover { border: 1px solid #007ACC; }
-        """)
+        self.checkbox.setStyleSheet("background: transparent; border: none;")
         
         # Name Label
         self.lbl_name = QLabel(name)
@@ -262,21 +272,7 @@ class MainWindow(QMainWindow):
         self.chk_all.setChecked(True)
         self.chk_all.setCursor(Qt.CursorShape.PointingHandCursor)
         # Apply the same indicator style here so it doesn't disappear
-        self.chk_all.setStyleSheet("""
-            QCheckBox {
-                color: #fff; font-weight: bold; font-size: 14px;
-            }
-            QCheckBox::indicator {
-                width: 14px; height: 14px;
-                border: 1px solid #555; border-radius: 3px;
-                background: #1e1e1e;
-            }
-            QCheckBox::indicator:checked {
-                background: #007ACC;
-                border: 1px solid #AAAAAA; /* grey frame */
-            }
-            QCheckBox::indicator:hover { border: 1px solid #007ACC; }
-        """)
+        self.chk_all.setStyleSheet("QCheckBox { color: #fff; font-weight: bold; }")
         self.chk_all.clicked.connect(self.toggle_all_plugins)
         
         chk_layout.addWidget(self.chk_all)
@@ -598,6 +594,15 @@ class MainWindow(QMainWindow):
             # Extract
             with zipfile.ZipFile(results_zip, 'r') as zf:
                 zf.extractall(self.results_dir)
+
+            for file in self.results_dir.rglob("*"):
+                if not file.is_file():
+                    continue
+
+                if file.suffix == ".json":
+                    self._fix_json_paths(file)
+                elif file.suffix == ".html":
+                    self._fix_html_paths(file)
                 
             print(f"Results extracted to: {self.results_dir}")
 
@@ -613,19 +618,16 @@ class MainWindow(QMainWindow):
             self.show_global_report()
 
         except Exception as e:
-            
-            if HAS_WEBENGINE:
-                # Try to load global report.html if it exists
+            print(f"Client Error: {e}")
+
+            if HAS_WEBENGINE and hasattr(self, "results_dir"):
                 global_report = self.results_dir / "report.html"
                 if global_report.exists():
                     self.web_view.setUrl(QUrl.fromLocalFile(str(global_report.resolve())))
-                else:
-                    self.web_view.setHtml("<h2 style='color:white'>Analysis Complete. Select a plugin to view details.</h2>")
+                    return
 
-        except Exception as e:
-            print(f"Client Error: {e}")
             self.lbl_path.setText(f"Error: {str(e)}")
-            self.lbl_path.setStyleSheet("color: #f48771;")
+            self.lbl_path.setStyleSheet("color: #f48771; font-weight: bold;")
 
     def show_plugin_dashboard(self, plugin_name):
         """
@@ -659,7 +661,7 @@ class MainWindow(QMainWindow):
                 html_content = dashboard_file.read_text(encoding="utf-8")
                 
                 # 2. Define Asset Paths
-                d3_local_path = Path("web/assets/d3.v7.min.js")                
+                d3_local_path = Path("web/assets/d3.v7.min.js")
                 cdn_tag = '<script src="https://d3js.org/d3.v7.min.js"></script>'
                                 
                 # 3. Inject Local D3 if available
@@ -741,6 +743,9 @@ class MainWindow(QMainWindow):
             # 1. Read HTML
             with open(html_path, "r", encoding="utf-8") as f:
                 html_content = f.read()
+            
+            # 1.5 Simple paths
+            html_content = self._normalize_html_paths(html_content)
 
             # 2. Convert to Markdown using the library
             # heading_style="ATX" ensures we get # headings instead of underlined ones
@@ -754,6 +759,10 @@ class MainWindow(QMainWindow):
 
             # 4. Save
             if save_path:
+                # Ensure .md extension
+                if not save_path.lower().endswith(".md"):
+                    save_path += ".md"
+
                 with open(save_path, "w", encoding="utf-8") as f:
                     f.write(md_content)
                 self.lbl_path.setText("Export Successful!")
@@ -778,14 +787,129 @@ class MainWindow(QMainWindow):
             else:
                 zf.write(path, arcname=path.name)
         return zip_path, tmp_dir
+    
+    def _normalize_path(self, full_path: str, anchor: str = "source") -> str:
+        """
+        Removes everything up to and including the anchor directory ('source'),
+        supports Windows, Linux, and macOS paths.
+
+        Examples:
+        C:\\x\\y\\source\\proj\\a.py  -> ./proj/a.py
+        /tmp/x/source/proj/a.py      -> ./proj/a.py
+        """
+
+        if not isinstance(full_path, str):
+            return full_path
+
+        # Ignore URLs
+        if full_path.startswith(("http://", "https://", "file://")):
+            return full_path
+
+        normalized = full_path.replace("\\", "/")
+        anchor_token = f"/{anchor}/"
+
+        if anchor_token not in normalized:
+            return full_path
+
+        relative = normalized.split(anchor_token, 1)[1]
+        return f"./{relative}"
+    
+    def _normalize_html_paths(self, html_content):
+        """
+        Replace paths in HTML headings with:
+        - forward slashes
+        - escaped underscores
+        """
+        import re
+        from pathlib import Path
+
+        def repl(match):
+            raw_path = match.group(1)
+            posix_path = Path(raw_path).as_posix()
+            md_path = posix_path.replace("_", r"\_")
+            return f"File: {md_path}"
+
+        # Replace any <h3>File: ...</h3> with fixed path
+        html_content = re.sub(
+            r"File:\s*(.*?)</h3>",
+            lambda m: f"File: {self.format_md_header_path(m.group(1))}</h3>",
+            html_content)
+        
+        return html_content
+
+    def _fix_json_paths(self, json_path: Path):
+        try:
+            with open(json_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            def recurse(obj):
+                if isinstance(obj, dict):
+                    return {k: recurse(v) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    return [recurse(i) for i in obj]
+                elif isinstance(obj, str):
+                    return self._normalize_path(obj)
+                return obj
+
+            fixed_data = recurse(data)
+
+            with open(json_path, "w", encoding="utf-8") as f:
+                json.dump(fixed_data, f, indent=2)
+
+        except Exception as e:
+            print(f"[WARN] Failed to fix JSON paths in {json_path}: {e}")
+
+    def format_md_header_path(self, file_path, base_dir="."):
+        """
+        Normalize file path for Markdown headers:
+        - Convert backslashes to forward slashes
+        - Escape underscores
+        - Show path relative to base_dir
+        """
+        path_obj = Path(file_path)
+        try:
+            rel_path = path_obj.relative_to(base_dir)
+        except ValueError:
+            rel_path = path_obj  # fallback if file is outside base_dir
+        posix_path = rel_path.as_posix()
+        md_path = posix_path.replace("_", r"\_")
+        return md_path
+
+
+    def _fix_html_paths(self, html_path: Path):
+        PATH_LIKE_PATTERN = re.compile(
+                r"""
+                (?:
+                    [A-Za-z]:[\\/][^"'<>]+?\.(py|js|java|ts|go|cpp) |
+                    /[^"'<>]+?/source/[^"'<>]+?\.(py|js|java|ts|go|cpp)
+                )
+                """,
+                re.VERBOSE | re.IGNORECASE
+            )
+
+
+
+        try:
+            content = html_path.read_text(encoding="utf-8")
+
+            def replace(match):
+                return self._normalize_path(match.group(0))
+
+            fixed = PATH_LIKE_PATTERN.sub(replace, content)
+            html_path.write_text(fixed, encoding="utf-8")
+
+        except Exception as e:
+            print(f"[WARN] Failed to fix HTML paths in {html_path}: {e}")
 
 def _to_snake_case(name: str) -> str:
-    """Converts PascalCase to snake_case (e.g. 'DeadCodeDetector' -> 'dead_code')."""
+    """Converts PascalCase to snake_case (e.g. 'DeadCodeDetector' -> 'dead_cod_detector')."""
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setStyle(CheckBoxXStyle())
+
     window = MainWindow()
     window.show()
     sys.exit(app.exec())

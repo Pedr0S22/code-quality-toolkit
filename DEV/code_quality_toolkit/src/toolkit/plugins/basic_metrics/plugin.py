@@ -2,29 +2,16 @@
 #   Basic metrics plugin   #
 # ------------------------ #
 
-# Imports antigos mantidos como comentário para histórico (pedido do enunciado):
-# import os
-# import tempfile
-# from radon.raw import analyze as raw_analyze
-# from radon.metrics import h_visit, HalsteadReport
-
 from __future__ import annotations
 
 import ast
 import io
+import json
 import tokenize
 from typing import Any
 
-from jinja2 import Environment, PackageLoader, select_autoescape
-
 from ...core.contracts import IssueResult
 from ...utils.config import ToolkitConfig
-
-JINJA_ENV = Environment(
-    loader=PackageLoader("toolkit.plugins.basic_metrics"),
-    autoescape=select_autoescape(["html", "xml"]),
-)
-
 
 # Import opcional do radon: se não estiver instalado, o plugin continua a funcionar .
 try:
@@ -69,8 +56,6 @@ class Plugin:
     def __init__(self) -> None:
         # Nível de detalhe configurável via ToolkitConfig.rules.metrics_report_level
         self.report_level: str = "LOW"
-        self.metrics_report_level: str = "LOW"
-        self.name: str = "plugin_basic_metrics"
 
     def get_metadata(self) -> dict[str, str]:
         return {
@@ -84,29 +69,7 @@ class Plugin:
 
     def configure(self, config: ToolkitConfig) -> None:
         sect = getattr(getattr(config, "plugins", None), "basic_metrics", None)
-        self.metrics_report_level = getattr(
-            sect, "metrics_report_level", self.metrics_report_level
-        )
-        self.report_level = self.metrics_report_level
-
-    # ------------------------------------------------------------------
-    # Dashboard
-    # ------------------------------------------------------------------
-
-    def render_html(self, results) -> str:
-        template = JINJA_ENV.get_template("dashboard.html")
-        return template.render(results=results)
-
-    def generate_dashboard(self, results):
-        """
-        Generates the D3.js dashboard HTML file.
-        """
-        dashboard_file = "src/toolkit/plugins/basic_metrics/" 
-        dashboard_file += f"{self.name}_dashboard.html"
-        html_content = self.render_html(results)
-
-        with open(dashboard_file, "w", encoding="utf-8") as f:
-            f.write(html_content)
+        self.report_level = getattr(sect, "report_level", self.report_level)
 
     # ------------------------------------------------------------------
     # Helpers para descobrir docstrings, comentários e linhas em branco
@@ -371,3 +334,172 @@ class Plugin:
             }
 
         return results
+
+    # ------------------------------------------------------------------
+    # Dashboard
+    # ------------------------------------------------------------------
+
+    def generate_dashboard(self, results) -> str:
+        """
+        Generates the D3.js dashboard HTML file.
+        """
+        dashboard_file = "src/toolkit/plugins/basic_metrics/"
+        dashboard_file += "basic_metrics_dashboard.html"
+
+        try:
+            html_content = self.render_html(results)
+
+            with open(dashboard_file, "w", encoding="utf-8") as f:
+                f.write(html_content)
+
+            return dashboard_file
+        except Exception:
+            return ""
+
+    def render_html(self, results) -> str:
+        """
+        Prepares data and returns the final HTML dashboard with injected JSON.
+        """
+        dashboard_data = self._aggregate_data_for_dashboard(results)
+        data_json = json.dumps(dashboard_data)
+        return self._get_html_template(data_json)
+
+    def _aggregate_data_for_dashboard(self, results):
+        """
+        Converts plugin results into a JSON-ready dashboard structure.
+        """
+        items = results.get("results", []) if isinstance(results, dict) else results
+        metrics = results.get(
+                "summary",
+                {}
+                ).get("metrics", {}) if isinstance(results, dict) else {}
+
+        # If items have no 'severity', just count total as "TOTAL"
+        severity_counts = {}
+        for item in items:
+            sev = item.get("severity", "TOTAL")
+            severity_counts[sev] = severity_counts.get(sev, 0) + 1
+
+        return {
+            "metrics": metrics,
+            "results": items,
+            "severity_counts": [
+                {"severity": k, "count": v} for k, v in severity_counts.items()
+            ],
+        }
+
+    def _get_html_template(self, data_json: str) -> str:
+        """Responsive D3.js dashboard template for Basic Metrics."""
+        return f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Basic Metrics Dashboard</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+body {{
+    font-family: 'Segoe UI', sans-serif;
+    margin: 0; padding: 20px;
+    background-color: #f4f4f4;
+    display: flex; justify-content: center;
+}}
+.chart-container {{
+    width: 100%;
+    max-width: 1066px;
+    aspect-ratio: 1066 / 628;
+    background: white;
+    border: 1px solid #ccc;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    box-sizing: border-box;
+}}
+</style>
+</head>
+<body>
+
+<div id="app" class="chart-container"></div>
+
+<script>
+const data = {data_json};
+const metrics = data.metrics || {{}};
+const issues = data.results || [];
+
+const width = 1066;
+const height = 628;
+
+const svg = d3.select("#app").append("svg")
+    .attr("viewBox", `0 0 ${{width}} ${{height}}`)
+    .attr("preserveAspectRatio", "xMidYMid meet")
+    .style("width", "100%")
+    .style("height", "100%")
+    .style("background-color", "#fff");
+
+// HEADER
+svg.append("rect")
+    .attr("x",0).attr("y",0)
+    .attr("width",width).attr("height",70)
+    .attr("fill","#0d6efd");
+
+svg.append("text")
+    .attr("x",20).attr("y",45)
+    .attr("fill","white")
+    .style("font-size","24px")
+    .style("font-weight","bold")
+    .text("Basic Metrics Analysis");
+
+// METRICS PANEL (LEFT)
+const mGroup = svg.append("g").attr("transform","translate(20,100)");
+let idx = 0;
+for (const [key,val] of Object.entries(metrics)) {{
+    mGroup.append("text")
+        .attr("x",0).attr("y", idx*25)
+        .style("font-size","14px")
+        .style("font-weight","bold")
+        .text(`${{key}}: ${{val}}`);
+    idx++;
+}}
+
+// ISSUES BY SEVERITY (RIGHT)
+const severityCounts = data.severity_counts || [];
+if (severityCounts.length) {{
+    const x = d3.scaleBand()
+        .domain(severityCounts.map(d=>d.severity))
+        .range([550, 950])
+        .padding(0.2);
+    const y = d3.scaleLinear()
+        .domain([0, d3.max(severityCounts,d=>d.count)])
+        .range([580,150]);
+
+    const bars = svg.append("g");
+    bars.selectAll("rect")
+        .data(severityCounts)
+        .enter()
+        .append("rect")
+        .attr("x",d=>x(d.severity))
+        .attr("y",d=>y(d.count))
+        .attr("width",x.bandwidth())
+        .attr("height",d=>580 - y(d.count))
+        .attr("fill","#0d6efd");
+
+    bars.selectAll("text")
+        .data(severityCounts)
+        .enter()
+        .append("text")
+        .attr("x",d=>x(d.severity)+x.bandwidth()/2)
+        .attr("y",d=>y(d.count)-5)
+        .attr("text-anchor","middle")
+        .style("font-size","12px")
+        .style("font-weight","bold")
+        .text(d=>d.count);
+}} else {{
+    svg.append("text")
+        .attr("x",775).attr("y",350)
+        .attr("text-anchor","middle")
+        .attr("fill","#28a745")
+        .style("font-size","16px")
+        .text("✅ No issues found!");
+}}
+</script>
+
+</body>
+</html>"""
