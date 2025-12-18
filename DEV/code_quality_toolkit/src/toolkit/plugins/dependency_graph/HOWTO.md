@@ -1,70 +1,88 @@
 Membros:
 
-João Neto  2023234004  @Imajellyfish
-João Eduardo Duarte  2011187848  @jeduarteldm
-Bernardo Fonseca  2021239253  @jF202 
-Diogo Delvivo  2021150174  @delvivo.diogo1 
-Catarina Vieira 2023218473  @27634982
+João Neto 2023234004 @Imajellyfish
 
-Como usar e configurar o plugin:
+João Eduardo Duarte 2011187848 @jeduarteldm
 
-1. Visão Geral do Uso:
+Bernardo Fonseca 2021239253 @jF202
 
-O Dependency Graph foi concebido para ser usado como parte do Toolkit de análise de código, funcionando como um módulo de análise de dependências que mapeia todas as importações de um projeto Python. O user não interage diretamente com o parser AST, mas sim com o plugin, que serve como camada de abstração. 
+Diogo Delvivo 2021150174 @delvivo.diogo1
 
-Na prática, o user apenas fornece código-fonte para análise, e o plugin devolve um relatório estrturado com todas as dependências identificadas, categorizadas e com estatísticas detalhadas.
+Catarina Vieira 2023218473 @27634982
 
-O processo de utilização é simples e totalmente integrado no fluxo normal de execução da ferramenta maior onde o plugin está inserido.
+Como usar e configurar o plugin DependencyGraph
+1. Visão Geral do Uso
+O DependencyGraph foi concebido para funcionar como um módulo de análise arquitetural dentro do Toolkit. A sua função é mapear todas as importações (dependências) de um projeto Python. O utilizador não interage diretamente com o parser AST (Abstract Syntax Tree), mas sim com o plugin, que serve como uma camada de abstração inteligente.
 
+Na prática, o utilizador apenas fornece o código-fonte (ficheiros ou diretórios), e o plugin devolve:
 
-2. Como a Análise é Executada:
+Um relatório estruturado (JSON) com todas as dependências categorizadas.
 
-Para usar o plugin, o user precisa apenas de acionar a análise de um ficheiro ou de um bloco de código através da aplicação que integra o Dependency Graph. O plugin receberá o código como texto e, de forma transparente, analisará a sua estrutura sintática usando o módulo ast do Python. Este processo identifica todos os statements de importação, tanto "import" como "from ... import", extraindo informações coom o nome do módulo, linha onde aparece, tipo de importação e nível de importção relativa.
+Um Dashboard Visual (HTML) para análise gráfica da arquitetura.
 
-Quando o processo termina, o plugin devolve um relatório JSON??? contendo uma lista de resultados com cada dependência encontrada, incluindo informações sobre a sua categoria(biblioteca padrão, pacote externo ou módulo local), severidade baseada em padrões potencialmente problemáticos, e mensagens descritivas. Além disso, inclui um sumário com estatísticas agregadas e dados para contrução de grafos de dependência.
+2. Como a Análise é Executada
+A execução é transparente e integrada no fluxo do Toolkit:
 
-Este fluxo é completamente automático: o user não precisa de instalar ferramentas externas al+em do Python padrão, o que simplifica muito o uso e torna o plugin acessível mesmo para quem não está familiarizado com análise de dependências.
+Acionamento: O utilizador executa o comando de análise (ex: toolkit analyze).
 
+Processamento Interno: O plugin recebe o código e utiliza o módulo nativo ast do Python para varrer a estrutura sintática. Ele identifica declarações import e from ... import, extraindo:
 
-3. Configuração do Plugin pelo User:
+Nome do módulo importado.
 
-A configuração do Dependency Graph é feita atrav+es do ficheiro TOML global do Toolkit, por meio de uma secção rules. Os parâmetro disponíveis incluem:
+Linha de ocorrência.
 
-- warn_wildcard_imports: controla se importações wildcard (from x import *) devem ser reportadas como severidade mais alta.
+Tipo de importação (Absoluta vs. Relativa).
 
-- max_relative_import_level: define o nível máximo aceitável para importações relativas antes de serem reportadas como problemáticas.
+Saída de Dados:
 
-- track_stdlib_modules: define se módulos da biblioteca padrão devem ser incluídos no relatório.
+JSON: É gerado um relatório detalhado contendo a lista de dependências classificadas (Biblioteca Padrão, Terceiros ou Local), severidade baseada em más práticas e estatísticas agregadas.
 
-Paara alterar estas configurações, o user precisa apenas de editar o ficheiro TOML e acrescentar, por exemplo:
+Dashboard HTML: É criado o ficheiro dependency_graph_dashboard.html, que permite visualizar graficamente o acoplamento do sistema.
+
+Este fluxo é automático e leve: o utilizador não precisa de instalar ferramentas externas (como o Bandit ou Pylint), pois o plugin usa apenas a biblioteca padrão do Python.
+
+3. Configuração do Plugin
+A configuração é realizada através do ficheiro global toolkit.toml. O utilizador pode ajustar o comportamento do plugin para ser mais ou menos rigoroso em relação a padrões de importação.
+
+Parâmetros Configuráveis:
+
+warn_wildcard_imports (Booleano): Controla se importações "coringa" (from x import *) devem ser reportadas com severidade MEDIUM. (Padrão: true)
+
+max_relative_import_level (Inteiro): Define o nível máximo aceitável para importações relativas (ex: from ..utils import x é nível 2). Importações mais profundas que este valor geram avisos. (Padrão: 1)
+
+track_stdlib_modules (Booleano): Define se os módulos da biblioteca padrão do Python (ex: os, json) devem aparecer no relatório e nos gráficos. Desativar isto ajuda a focar apenas em dependências externas e locais. (Padrão: true)
+
+Exemplo de Configuração (toolkit.toml):
+
+Ini, TOML
 
 [rules]
-warn_wildcard_imports= true
-max_relative_import_level= 1
-track_stdlib_modules= false
+# Penaliza imports do tipo 'from *', aceita imports relativos simples
+# e ignora a biblioteca padrão para limpar o relatório.
+warn_wildcard_imports = true
+max_relative_import_level = 1
+track_stdlib_modules = false
+Nota: O plugin é resiliente. Se estes campos não existirem no TOML, ele utiliza valores padrão seguros definidos internamente, garantindo que a análise nunca falha por falta de configuração.
 
-Com estas configurações, o plugin adaptará o seu comportamento: wildcard imports serão marcados como "medium", importações relativas profundas serão destacadas, e módulos da stdlib serão excluídos do relatório final, focando apenas em dependências externas e locais.
+4. Visualização dos Resultados (Dashboard)
+Para além do JSON, o utilizador deve consultar o ficheiro dependency_graph_dashboard.html gerado na pasta de saída.
 
-O user não necessita de modificar código e não precisa de saber detalhes internos do AST, a configuração é simples, declarativa e centralizada.
+Funcionalidades do Dashboard:
 
-Além disso, se estes campos não existirem no TOML, o plugin continua a funcionar normalmente, recorrendo aos valores padrão configurados no __init__, o que evita falhas e torna o sistema mais resiliente.
+Métricas de Arquitetura: Total de importações, número de módulos únicos e contagem de ficheiros analisados.
 
+Distribuição de Tipos: Gráficos que mostram a proporção entre dependências da stdlib, third-party (pacotes externos) e local (módulos do projeto).
 
-4. Pré-requisitos e Considerações Práticas:
+Top Consumers: Uma lista dos ficheiros que realizam mais importações, ajudando a identificar módulos com acoplamento excessivo (potenciais "God Classes").
 
-Uma das grandes vantagens deste plugin é que não requer dependências externas além do Python padrão. O módulo "ast" faz parte da biblioteca padrão do Python, pelo que o plugin está sempre pronto a ser usado sem instalações adicionais.
+5. Pré-requisitos e Robustez
+Sem Dependências Extras: A grande vantagem deste plugin é a sua portabilidade. Não requer pip install de nada extra; funciona em qualquer ambiente que tenha Python instalado.
 
-Do ponto de vista prático, o utilizador não precisa de se preocupar com parsing manual, tratamento de erros sintáticos ou construção de estruturas de dados complexas, pois o plugin gere tudo automaticamente. O uso é, portanto, altamente conveniente e adequado tanto para fluxos manuais quanto automáticos.
+Tratamento de Erros: O plugin segue a "Golden Rule" de robustez. Se encontrar um ficheiro com erro de sintaxe (código Python inválido), ele não encerra a execução. Em vez disso, gera um relatório de erro controlado para aquele ficheiro específico e continua a analisar o resto do projeto.
 
-o plugin também é robusto face a erros de sintaxe: se o código fornecido não for Python válido, o plugin devolve um relatório de erro controlado sem crashar, explicando o problema encontrado.
+6. Cenários de Uso Típicos
+Desenvolvimento Local: O programador utiliza o plugin para mapear a estrutura de um projeto desconhecido ou para garantir que não está a criar dependências circulares ou a usar wildcards indevidos antes de submeter o código.
 
+Pipelines CI/CD: O plugin atua como um validador de arquitetura. Pode ser configurado para falhar o build se alguém introduzir from * import * ou se o número de dependências externas crescer inesperadamente.
 
-5. Experiência de Uso para Diferentes Cenários:
-
-- Desenvolvimento Local:em ambientes de desenvolvimento local, o user pode executar a análise de dependências sempre que quiser. Para verificar rapidamente todas as dependências de um ficheiro, identificar dependências circulares potenciais, descobrir dependências externas que precisam de ser instaladas, ou mapear a estrutura de imports de um projeto.
-
-- Pipelines CI/CD: em pipelines CI/CD, o plugin naturalmente como uma etapa de validação, permite verificar se existem wildcard imports no código, garantir que não há importações relativas excessivamente profundas, gear relatórios de dependências para documentação, e monitorizar o crescimento de dependências externas ao longo do tempo.
-
-- Análise de Projetos: para análise de projetos completos, o plugin pode identificar todos os módulos externos usado, mapear a estrutura de dependências internas, detetar padrões de acoplamento excessivo, e fornecer dados para visualização de grafos de dependência.
-
-O user final não precisa de ajustar nada além das configurações desejadas, sendo que todo o restantes, desde a análise até ao formato final do relatório, é gerido automaticamente pelo plugin.
+Documentação Automática: O Dashboard gerado serve como documentação viva das dependências do projeto, útil para onboarding de novos membros na equipa.
