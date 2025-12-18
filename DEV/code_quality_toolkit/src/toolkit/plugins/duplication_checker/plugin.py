@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import json
-import subprocess  # nosec B404 - uso controlado
-import sys
 from pathlib import Path
 
 from ...utils.config import ToolkitConfig
