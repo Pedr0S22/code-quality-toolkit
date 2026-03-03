@@ -6,6 +6,6 @@ This folder serves as the central repository for all user documentation related 
 
 All documentation is organized as follows:
 
-* **Plugin Documentation:** Each individual plugin has its own dedicated Markdown file located within the `plugins/` folder.
+* **Plugin Documentation:** Each individual plugin has its own dedicated Markdown file located within the `PROD/plugins/` folder.
 
-* **Application Documentation:** General documentation for the main application resides in the `app/` folder.
+* **Application Documentation:** General documentation for the main application resides in the `PROD/app/` folder.

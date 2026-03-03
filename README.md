@@ -1,151 +1,167 @@
 # Code Quality Toolkit
 
-O Code Quality Toolkit é um MVP de um motor de análise baseado em plugins, capaz de produzir relatórios de qualidade de código unificados em JSON e consumidos por uma CLI e uma Web UI leve.
+## Project Overview & Goals
+The Code Quality Toolkit is a modular software framework designed to perform python code quality checks on the given files. Operating as a Minimum Viable Product (MVP), it is a plugin-based analysis engine capable of producing unified code quality reports in JSON format. These reports can be consumed by both a Command Line Interface and a lightweight Web User Interface.
 
-## Instalação rápida
+The primary goal of this project is to practice modular software design and interface-driven development and understanding the standards of software and team planning and management. The system emphasizes a robust software architecture that allows developers to add new plugins seamlessly without modifying the core system.
+
+## Table of Contents
+- [Project Structure](#project-structure)
+- [Architecture](#architecture)
+- [Plugin Lifecycle](#plugin-lifecycle)
+- [Installation](#installation)
+- [Usage & User Guide](#usage--user-guide)
+- [Additional Documentation](#additional-documentation)
+- [License](#license)
+- [Authors](#authors)
+
+## Project Structure
+
+The toolkit is organized into three main directories to separate the implementation of the backend, the frontend (UI)  and the tests. Consider the folder `DEV/` or `DEP/`.
+
+- `code_quality_toolkit/src/`: Backend of the system.
+- `code_quality_toolkit/web/`: Interface of the system.
+- `code_quality_toolkit/tests/`: unit and integration tests of the system.
+
+The backend has 3 other sub-directories that distiguishes the core engine from external plugins and shared utilities:
+
+- `code_quality_toolkit/src/toolkit/core/`: Engine infrastructure and CLI.
+- `code_quality_toolkit/src/toolkit/plugins/`: Dynamically discover plugins to add to the system.
+- `code_quality_toolkit/src/toolkit/utils/`: Shared utilities like configuration and file system helpers.
+
+## Architecture
+
+The system is divided into a **Core System** (responsible for orchestrating execution, managing plugins, and aggregating results) and independent **Plugins** (each implementing a discrete analysis).
+
+The toolkit features a robust error-handling architecture designed for resilience:
+- **CLI Layer (`cli.py`):** Acts as the external defense line, managing expected operational errors (terminating with exit code `1`) and intercepting unexpected crashes (terminating with exit code `2`).
+- **Analysis Engine Layer (`engine.py`):** Isolates plugin execution using `try...except` blocks. If a plugin fails, the engine logs the error, flags the plugin as `"partial"`, generates a synthetic error report, and safely continues executing the remaining plugins and files.
+
+After the plugins analysis, the system generate a `unified report` containing a global summary alongside detailed results per file and per plugin and, using the app, it is possible to download the report as a `report.md` file. Also, while using the app, the user have acess to plugins report summarized in unique `dashboards` to make analysis easier for the user.
+
+> For a deep dive into the architecture and core interactions, please see our [Architecture Documentation](ARCH/README.md).
+
+
+## Plugins
+
+
+### Plugins Available
+
+The plugins of this toolkit that are available at the moment are:
+- Basic Metrics
+- Comment Density
+- Cyclomatic Complexity
+- Dead Code Detector
+- Dependency Graph
+- Duplication Checker
+- Linter Wrapper
+- Security Checker
+- Style Checker
+
+For further plugin availability, visit the plugins documentantation [here].
+
+### Plugin Lifecycle
+
+The core system handles plugins through a standardized lifecycle:
+
+1. **Discovery:** The core dynamically scans the `src/toolkit/plugins` directory to identify plugin modules.
+2. **Loading:** Modules are imported dynamically and validated against the `BasePlugin` metadata contract (interface).
+3. **Execution:** The engine configures and runs the `analyze()` function for each discovered file.
+4. **Aggregation:** Results are consolidated into a unified report, calculating metrics and identifying top offenders.
+5. **CLI Integration:** The CLI/backend orchestrates this flow to output the final statistics and JSON file and the dashboards for the app.
+
+
+## Installation
+
+To set up the project quickly, run:
 
 ```bash
 make setup
 ```
 
-Este comando cria um ambiente virtual `.venv` e instala as dependências.
+This command creates a `.venv` virtual environment and installs all required dependencies.
 
-## Como executar uma análise
+## Usage & User Guide
 
+This guide describes how to use the Code Quality Toolkit to analyze python projects, configure options, and interpret the results.
+
+### 1. Running an Analysis via CLI
+
+You can quickly run the default analysis using:
 ```bash
 make run
 ```
 
-ou diretamente com a CLI:
+Or, to start an analysis manually, use the `analyze` command via the CLI in the root folder `code_quality_toolkit`:
 
 ```bash
-python -m toolkit.core.cli analyze examples/sample_project --out report.json
-```
-Para um guia detalhado sobre todas as opções e como interpretar os resultados, consulte o ficheiro HOWTO.md.
-
-## Usando a app do Code Quality Toolkit
-
-Para usar a app, o servidor backend deve ser ligado para que a app (fronted) possa ser usada.
-
-- **Corra o Server**: Corra o ficheiro server.py usando o comando:
-
-  ```txt
-    make run_server
-    ```
-
-- **Corra o Client**: Corra o ficheiro client.py usando o comando:
-
-    ```txt
-    make run_client
-    ```
-
-A aplicação irá abrir uma GUI que permite a execução da análise, bem como a configuração de cada plugin.
-
-### Opções da CLI
-
-1. Ao usar o comando
-```bash
-make run
-```
-utilizar um dos argumentos (optional):
-
-```
-make run arg=
-  "--plugins all | StyleChecker,CyclomaticComplexity"
-  "--out report.json"
-  "--include-glob "**/*.py" (repetível)"
-  "--exclude-glob "tests/**" (repetível)"
-  "--config toolkit.toml"
-  "--fail-on-severity low|medium|high"
-  "--log-level DEBUG|INFO|WARNING|ERROR"
-  "-v | --verbose"
+python -m toolkit.core.cli analyze <path_to_analyze> [options]
 ```
 
-2. Usando o CLI com: 
+Then, after the analysis is complete, there will be a report.json to be analysed. See section [HERE]() to know how this report is structured.
 
-```bash
-python -m toolkit.core.cli analyze examples/sample_project --out report.json
-```
-utilizar um dos argumentos (optional):
-```
-toolkit analyze <path>
-  --plugins all | StyleChecker,CyclomaticComplexity
-  --out report.json
-  --include-glob "**/*.py" (repetível)
-  --exclude-glob "tests/**" (repetível)
-  --config toolkit.toml
-  --fail-on-severity low|medium|high
-  --log-level DEBUG|INFO|WARNING|ERROR
-  -v | --verbose
-```
+### 1.1. CLI Options
 
-Exit codes:
+You can customize the execution using the following arguments:
 
-- `0` análise concluída e sem violações acima do limiar configurado;
-- `1` erro de execução (ex.: falha ao carregar plugin);
-- `2` severidade encontrada igual ou superior ao limiar definido.
+| Option | Description | Example |
+| :--- | :--- | :--- |
+| `--plugins` | Defines which plugins to execute (comma-separated). Default is `all`. | `--plugins StyleChecker,CyclomaticComplexity` |
+| `--out` | Defines the output path for the JSON report. | `--out results.json` |
+| `--include-glob` | File pattern to include. Can be repeated. | `--include-glob "**/*.py"` |
+| `--exclude-glob` | File pattern to ignore (e.g., tests). Can be repeated. | `--exclude-glob "tests/**"` |
+| `--fail-on-severity` | Defines a severity level that will cause the tool to fail (exit code > 0). | `--fail-on-severity high` |
+| `--log-level` | Defines log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`). | `--log-level DEBUG` |
+| `-v, --verbose` | Shortcut to activate debug logs (equivalent to `--log-level DEBUG`). | `-v` |
 
-## Estrutura
+### 1.2. Integration Testing (CLI Failure Modes)
 
-```
-src/toolkit/
-  core/        # infraestrutura do motor e CLI
-  plugins/     # plugins descobertos dinamicamente
-  utils/       # utilitários partilhados (config, fs)
-```
+The CLI executable is designed to fail gracefully from a user's perspective. Automated tests ensure the CLI exits with the correct, non-zero error codes (e.g., `EXIT_MANAGED_ERROR`) when a plugin fails to load or run. The final `report.json` will still be generated successfully, displaying a `"partial"` status to indicate the interrupted plugin, ensuring no overall data loss.
 
-Os relatórios são gravados como `report.json`, contendo um resumo global e
-resultados detalhados por ficheiro e plugin.
+### 2. Running Analysis Using the Web App
 
-## Descoberta e ciclo de vida dos plugins
+To use the Web App interface, both the backend server and the frontend client must be running. At the root folder `code_quality_toolkit`:
 
-1. **Descoberta:** `toolkit.core.loader.discover_plugins()` percorre dinamicamente o diretório `src/toolkit/plugins` através de `_iter_plugin_modules()` e identifica cada subpasta que contenha um `plugin.py`.
-2. **Carregamento:** `toolkit.core.loader.load_plugins()` importa os módulos com `_import_module_from_path()`, instância a classe `Plugin` exposta por cada módulo e valida o contrato via `_validate_metadata()`. O contrato básico exigido está documentado em `toolkit.plugins.base.BasePlugin`.
-3. **Execução:** `toolkit.core.engine.run_analysis()` recebe o mapa de instâncias carregadas, configura cada plugin (caso exponha `configure`) e executa `analyze()` para cada ficheiro descoberto por `toolkit.utils.fs.discover_files()`. Exceções são transformadas em relatórios estruturados, registando o estado `partial` em `plugin_status`.
-4. **Agregação:** `toolkit.core.aggregator.aggregate()` consolida os relatórios por ficheiro e o estado final de cada plugin, calcula métricas (por severidade, por plugin, top offenders) e valida a estrutura final com `validate_unified_report()`.
-5. **Integração na CLI:** `toolkit.core.cli._run_analyze()` orquestra o fluxo chamando `load_plugins()`, `run_analysis()` e `aggregate()`, produzindo o `report.json` com data, versão da ferramenta e estatísticas de execução.
+1. **Run the Server:** Start `server.py` using:
+   ```bash
+   make run_server
+   ```
+2. **Run the Client App:** Start `client.py` using:
+   ```bash
+   make run_client
+   ```
 
-## Arquitetura de Tratamento de Erros
-O sistema foi desenhado com uma arquitetura de resiliência robusta, assegurando que a falha individual de qualquer plugin não comprometa a conclusão da análise do projeto.
+A GUI will open, allowing you to select desired plugins and settings. Simply insert the file or folder to be analyzed and click **"Run analysis"**. Once the backend processes the data, you will immediately receive the report. The app will display interactive dashboards showcasing the errors, tips, and metrics exclusively for the plugins you selected.
 
-### 1. Camada da Interface de Linha de Comandos (CLI - `cli.py`)
+### 3. Interpreting the Report & Dashboards
 
-A CLI funciona como a principal linha de defesa externa para o sistema:
-  * **Gestão de Erros Previstos:** Captura e trata exceções operacionais esperadas (`ConfigurationError`, `PluginLoadError`, `AnalysisExecutionError`), terminando a execução com o código de saída `1`.
-  * **Gestão de Erros Imprevistos (Crashes):** Inclui um bloco `except Exception` genérico para intercetar falhas inesperadas. Estes erros são registados detalhadamente antes do sistema terminar com o código de saída `2`.
+Reports are saved by default as `report.json`, containing a global summary alongside detailed results per file and per plugin and, using the app, it is possible to download the report as a `report.md` file.
 
-### 2. Camada do Motor de Análise (`engine.py`)
+While using the app, beside the `report`, the user can ..
 
-A lógica principal de resiliência reside no motor, especificamente na função `run_analysis`, que garante o isolamento da execução:
+The final report is a JSON file divided into three main sections:
 
-**Isolamento e Continuidade dos Plugins:**
+- **`analysis_metadata`:** Information about the execution (date, version, executed plugins).
+  - *Note on `partial` status:* If the `status` field is `"partial"`, it means **one or more plugins failed**, but the analysis continued for the remaining ones. Check the details section for specific errors.
+- **`summary`:** Global statistics (total issues found, issue count by severity).
+- **`details`:** A detailed list of all findings, grouped by file and plugin.
 
-* A execução de cada plugin é encapsulada num bloco `try...except`.
-* **Em caso de acontecer o except no `analyze()`:**
-    * O erro é capturado e registado (etiqueta `plugin.failure`).
-    * O plugin que falhou é assinalado como `"partial"` no relatório final.
-    * É gerado um relatório de erro sintético no JSON de saída com nível de severidade `high` e o código `PLUGIN_ERROR`.
-* **Continuidade:** O motor ignora a falha do plugin e prossegue com a execução dos plugins que faltam e o processamento de outros ficheiros. Isto garante que o utilizador receba um relatório parcial útil, em vez de uma falha completa e vazia.
+## Additional Documentation
 
-## Criar um novo plugin
+See more Documentation (User and Developer) in the following folders:
+- > Check the [User Documentation](PROD/README.md) for further details of the app, plugins and report analysis.
+- > For a deep dive into the architecture and core interactions, please see our [Architecture Documentation](ARCH/README.md).
+- > Verify the [`Specifications`](DEP/code_quality_toolkit/web/SPEC.md) of the Web interface consuming the `report.json`.
+- > See how the developer can build a [New Plugin](DEP/code_quality_toolkit/src/toolkit/plugins/README.md) and how it can be discovered by the core system.
+- > Also, see how the developer can build a [New Dashboard](DEP/code_quality_toolkit/src/toolkit/plugins/DASHBOARD.md) for a new plugin.
 
-1. Crie um diretório em `src/toolkit/plugins/<nome_do_plugin>` com um ficheiro
-   `plugin.py`.
-2. Implemente uma classe ou objeto com as funções `get_metadata()` e
-   `analyze(source_code: str, file_path: str | None)` seguindo o contrato em
-   `plugins/base.py`.
-3. Registe qualquer configuração necessária em `toolkit.toml`.
-4. Utilize `# EXTENSION-POINT:` para documentar pontos de expansão.
 
-Teste o plugin com `pytest` e execute a CLI para gerar relatórios que o incluam.
 
-## Documentação adicional
+## License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-Veja toda a documentação para usuários na pasta PROD. Veja mais também:
-
-- [`web/SPEC.md`](web/SPEC.md): proposta de interface Web que consome o
-  `report.json`.
-
-## Licença
-
-Distribuído sob licença MIT. Consulte `LICENSE` para detalhes.
+## Authors
+- Pedro Silva - *Project Lead / Maintainer*
+- Mathias Welz - *Project Lead / Maintainer*
+- ES 2025 TEAM
+- See the other members [HERE](PM/profiles/)
