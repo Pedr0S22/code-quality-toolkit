@@ -7,6 +7,7 @@ The primary goal of this project is to practice modular software design and inte
 
 ## Table of Contents
 - [Project Structure](#project-structure)
+- [Repository]()
 - [Architecture](#architecture)
 - [Plugin Lifecycle](#plugin-lifecycle)
 - [Installation](#installation)
@@ -29,6 +30,10 @@ The backend has 3 other sub-directories that distiguishes the core engine from e
 - `code_quality_toolkit/src/toolkit/plugins/`: Dynamically discover plugins to add to the system.
 - `code_quality_toolkit/src/toolkit/utils/`: Shared utilities like configuration and file system helpers.
 
+## Repository & CI/CD
+
+This project originally was made and maintained in GitLab. This is the last snapshot of the project with additional Documentation. It was used a `GitLab CI/CD` and, of course, it can't be used here in GitHub. The `CI` pipeline tested the unit and integration tests coverage (> 70%), the quality of the code - the lint and the cyclomatic complexity - and the security.
+
 ## Architecture
 
 The system is divided into a **Core System** (responsible for orchestrating execution, managing plugins, and aggregating results) and independent **Plugins** (each implementing a discrete analysis).
@@ -43,7 +48,6 @@ After the plugins analysis, the system generate a `unified report` containing a 
 
 
 ## Plugins
-
 
 ### Plugins Available
 
@@ -146,7 +150,7 @@ The final report is a JSON file divided into three main sections:
 - **`summary`:** Global statistics (total issues found, issue count by severity).
 - **`details`:** A detailed list of all findings, grouped by file and plugin.
 
-## Additional Documentation
+## Additional Documentation and Informations
 
 See more Documentation (User and Developer) in the following folders:
 - > Check the [User Documentation](PROD/README.md) for further details of the app, plugins and report analysis.
@@ -154,8 +158,6 @@ See more Documentation (User and Developer) in the following folders:
 - > Verify the [`Specifications`](DEP/code_quality_toolkit/web/SPEC.md) of the Web interface consuming the `report.json`.
 - > See how the developer can build a [New Plugin](DEP/code_quality_toolkit/src/toolkit/plugins/README.md) and how it can be discovered by the core system.
 - > Also, see how the developer can build a [New Dashboard](DEP/code_quality_toolkit/src/toolkit/plugins/DASHBOARD.md) for a new plugin.
-
-
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
